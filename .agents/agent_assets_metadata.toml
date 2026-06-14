@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "pGJuJBmPS9vjVgMLrCqQ6"
+uri = "file://PACCA_PRODUCT_EVOLUTION_PLAN.md"
+type = "text"
+title = "PACCA Product Evolution Plan"
