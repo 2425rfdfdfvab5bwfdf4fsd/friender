@@ -186,6 +186,140 @@ class BrowserController:
         except Exception as e:
             return {"error": str(e)}
 
+    async def click_element(self, selector: str, timeout: int = 10000) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            await self._page.click(selector, timeout=timeout)
+            return {"clicked": selector, "url": self._page.url}
+        except Exception as e:
+            return {"error": str(e), "selector": selector}
+
+    async def type_text(self, selector: str, text: str, clear_first: bool = True,
+                        timeout: int = 10000) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            await self._page.wait_for_selector(selector, timeout=timeout)
+            if clear_first:
+                await self._page.fill(selector, "")
+            await self._page.type(selector, text, delay=30)
+            return {"typed": text[:50], "selector": selector}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def fill_form(self, fields: list[dict]) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        results = []
+        for field in fields:
+            selector = field.get("selector", "")
+            value = field.get("value", "")
+            field_type = field.get("type", "text")
+            try:
+                if field_type == "select":
+                    await self._page.select_option(selector, value)
+                elif field_type == "checkbox":
+                    if value:
+                        await self._page.check(selector)
+                    else:
+                        await self._page.uncheck(selector)
+                else:
+                    await self._page.fill(selector, value)
+                results.append({"selector": selector, "ok": True})
+            except Exception as e:
+                results.append({"selector": selector, "error": str(e)})
+        return {"fields_filled": len([r for r in results if r.get("ok")]),
+                "results": results}
+
+    async def get_page_source(self) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            content = await self._page.content()
+            return {"html": content[:32768], "url": self._page.url,
+                    "truncated": len(content) > 32768}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def wait_for_element(self, selector: str, state: str = "visible",
+                                timeout: int = 15000) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            await self._page.wait_for_selector(selector, state=state, timeout=timeout)
+            return {"found": True, "selector": selector, "state": state}
+        except Exception as e:
+            return {"found": False, "error": str(e), "selector": selector}
+
+    async def scroll_page(self, direction: str = "down", amount: int = 500) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            if direction == "down":
+                await self._page.evaluate(f"window.scrollBy(0, {amount})")
+            elif direction == "up":
+                await self._page.evaluate(f"window.scrollBy(0, -{amount})")
+            elif direction == "top":
+                await self._page.evaluate("window.scrollTo(0, 0)")
+            elif direction == "bottom":
+                await self._page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            return {"scrolled": direction, "amount": amount}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def go_back(self) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            await self._page.go_back(wait_until="domcontentloaded", timeout=15000)
+            return {"url": self._page.url, "title": await self._page.title()}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def screenshot(self, path: str | None = None) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            if path is None:
+                PACCA_DOWNLOADS.mkdir(parents=True, exist_ok=True)
+                import time as _time
+                path = str(PACCA_DOWNLOADS / f"screenshot_{int(_time.time())}.png")
+            data = await self._page.screenshot(path=path, full_page=False)
+            return {"saved": path, "url": self._page.url, "bytes": len(data)}
+        except Exception as e:
+            return {"error": str(e)}
+
+    async def get_structured_data(self, selector: str | None = None) -> dict:
+        if not self._page:
+            return {"error": "Browser not started"}
+        try:
+            script = """(sel) => {
+                const root = sel ? document.querySelector(sel) : document;
+                if (!root) return {error: 'selector not found'};
+                const tables = [];
+                root.querySelectorAll('table').forEach(t => {
+                    const rows = [];
+                    t.querySelectorAll('tr').forEach(r => {
+                        const cells = [];
+                        r.querySelectorAll('td,th').forEach(c => cells.push(c.innerText.trim()));
+                        if (cells.length) rows.push(cells);
+                    });
+                    if (rows.length) tables.push(rows);
+                });
+                const lists = [];
+                root.querySelectorAll('ul,ol').forEach(l => {
+                    const items = [];
+                    l.querySelectorAll('li').forEach(i => items.push(i.innerText.trim()));
+                    if (items.length) lists.push(items);
+                });
+                return {tables, lists};
+            }"""
+            data = await self._page.evaluate(script, selector)
+            return {"data": data, "url": self._page.url}
+        except Exception as e:
+            return {"error": str(e)}
+
 
 _browser_controller: BrowserController | None = None
 
@@ -246,3 +380,88 @@ async def browser_tab_management(action: str, url: str | None = None,
     if not controller._context:
         await controller.start()
     return await controller.manage_tabs(action, url)
+
+
+async def browser_click(selector: str, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "would_click": selector}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.click_element(selector)
+
+
+async def browser_type_text(selector: str, text: str, clear_first: bool = True,
+                             dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "would_type": text[:50], "selector": selector}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.type_text(selector, text, clear_first)
+
+
+async def browser_fill_form(fields: list[dict], dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "fields": len(fields)}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.fill_form(fields)
+
+
+async def browser_get_page_source(dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "get_page_source"}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.get_page_source()
+
+
+async def browser_screenshot(path: str | None = None, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "screenshot"}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.screenshot(path)
+
+
+async def browser_wait_for_element(selector: str, state: str = "visible",
+                                    timeout: int = 15000, dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "selector": selector, "state": state}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.wait_for_element(selector, state, timeout)
+
+
+async def browser_scroll(direction: str = "down", amount: int = 500,
+                          dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "direction": direction}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.scroll_page(direction, amount)
+
+
+async def browser_go_back(dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "go_back"}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.go_back()
+
+
+async def browser_get_structured_data(selector: str | None = None,
+                                       dry_run: bool = False) -> dict:
+    if dry_run:
+        return {"dry_run": True, "action": "get_structured_data"}
+    controller = get_browser_controller()
+    if not controller._page:
+        return {"error": "No browser page open. Navigate to a URL first."}
+    return await controller.get_structured_data(selector)

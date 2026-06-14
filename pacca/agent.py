@@ -30,6 +30,8 @@ from pacca.tools.registry import TOOL_REGISTRY, policy_version
 from pacca.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
 from pacca.advisor import AdvisoryIntentDetector
 from pacca.llm_client import LLMClient
+from pacca.memory.memory_manager import MemoryManager
+from pacca.supervisor import GoalSupervisor, is_multi_step_goal
 
 import pacca.tools.file_tools as file_tools
 import pacca.tools.app_tools as app_tools
@@ -67,6 +69,15 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "browser_extract_page_text": lambda args: browser_tools.browser_extract_page_text(**_clean(args)),
     "browser_download_file": lambda args: browser_tools.browser_download_file(**_clean(args)),
     "browser_tab_management": lambda args: browser_tools.browser_tab_management(**_clean(args)),
+    "browser_click": lambda args: browser_tools.browser_click(**_clean(args)),
+    "browser_type_text": lambda args: browser_tools.browser_type_text(**_clean(args)),
+    "browser_fill_form": lambda args: browser_tools.browser_fill_form(**_clean(args)),
+    "browser_screenshot": lambda args: browser_tools.browser_screenshot(**_clean(args)),
+    "browser_wait_for_element": lambda args: browser_tools.browser_wait_for_element(**_clean(args)),
+    "browser_scroll": lambda args: browser_tools.browser_scroll(**_clean(args)),
+    "browser_go_back": lambda args: browser_tools.browser_go_back(**_clean(args)),
+    "browser_get_page_source": lambda args: browser_tools.browser_get_page_source(**_clean(args)),
+    "browser_get_structured_data": lambda args: browser_tools.browser_get_structured_data(**_clean(args)),
     "create_docx": lambda args: document_tools.create_docx(**_clean(args)),
     "read_docx": lambda args: document_tools.read_docx(**_clean(args)),
     "create_xlsx": lambda args: document_tools.create_xlsx(**_clean(args)),
@@ -171,6 +182,7 @@ class PACCAAgent:
         self.task_history = TaskHistory()
         self.heuristic_planner = HeuristicPlanner()
         self.advisory_detector = AdvisoryIntentDetector()
+        self.memory = MemoryManager()
 
         llm_client: LLMClient | None = None
         if not self.config.offline_mode:
@@ -189,8 +201,17 @@ class PACCAAgent:
             max_file_egress_bytes=self.config.max_file_egress_bytes,
         )
 
+        self.supervisor = GoalSupervisor(
+            run_command_fn=self.run_command,
+            max_retries=2,
+            goal_timeout=600.0,
+            max_depth=3,
+        )
+
         # Confirmation gates: key = "task_id:confirmation_id" → asyncio.Queue(1)
         self._confirmation_gates: dict[str, asyncio.Queue] = {}
+        # Goal emit queues: goal_id → asyncio.Queue for supervisor events
+        self._goal_queues: dict[str, asyncio.Queue] = {}
 
     def _on_state_transition(self, task_id: str, old: TaskState, new: TaskState) -> None:
         self.audit_logger.log_event(
@@ -242,6 +263,38 @@ class PACCAAgent:
                 "message": "🔍 Dry-run mode — plan will be shown but NOT executed",
                 "task_id": task_id,
             })
+
+        # ── Autonomous goal execution path ─────────────────────────────────────
+        if is_multi_step_goal(raw_cmd) and not dry_run:
+            goal_queue: asyncio.Queue = asyncio.Queue()
+
+            def _emit_goal(event_type: str, data: dict) -> None:
+                goal_queue.put_nowait(AgentEvent(event_type, {**data, "task_id": task_id}))
+
+            async def _run_goal():
+                try:
+                    await self.supervisor.execute_goal(raw_cmd, _emit_goal)
+                finally:
+                    goal_queue.put_nowait(None)
+
+            asyncio.create_task(_run_goal())
+
+            while True:
+                evt = await goal_queue.get()
+                if evt is None:
+                    break
+                yield evt
+                if evt.type == "goal_complete":
+                    steps = evt.data.get("steps_completed", 0)
+                    self.memory.record_task(
+                        task_id=task_id,
+                        command=raw_cmd,
+                        intent_verb="goal",
+                        intent_domain="multi_step",
+                        outcome="completed",
+                        steps_executed=steps,
+                    )
+            return
 
         # ── Advisory path: questions / analysis / expert guidance ─────────────
         if self.advisory_detector.is_advisory(raw_cmd):
@@ -552,6 +605,17 @@ class PACCAAgent:
             task_id, final_status,
             steps_executed=len(results),
             files_affected=files_affected,
+        )
+
+        self.memory.record_task(
+            task_id=task_id,
+            command=scope.redacted_command[:300],
+            intent_verb=scope.intent_verb,
+            intent_domain=scope.intent_domain,
+            outcome=final_status,
+            steps_executed=len(results),
+            risk_score=risk_score.total,
+            files_affected=files_affected[:10],
         )
 
         can_undo = self.undo_manager.can_undo()

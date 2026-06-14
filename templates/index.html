@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PACCA v5.2 — AI Agent</title>
+<title>PACCA v6.0 — AI Agent</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
@@ -238,6 +238,58 @@ select.setting-input option{background:var(--surface2)}
 #prov-sel{padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px}
 #prov-sel option{background:var(--surface2)}
 
+/* ── Voice button ───────────────────────────────────────────────────────── */
+#mic-btn{font-size:15px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 9px;cursor:pointer;color:var(--muted);transition:all .2s;line-height:1;flex-shrink:0}
+#mic-btn:hover{border-color:var(--accent);color:var(--accent)}
+#mic-btn.listening{border-color:var(--danger);color:var(--danger);background:rgba(248,81,73,.1);animation:pulse 1s ease infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#tts-btn{font-size:12px;padding:4px 8px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--muted);transition:all .2s;flex-shrink:0}
+#tts-btn.on{color:var(--accent2);border-color:var(--accent2);background:rgba(63,185,80,.08)}
+
+/* ── Goal progress overlay ──────────────────────────────────────────────── */
+#goal-bar{display:none;align-items:center;gap:10px;padding:8px 14px;background:rgba(88,166,255,.05);border-top:1px solid rgba(88,166,255,.2);flex-shrink:0;font-size:11px}
+#goal-bar.show{display:flex}
+#goal-title{color:var(--accent);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#goal-progress{color:var(--muted)}
+#goal-steps{display:flex;gap:3px;flex-shrink:0}
+.goal-step-dot{width:8px;height:8px;border-radius:50%;background:var(--border);flex-shrink:0;transition:background .3s}
+.goal-step-dot.done{background:var(--accent2)}
+.goal-step-dot.active{background:var(--accent);animation:pulse .8s ease infinite}
+.goal-step-dot.failed{background:var(--danger)}
+
+/* ── Memory panel ───────────────────────────────────────────────────────── */
+.mem-item{padding:7px 0;border-bottom:1px solid var(--border2);font-size:10px}
+.mem-item:last-child{border-bottom:none}
+.mem-cmd{color:var(--text2);line-height:1.4;margin-bottom:3px}
+.mem-meta{color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;font-size:9px;align-items:center}
+.mem-outcome{font-size:9px;padding:1px 5px;border-radius:3px;font-weight:700}
+.mem-completed{background:rgba(63,185,80,.15);color:var(--accent2)}
+.mem-failed{background:rgba(248,81,73,.15);color:var(--danger)}
+.mem-pref-section{margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+.mem-pref-item{display:flex;justify-content:space-between;padding:3px 0;font-size:10px;color:var(--text2)}
+.mem-pref-key{color:var(--muted)}
+.mem-count-badge{font-size:10px;padding:2px 8px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.2);border-radius:10px;color:var(--accent);margin-bottom:10px;display:inline-block}
+.mem-search{width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:11px;outline:none;margin-bottom:8px}
+.mem-search:focus{border-color:var(--accent)}
+
+/* ── Workflow panel ──────────────────────────────────────────────────────── */
+.wf-item{padding:8px;border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:6px;background:var(--surface2)}
+.wf-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px}
+.wf-desc{font-size:10px;color:var(--muted);margin-bottom:5px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wf-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:9px;color:var(--muted);margin-bottom:6px}
+.wf-trigger{padding:2px 6px;background:rgba(88,166,255,.1);color:var(--accent);border-radius:3px;font-size:9px}
+.wf-status{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.wf-status.enabled{background:var(--accent2)}
+.wf-status.disabled{background:var(--muted)}
+.wf-actions{display:flex;gap:4px;flex-wrap:wrap}
+.wf-btn{font-size:9px;padding:2px 8px;border-radius:3px;border:1px solid var(--border);background:var(--surface);color:var(--muted);cursor:pointer;font-family:inherit;transition:all .15s}
+.wf-btn:hover{color:var(--text);border-color:var(--accent)}
+.wf-btn.danger:hover{color:var(--danger);border-color:var(--danger)}
+#wf-new-form{margin-bottom:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
+#wf-new-form input{width:100%;padding:5px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:11px;outline:none;margin-bottom:6px}
+#wf-new-form input:focus{border-color:var(--accent)}
+#wf-empty{color:var(--muted);font-size:11px;text-align:center;padding:20px 0}
+
 /* ── Fullscreen ─────────────────────────────────────────────────────────── */
 body.fullscreen #sidebar{display:none}
 body.fullscreen #quickbar{display:none}
@@ -330,7 +382,7 @@ body.fullscreen #sys-stats{display:none}
 
 <!-- Header -->
 <div id="header">
-  <div id="logo">PACCA<span id="logo-sub">AI Agent v5.2</span></div>
+  <div id="logo">PACCA<span id="logo-sub">AI Agent v6.0</span></div>
   <div id="status-dot" title="Connecting…"></div>
   <div id="provider-badge">offline</div>
 
@@ -354,10 +406,14 @@ body.fullscreen #sys-stats{display:none}
   </div>
 
   <div class="spacer"></div>
-  <button class="hdr-btn" onclick="switchPanel('sysmon')">📊 System</button>
+  <span id="mem-counter" style="font-size:9px;color:var(--muted);white-space:nowrap;cursor:default" title="Memories stored">🧠 —</span>
+  <span id="wf-counter" style="font-size:9px;color:var(--muted);white-space:nowrap;cursor:default;margin-left:4px" title="Saved workflows">⚙ —</span>
+  <button class="hdr-btn" onclick="switchPanel('sysmon')">📊</button>
   <button class="hdr-btn" onclick="switchPanel('tools')">🔧 Tools</button>
-  <button class="hdr-btn" onclick="switchPanel('history')">📋 History</button>
-  <button class="hdr-btn" onclick="switchPanel('settings')">⚙ Settings</button>
+  <button class="hdr-btn" onclick="switchPanel('memory')">🧠 Memory</button>
+  <button class="hdr-btn" onclick="switchPanel('workflows')">⚙ Workflows</button>
+  <button class="hdr-btn" onclick="switchPanel('history')">📋</button>
+  <button class="hdr-btn" onclick="switchPanel('settings')">⚙</button>
   <button class="hdr-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle full screen">⛶</button>
   <button class="hdr-btn" id="btn-toggle" onclick="toggleSidebar()">◀</button>
 </div>
@@ -365,16 +421,17 @@ body.fullscreen #sys-stats{display:none}
 <!-- Quick-action bar -->
 <div id="quickbar">
   <span id="quickbar-label">Quick:</span>
-  <button class="qa-btn" onclick="qa('show system cpu and memory usage')"><span class="qa-icon">📊</span>System Stats</button>
-  <button class="qa-btn" onclick="qa('list files in current directory')"><span class="qa-icon">📁</span>List Files</button>
-  <button class="qa-btn" onclick="qa('git status in current directory')"><span class="qa-icon">🌿</span>Git Status</button>
-  <button class="qa-btn" onclick="qa('search the web for latest AI news')"><span class="qa-icon">🌐</span>Web Search</button>
+  <button class="qa-btn" onclick="qa('show system cpu and memory usage')"><span class="qa-icon">📊</span>System</button>
+  <button class="qa-btn" onclick="qa('list files in current directory')"><span class="qa-icon">📁</span>Files</button>
+  <button class="qa-btn" onclick="qa('git status in current directory')"><span class="qa-icon">🌿</span>Git</button>
+  <button class="qa-btn" onclick="qa('search the web for latest AI news')"><span class="qa-icon">🌐</span>Web</button>
+  <button class="qa-btn" onclick="qa('memory')"><span class="qa-icon">🧠</span>Memory</button>
+  <button class="qa-btn" onclick="qa('workflows')"><span class="qa-icon">⚙</span>Workflows</button>
   <div class="qa-sep"></div>
-  <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')" title="Ask advisor"><span class="qa-icon">🧠</span>Rate Limiter</button>
-  <button class="qa-btn" onclick="qa('explain the difference between Docker and Kubernetes')" title="Ask advisor"><span class="qa-icon">🧠</span>Docker vs K8s</button>
-  <button class="qa-btn" onclick="qa('what are the best practices for securing a REST API?')" title="Ask advisor"><span class="qa-icon">🧠</span>API Security</button>
-  <button class="qa-btn" onclick="qa('how should I implement retry logic with exponential backoff?')" title="Ask advisor"><span class="qa-icon">🧠</span>Retry Logic</button>
+  <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Goal mode"><span class="qa-icon">🎯</span>Goal: AI Tools Report</button>
+  <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot')"><span class="qa-icon">📸</span>Screenshot HN</button>
   <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">🧠</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
   <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
 </div>
@@ -393,6 +450,15 @@ body.fullscreen #sys-stats{display:none}
       <div id="progress-label"><span id="prog-step"></span><span id="prog-pct"></span></div>
     </div>
 
+    <!-- Goal progress bar -->
+    <div id="goal-bar">
+      <span style="color:var(--accent);font-size:12px;flex-shrink:0">🎯</span>
+      <span id="goal-title">Running goal…</span>
+      <div id="goal-steps"></div>
+      <span id="goal-progress">0/0</span>
+      <button style="font-size:10px;padding:2px 8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;border-radius:3px;font-family:inherit" onclick="cancelGoal()">✕</button>
+    </div>
+
     <div id="confirm-bar">
       <div id="confirm-msg"></div>
       <input id="confirm-input" placeholder="type YES" autocomplete="off" spellcheck="false">
@@ -403,9 +469,11 @@ body.fullscreen #sys-stats{display:none}
     <div id="input-bar">
       <span id="prompt">pacca ›</span>
       <div id="cmd-wrap">
-        <input id="cmd-input" placeholder="Describe what you want to do… (try 'help')" autocomplete="off" spellcheck="false">
+        <input id="cmd-input" placeholder="Describe what you want to do… (try 'help' or 🎙 for voice)" autocomplete="off" spellcheck="false">
         <span id="char-count"></span>
       </div>
+      <button id="mic-btn" onclick="toggleMic()" title="Push-to-talk (Ctrl+M)">🎙</button>
+      <button id="tts-btn" onclick="toggleTTS()" title="Text-to-speech output">🔊</button>
       <button id="dryrun-toggle" onclick="toggleDryRun()" title="Preview plan without executing">dry-run</button>
       <button id="send-btn" onclick="sendCommand()">Send ↵</button>
     </div>
@@ -416,12 +484,16 @@ body.fullscreen #sys-stats{display:none}
     <div id="panel-tabs">
       <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon">📊</div>
       <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools">Tools</div>
-      <div class="ptab" onclick="switchPanel('history')" id="tab-history">History</div>
+      <div class="ptab" onclick="switchPanel('memory')" id="tab-memory">🧠</div>
+      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows">⚙ Flows</div>
+      <div class="ptab" onclick="switchPanel('history')" id="tab-history">📋</div>
       <div class="ptab" onclick="switchPanel('audit')" id="tab-audit">Audit</div>
       <div class="ptab" onclick="switchPanel('settings')" id="tab-settings">⚙</div>
     </div>
     <div class="panel" id="panel-sysmon"><div style="color:var(--muted);font-size:11px">Loading system info…</div></div>
     <div class="panel active" id="panel-tools"><div style="color:var(--muted);font-size:11px">Loading tools…</div></div>
+    <div class="panel" id="panel-memory"><div style="color:var(--muted);font-size:11px">Loading memory…</div></div>
+    <div class="panel" id="panel-workflows"><div style="color:var(--muted);font-size:11px">Loading workflows…</div></div>
     <div class="panel" id="panel-history"><div style="color:var(--muted);font-size:11px">No tasks yet.</div></div>
     <div class="panel" id="panel-audit"><div style="color:var(--muted);font-size:11px">No audit entries yet.</div></div>
     <div class="panel" id="panel-settings"><div style="color:var(--muted);font-size:11px">Loading…</div></div>
@@ -441,39 +513,41 @@ const S = {
   totalSteps:0, doneSteps:0,
   running:false, acIdx:-1, acItems:[],
   lastSysStats:null,
+  // Voice
+  recognition:null, ttsEnabled:false, listening:false,
+  // Goal supervisor
+  currentGoal:null, goalDots:[],
 };
 
 // ── Common commands for autocomplete ────────────────────────────────────────
 const SUGGESTIONS = [
-  // Action commands
   {icon:'📊', label:'show system cpu and memory usage', hint:'system'},
   {icon:'📁', label:'list files in current directory', hint:'file'},
   {icon:'🔍', label:'search for files named *.py', hint:'file'},
   {icon:'📄', label:'read the file README.md', hint:'file'},
   {icon:'✏️', label:'create a file called notes.txt with content "hello"', hint:'file'},
-  {icon:'🗂', label:'find all pdf files in home directory', hint:'file'},
-  {icon:'⚙', label:'show running apps and processes', hint:'system'},
   {icon:'🌿', label:'git status in current directory', hint:'git'},
   {icon:'🌿', label:'git add and commit all changes with message "update"', hint:'git'},
   {icon:'🌐', label:'search the web for', hint:'browser'},
   {icon:'🌐', label:'open url https://example.com', hint:'browser'},
-  {icon:'📦', label:'zip folder ~/Documents to ~/backup.zip', hint:'file'},
-  // Advisory / expert mode
+  {icon:'📸', label:'open url https://news.ycombinator.com and take a screenshot', hint:'browser'},
+  {icon:'🖱', label:'click the button with selector #submit', hint:'browser'},
+  {icon:'📝', label:'fill form with name="Alice", email="alice@example.com"', hint:'browser'},
+  {icon:'🎯', label:'search the web for top 5 AI tools and save results to ~/ai-tools-report.txt', hint:'goal'},
+  {icon:'🎯', label:'check git status and then commit any changed files', hint:'goal'},
+  {icon:'🎯', label:'research Python async patterns and create a summary document', hint:'goal'},
+  {icon:'⚙', label:'save this as a workflow called daily_check every day at 9am', hint:'workflow'},
+  {icon:'⚙', label:'list workflows', hint:'workflow'},
+  {icon:'⚙', label:'workflows', hint:'workflow'},
+  {icon:'🧠', label:'memory', hint:'memory'},
+  {icon:'🧠', label:'remember ', hint:'memory'},
   {icon:'🧠', label:'how do I design a rate limiter for a REST API?', hint:'advisor'},
   {icon:'🧠', label:'how do I implement JWT authentication securely?', hint:'advisor'},
   {icon:'🧠', label:'explain the difference between Docker and Kubernetes', hint:'advisor'},
   {icon:'🧠', label:'what are the best practices for securing a REST API?', hint:'advisor'},
-  {icon:'🧠', label:'how should I implement retry logic with exponential backoff?', hint:'advisor'},
   {icon:'🧠', label:'compare Redis vs Memcached for session storage', hint:'advisor'},
-  {icon:'🧠', label:'what is the best database for a high-read low-write workload?', hint:'advisor'},
-  {icon:'🧠', label:'explain SOLID principles with examples', hint:'advisor'},
-  {icon:'🧠', label:'how should I structure a Python monorepo?', hint:'advisor'},
-  {icon:'🧠', label:'why is my PostgreSQL query slow? how do I optimize it?', hint:'advisor'},
-  {icon:'🧠', label:'how do I set up CI/CD for a Python FastAPI app?', hint:'advisor'},
   {icon:'🧠', label:'what are the OWASP top 10 vulnerabilities?', hint:'advisor'},
-  {icon:'🧠', label:'help me debug: connection refused on port 5432', hint:'advisor'},
   {icon:'🧠', label:'ask: ', hint:'force advisor mode'},
-  // Special
   {icon:'↩', label:'undo', hint:'special'},
   {icon:'❓', label:'help', hint:'special'},
   {icon:'📋', label:'history', hint:'special'},
@@ -577,6 +651,19 @@ function route(type,d) {
     case 'audit_log':            onAuditTxt(d); break;
     case 'advisory':             onAdvisory(d); break;
     case 'disclosure':           showModal(d.text); break;
+    // ── Goal events ──────────────────────────────────────────────────────
+    case 'goal_start':           onGoalStart(d); break;
+    case 'subtask_start':        onSubtaskStart(d); break;
+    case 'subtask_complete':     onSubtaskComplete(d); break;
+    case 'subtask_failed':       onSubtaskFailed(d); break;
+    case 'subtask_retry':        pr(ts()+C.yellow+'  ↻ Retrying step '+(d.attempt||'')+C.rst); break;
+    case 'goal_complete':        onGoalComplete(d); break;
+    case 'goal_error':           onGoalError(d); break;
+    case 'goal_cancelled':       onGoalCancelled(d); break;
+    // ── Memory / workflow events ──────────────────────────────────────────
+    case 'memory_data':          onMemoryData(d); break;
+    case 'workflow_list':        onWorkflowList(d); break;
+    case 'workflow_saved':       onWorkflowSaved(d); break;
     case 'pong':                 break;
     default: break;
   }
@@ -586,6 +673,9 @@ function route(type,d) {
 function onWelcome(d) {
   badge(d.provider+' / '+d.model, d.llm_available?'live':'');
   dot('ok');
+  // Update counters
+  if(d.memory_count!==undefined) updateMemCounter(d.memory_count);
+  if(d.workflow_count!==undefined) updateWfCounter(d.workflow_count);
   pr('');
   pr(C.bold+C.bblue+'  ██████╗  █████╗  ██████╗  ██████╗  █████╗ '+C.rst);
   pr(C.bold+C.bblue+'  ██╔══██╗██╔══██╗██╔════╝ ██╔════╝ ██╔══██╗'+C.rst);
@@ -593,32 +683,44 @@ function onWelcome(d) {
   pr(C.bold+C.bblue+'  ██╔═══╝ ██╔══██║██║      ██║      ██╔══██║'+C.rst);
   pr(C.bold+C.bblue+'  ██║     ██║  ██║╚██████╗ ╚██████╗ ██║  ██║'+C.rst);
   pr(C.bold+C.bblue+'  ╚═╝     ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝'+C.rst);
-  pr('  '+C.gray+'Personal AI Computer-Control Agent  v5.2'+C.rst);
+  pr('  '+C.gray+'Personal AI Computer-Control Agent  v6.0'+C.rst);
   sep();
   if (d.llm_available) {
     pr('  '+C.bgreen+'✓ LLM Connected'+C.rst+'  '+C.gray+d.provider+' / '+C.white+d.model+C.rst);
   } else {
-    pr('  '+C.yellow+'⚠  No API key detected — running in heuristic demo mode'+C.rst);
-    pr('  '+C.gray+'To enable full AI planning, add your key in '+C.cyan+'⚙ Settings'+C.gray+' → Secrets'+C.rst);
-    pr('  '+C.gray+'  ANTHROPIC_API_KEY  •  OPENAI_API_KEY  •  GEMINI_API_KEY'+C.rst);
+    pr('  '+C.yellow+'⚠  No API key — running in heuristic demo mode'+C.rst);
+    pr('  '+C.gray+'Add ANTHROPIC_API_KEY or OPENAI_API_KEY in Replit Secrets'+C.rst);
   }
+  pr('  '+C.gray+'Memory: '+C.cyan+(d.memory_count||0)+' tasks'+C.gray+'  Workflows: '+C.cyan+(d.workflow_count||0)+C.rst);
   pr('');
-  pr('  '+C.gray+'Type a command below, click a '+C.cyan+'Quick Action'+C.gray+' above, or type '+C.cyan+'help'+C.rst);
-  pr('  '+C.gray+'Use '+C.cyan+'dry-run:'+C.gray+' prefix to preview without executing anything'+C.rst);
-  pr('');
+  pr('  '+C.gray+'NEW v6.0: '+C.bgreen+'🧠 Memory'+C.gray+' • '+C.bgreen+'🌐 Browser Automation'+C.gray+' • '+C.bgreen+'🎯 Goal Mode'+C.gray+' • '+C.bgreen+'🎙 Voice'+C.gray+' • '+C.bgreen+'⚙ Workflows'+C.rst);
+  sep();
   pr('  '+C.gray+'Examples:'+C.rst);
-  pr('  '+C.cyan+'  list files in my downloads folder'+C.rst);
-  pr('  '+C.cyan+'  show system cpu and memory usage'+C.rst);
-  pr('  '+C.cyan+'  search the web for latest Python news'+C.rst);
-  pr('  '+C.cyan+'  create a file called todo.txt with content "Buy milk"'+C.rst);
+  pr('  '+C.cyan+'  list files in my downloads folder'+C.rst+'           '+C.gray+'← action'+C.rst);
+  pr('  '+C.cyan+'  research AI tools and create a report file'+C.rst+'  '+C.gray+'← 🎯 goal'+C.rst);
+  pr('  '+C.cyan+'  save this as a workflow called daily_check'+C.rst+'  '+C.gray+'← ⚙ workflow'+C.rst);
+  pr('  '+C.cyan+'  how do I design a rate limiter?'+C.rst+'              '+C.gray+'← 🧠 advisor'+C.rst);
+  pr('  '+C.cyan+'  open url https://example.com and screenshot'+C.rst+'  '+C.gray+'← 🌐 browser'+C.rst);
+  pr('');
+  pr('  '+C.gray+'Click '+C.cyan+'🎙'+C.gray+' mic button or press '+C.cyan+'Ctrl+M'+C.gray+' for voice input'+C.rst);
   pr('');
   if (!d.onboarding_complete) fetchAndShowModal();
   loadTools();
   loadSettings();
   loadSysmon();
-  // Start auto-refresh of header stats every 8 seconds
+  loadMemory();
+  loadWorkflows();
   refreshHeaderStats();
   setInterval(refreshHeaderStats, 8000);
+}
+
+function updateMemCounter(n){
+  const el=document.getElementById('mem-counter');
+  if(el) el.textContent='🧠 '+n;
+}
+function updateWfCounter(n){
+  const el=document.getElementById('wf-counter');
+  if(el) el.textContent='⚙ '+n;
 }
 
 function onScope(d) {
@@ -800,8 +902,9 @@ function onCompleted(d) {
   pr(C.bold+C.bgreen+'  ✓ Task Complete'+C.rst+C.gray+'  '+ok+'/'+tot+' step'+(tot!==1?'s':'')+' succeeded'+C.rst);
   if(d.can_undo) pr('  '+C.gray+'Tip: type '+C.cyan+'undo'+C.gray+' to reverse the last action'+C.rst);
   pr('');
-  loadHistory(); loadAudit();
+  loadHistory(); loadAudit(); loadMemory();
   toast('Task complete — '+ok+'/'+tot+' steps succeeded', 'ok');
+  ttsSpeak('Task complete. '+ok+' of '+tot+' steps succeeded.');
 }
 
 function onDryRunDone(d) {
@@ -944,7 +1047,277 @@ function onStatusInfo(d) {
     pr('  Circuit:   '+C.bred+cb.state+' ('+cb.failure_count+' failures, resets '+Math.round(cb.reset_in||0)+'s)'+C.rst);
   }
   pr('  Onboard:   '+(d.onboarding?C.bgreen+'✓'+C.rst:C.yellow+'pending'+C.rst));
+  pr('  Memory:    '+C.cyan+(d.memory_count||0)+' tasks stored'+C.rst);
+  pr('  Workflows: '+C.cyan+(d.workflow_count||0)+' saved'+C.rst);
   pr('');
+  if(d.memory_count!==undefined) updateMemCounter(d.memory_count);
+  if(d.workflow_count!==undefined) updateWfCounter(d.workflow_count);
+}
+
+// ── Goal supervisor event handlers ────────────────────────────────────────────
+function onGoalStart(d) {
+  S.currentGoal = d;
+  S.running = true; setSendRunning(true);
+  const n = d.subtask_count||0;
+  pr('');
+  pr(C.bold+C.bblue+'  🎯 AUTONOMOUS GOAL'+C.rst+C.gray+'  '+n+' sub-tasks planned'+C.rst);
+  sep();
+  pr('  '+C.gray+d.goal.substring(0,100)+C.rst);
+  (d.subtasks||[]).forEach((t,i)=>pr('  '+C.gray+(i+1)+'. '+t.description.substring(0,80)+C.rst));
+  sep();
+  // Render dot strip
+  const bar = document.getElementById('goal-bar');
+  const stepsEl = document.getElementById('goal-steps');
+  document.getElementById('goal-title').textContent = d.goal.substring(0,60);
+  document.getElementById('goal-progress').textContent = '0/'+n;
+  stepsEl.innerHTML = Array(n).fill(0).map((_,i)=>
+    `<div class="goal-step-dot" id="gdot-${i}"></div>`).join('');
+  S.goalDots = n;
+  bar.classList.add('show');
+}
+
+function onSubtaskStart(d) {
+  const i = (d.step||1)-1;
+  const dot = document.getElementById('gdot-'+i);
+  if(dot){ dot.className='goal-step-dot active'; }
+  document.getElementById('goal-progress').textContent = (d.step||1)+'/'+(d.total||S.goalDots);
+  pr(ts()+C.cyan+'  🎯 ['+(d.step||1)+'/'+(d.total||'?')+'] '+C.white+(d.description||'').substring(0,80)+C.rst);
+}
+
+function onSubtaskComplete(d) {
+  const i = (d.step||1)-1;
+  const dot = document.getElementById('gdot-'+i);
+  if(dot){ dot.className='goal-step-dot done'; }
+  pr(ts()+C.bgreen+'  ✓ Step '+(d.step||'?')+' complete'+C.rst+
+     (d.result?C.gray+' — '+(d.result||'').substring(0,60)+C.rst:''));
+}
+
+function onSubtaskFailed(d) {
+  const dots = document.getElementById('goal-steps');
+  if(dots){
+    const active = dots.querySelector('.goal-step-dot.active');
+    if(active) active.className='goal-step-dot failed';
+  }
+  pr(ts()+C.bred+'  ✖ Step failed: '+(d.error||'').substring(0,80)+C.rst);
+}
+
+function onGoalComplete(d) {
+  document.getElementById('goal-bar').classList.remove('show');
+  S.currentGoal = null; S.running = false; setSendRunning(false);
+  const ok = d.steps_completed||0, tot = d.steps_total||0;
+  pr(''); sep();
+  pr(C.bold+C.bblue+'  🎯 Goal Complete'+C.rst+C.gray+'  '+ok+'/'+tot+' steps  '+
+     Math.round(d.elapsed||0)+'s'+C.rst);
+  toast('Goal complete — '+ok+'/'+tot+' steps', 'ok');
+  loadHistory(); loadMemory();
+}
+
+function onGoalError(d) {
+  document.getElementById('goal-bar').classList.remove('show');
+  S.currentGoal = null; S.running = false; setSendRunning(false);
+  pr(ts()+C.bred+'  ✖ Goal failed: '+(d.error||'').substring(0,100)+C.rst);
+  toast('Goal failed: '+(d.error||''), 'err', 5000);
+}
+
+function onGoalCancelled(d) {
+  document.getElementById('goal-bar').classList.remove('show');
+  S.currentGoal = null; S.running = false; setSendRunning(false);
+  pr(ts()+C.yellow+'  ⊘ Goal cancelled'+C.rst);
+}
+
+function cancelGoal() {
+  if(S.taskId) wsSend({type:'cancel',data:{task_id:S.taskId}});
+  document.getElementById('goal-bar').classList.remove('show');
+  S.running = false; setSendRunning(false);
+}
+
+// ── Memory event handlers ──────────────────────────────────────────────────────
+function onMemoryData(d) {
+  pr('');
+  pr(C.bold+C.bblue+'  🧠 Persistent Memory'+C.rst+C.gray+'  '+d.task_count+' tasks stored'+C.rst); sep(40);
+  (d.recent_tasks||[]).slice(0,8).forEach(t=>{
+    const ts2 = new Date(t.created_at*1000).toLocaleDateString();
+    const oc = t.outcome==='completed'?C.bgreen:C.bred;
+    pr('  '+oc+(t.outcome==='completed'?'✓':'✖')+C.rst+' '+C.text+(t.command||'').substring(0,65)+
+       C.gray+'  '+ts2+C.rst);
+  });
+  pr('');
+  renderMemory(d);
+  switchPanel('memory');
+}
+
+async function loadMemory(){
+  try{
+    const r=await fetch('/api/memory?limit=20');
+    const d=await r.json();
+    renderMemory(d);
+    updateMemCounter(d.task_count||0);
+  }catch(_){}
+}
+
+function renderMemory(d){
+  const p=document.getElementById('panel-memory');
+  const tasks=d.recent_tasks||[];
+  const prefs=d.preferences||{};
+  const count=d.task_count||0;
+  let html=`<span class="mem-count-badge">🧠 ${count} memories stored</span>
+    <input class="mem-search" placeholder="Search memories…" oninput="searchMemory(this.value)">
+    <div id="mem-list">`;
+  if(!tasks.length){
+    html+='<div style="color:var(--muted);font-size:11px">No tasks remembered yet. Complete some tasks first.</div>';
+  } else {
+    tasks.forEach(t=>{
+      const dt=new Date(t.created_at*1000);
+      const dts=dt.toLocaleDateString()+' '+dt.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+      const oc=t.outcome==='completed'?'mem-completed':'mem-failed';
+      html+=`<div class="mem-item">
+        <div class="mem-cmd">${esc((t.command||'').substring(0,90))}</div>
+        <div class="mem-meta">
+          <span class="mem-outcome ${oc}">${esc(t.outcome||'?')}</span>
+          <span>${esc(t.intent_domain||'')} / ${esc(t.intent_verb||'')}</span>
+          <span>${t.steps_executed||0} steps</span>
+          <span style="margin-left:auto">${esc(dts)}</span>
+        </div>
+      </div>`;
+    });
+  }
+  html+='</div>';
+  if(Object.keys(prefs).length){
+    html+='<div class="mem-pref-section"><div style="font-size:10px;font-weight:700;color:var(--accent);margin-bottom:6px">User Preferences</div>';
+    for(const[k,v] of Object.entries(prefs).slice(0,10)){
+      html+=`<div class="mem-pref-item"><span class="mem-pref-key">${esc(k)}</span><span>${esc(String(v))}</span></div>`;
+    }
+    html+='</div>';
+  }
+  p.innerHTML=html;
+}
+
+async function searchMemory(q){
+  if(!q||q.length<2){ loadMemory(); return; }
+  try{
+    const r=await fetch('/api/memory/search?q='+encodeURIComponent(q)+'&top_k=10');
+    const d=await r.json();
+    const list=document.getElementById('mem-list');
+    if(!list) return;
+    if(!d.results||!d.results.length){list.innerHTML='<div style="color:var(--muted);font-size:11px">No matching memories.</div>';return;}
+    list.innerHTML=d.results.map(r=>`
+      <div class="mem-item">
+        <div class="mem-cmd">${esc(r.content.substring(0,90))}</div>
+        <div class="mem-meta"><span>score: ${r.score}</span><span>${esc(r.source)}</span></div>
+      </div>`).join('');
+  }catch(_){}
+}
+
+// ── Workflow event handlers ────────────────────────────────────────────────────
+function onWorkflowList(d) {
+  pr('');
+  pr(C.bold+C.bblue+'  ⚙ Workflows'+C.rst+C.gray+'  '+(d.workflows||[]).length+' saved'+C.rst); sep(30);
+  (d.workflows||[]).forEach(w=>{
+    const sched=w.trigger?.schedule||'manual';
+    pr('  '+C.bgreen+'•'+C.rst+' '+C.white+(w.name||'?')+C.rst+C.gray+'  '+sched+
+       '  '+(w.enabled?'enabled':'paused')+
+       (w.last_run?'  last: '+new Date(w.last_run*1000).toLocaleDateString():'')+C.rst);
+  });
+  if(!(d.workflows||[]).length) pr('  '+C.gray+'No workflows yet. Try: save this as a workflow called X'+C.rst);
+  pr('');
+  renderWorkflows(d.workflows||[]);
+  updateWfCounter((d.workflows||[]).length);
+  switchPanel('workflows');
+}
+
+function onWorkflowSaved(d) {
+  pr(ts()+C.bgreen+'⚙ Workflow "'+d.name+'" saved'+(d.schedule?' ('+d.schedule+')':' (manual)')+C.rst);
+  toast('Workflow "'+d.name+'" saved', 'ok');
+  loadWorkflows();
+}
+
+async function loadWorkflows(){
+  try{
+    const r=await fetch('/api/workflows');
+    const d=await r.json();
+    renderWorkflows(d.workflows||[]);
+    updateWfCounter((d.workflows||[]).length);
+  }catch(_){}
+}
+
+function renderWorkflows(wfs){
+  const p=document.getElementById('panel-workflows');
+  let html=`<div id="wf-new-form" style="display:none">
+    <div style="font-size:10px;color:var(--accent);margin-bottom:6px;font-weight:700">New Workflow</div>
+    <input id="wf-inp-name" placeholder="Workflow name (e.g. daily_check)">
+    <input id="wf-inp-cmd" placeholder="Command to run (e.g. git status in ~/myproject)">
+    <input id="wf-inp-schedule" placeholder="Schedule (e.g. every day at 9am) — leave blank for manual">
+    <div style="display:flex;gap:6px;margin-top:4px">
+      <button class="wf-btn" style="flex:1;padding:5px" onclick="createWorkflow()">✓ Create</button>
+      <button class="wf-btn" onclick="document.getElementById('wf-new-form').style.display='none'">✕</button>
+    </div>
+  </div>
+  <button class="wf-btn" style="width:100%;padding:6px;margin-bottom:8px" onclick="document.getElementById('wf-new-form').style.display=document.getElementById('wf-new-form').style.display==='none'?'block':'none'">+ New Workflow</button>`;
+  if(!wfs.length){
+    html+='<div id="wf-empty">No workflows yet.<br><br>Try:<br><code style="color:var(--accent);font-size:10px">save this as a workflow called daily_check every day at 9am</code></div>';
+  } else {
+    wfs.forEach(w=>{
+      const sched=w.trigger?.schedule||'manual';
+      const nextRun=w.next_run?new Date(w.next_run).toLocaleString():'—';
+      const lastRun=w.last_run?new Date(w.last_run*1000).toLocaleString():'Never';
+      html+=`<div class="wf-item">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="wf-status ${w.enabled?'enabled':'disabled'}"></div>
+          <div class="wf-name">${esc(w.name)}</div>
+          <span class="wf-trigger">${esc(sched)}</span>
+        </div>
+        <div class="wf-desc" title="${esc(w.description)}">${esc((w.description||'').substring(0,80))}</div>
+        <div class="wf-meta">
+          <span>runs: ${w.run_count||0}</span>
+          <span>last: ${esc(lastRun)}</span>
+          ${w.next_run?'<span>next: '+esc(nextRun)+'</span>':''}
+          ${w.last_outcome?'<span style="color:'+(w.last_outcome==='success'?'var(--accent2)':'var(--danger)')+'">'+esc(w.last_outcome)+'</span>':''}
+        </div>
+        <div class="wf-actions">
+          <button class="wf-btn" onclick="runWorkflow('${esc(w.name)}')">▶ Run now</button>
+          <button class="wf-btn" onclick="toggleWorkflow('${esc(w.name)}',${!w.enabled})">${w.enabled?'⏸ Pause':'▶ Enable'}</button>
+          <button class="wf-btn danger" onclick="deleteWorkflow('${esc(w.name)}')">✕ Delete</button>
+        </div>
+      </div>`;
+    });
+  }
+  p.innerHTML=html;
+}
+
+async function createWorkflow(){
+  const name=document.getElementById('wf-inp-name')?.value?.trim();
+  const cmd=document.getElementById('wf-inp-cmd')?.value?.trim();
+  const sched=document.getElementById('wf-inp-schedule')?.value?.trim();
+  if(!name||!cmd){ toast('Name and command are required','warn'); return; }
+  const fullCmd=sched?`save this as a workflow called ${name} — command: ${cmd} — ${sched}`
+                    :`save this as a workflow called ${name} — command: ${cmd}`;
+  wsSend({type:'command',data:{command:fullCmd}});
+  document.getElementById('wf-new-form').style.display='none';
+}
+
+function runWorkflow(name){
+  wsSend({type:'command',data:{command:'run workflow '+name}});
+  toast('Running workflow "'+name+'"','info');
+}
+
+async function toggleWorkflow(name,enabled){
+  try{
+    await fetch('/api/workflows/'+encodeURIComponent(name)+'/toggle',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({enabled})
+    });
+    toast('Workflow "'+name+'" '+(enabled?'enabled':'paused'),'ok');
+    loadWorkflows();
+  }catch(_){}
+}
+
+async function deleteWorkflow(name){
+  if(!confirm('Delete workflow "'+name+'"?')) return;
+  try{
+    await fetch('/api/workflows/'+encodeURIComponent(name),{method:'DELETE'});
+    toast('Workflow "'+name+'" deleted','ok');
+    loadWorkflows();
+  }catch(_){}
 }
 
 function onUndoResult(d) {
@@ -1168,6 +1541,80 @@ function switchPanel(name){
   if(name==='audit') loadAudit();
   if(name==='settings') loadSettings();
   if(name==='sysmon') loadSysmon();
+  if(name==='memory') loadMemory();
+  if(name==='workflows') loadWorkflows();
+}
+
+// ── Voice Interface (Web Speech API) ─────────────────────────────────────────
+function initVoice() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('mic-btn').title = 'Voice not supported in this browser (use Chrome/Edge)';
+    document.getElementById('mic-btn').style.opacity = '0.3';
+    return;
+  }
+  const rec = new SpeechRecognition();
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.lang = 'en-US';
+
+  rec.onstart = () => {
+    S.listening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    document.getElementById('cmd-input').placeholder = '🎙 Listening…';
+  };
+
+  rec.onresult = (e) => {
+    const transcript = Array.from(e.results)
+      .map(r => r[0].transcript).join('');
+    document.getElementById('cmd-input').value = transcript;
+    if (e.results[e.results.length - 1].isFinal) {
+      stopListening();
+      setTimeout(() => sendCommand(), 300);
+    }
+  };
+
+  rec.onerror = (e) => {
+    stopListening();
+    if (e.error !== 'aborted') toast('Voice error: ' + e.error, 'warn', 3000);
+  };
+
+  rec.onend = () => stopListening();
+  S.recognition = rec;
+}
+
+function toggleMic() {
+  if (!S.recognition) { toast('Voice not supported — use Chrome/Edge', 'warn'); return; }
+  if (S.listening) { stopListening(); }
+  else { startListening(); }
+}
+
+function startListening() {
+  if (!S.recognition || S.listening) return;
+  try { S.recognition.start(); }
+  catch(e) { console.warn('Recognition start error:', e); }
+}
+
+function stopListening() {
+  S.listening = false;
+  document.getElementById('mic-btn').classList.remove('listening');
+  document.getElementById('cmd-input').placeholder = 'Describe what you want to do… (try \'help\' or 🎙 for voice)';
+  try { if (S.recognition) S.recognition.stop(); } catch(e) {}
+}
+
+function toggleTTS() {
+  S.ttsEnabled = !S.ttsEnabled;
+  document.getElementById('tts-btn').classList.toggle('on', S.ttsEnabled);
+  toast(S.ttsEnabled ? 'Text-to-speech ON' : 'Text-to-speech OFF', 'info', 2000);
+}
+
+function ttsSpeak(text) {
+  if (!S.ttsEnabled || !window.speechSynthesis || !text) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text.substring(0, 400));
+  utt.rate = 1.05;
+  utt.pitch = 1.0;
+  window.speechSynthesis.speak(utt);
 }
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -1505,11 +1952,13 @@ async function testWA(){
 // ── Init ──────────────────────────────────────────────────────────────────────
 initTerm();
 connectWS();
+initVoice();
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); pr(''); }
   if((e.ctrlKey||e.metaKey)&&e.key==='/'){ e.preventDefault(); document.getElementById('cmd-input').focus(); }
+  if((e.ctrlKey||e.metaKey)&&e.key==='m'){ e.preventDefault(); toggleMic(); }
   if(e.key==='Escape'){
     const ov=document.getElementById('advisory-overlay');
     if(!ov.classList.contains('hidden')){ closeAdvisory(); return; }

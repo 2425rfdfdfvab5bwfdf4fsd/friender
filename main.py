@@ -1,9 +1,10 @@
-"""PACCA v5.2 — FastAPI web server with WebSocket terminal interface."""
+"""PACCA v6.0 — FastAPI web server with WebSocket terminal interface."""
 from __future__ import annotations
 import asyncio
 import json
 import os
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import hashlib
@@ -21,12 +22,25 @@ from pacca.ui.onboarding import (
 )
 from pacca.tools.registry import TOOL_REGISTRY, list_tools
 from pacca.models.audit_log import AuditLogger
-
-app = FastAPI(title="PACCA", version="5.2.0")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+from pacca.workflows.workflow_manager import WorkflowManager, parse_workflow_from_command
 
 _agent: PACCAAgent | None = None
 _config: PACCAConfig | None = None
+_workflow_manager: WorkflowManager | None = None
+
+
+@asynccontextmanager
+async def lifespan(app_: FastAPI):
+    global _workflow_manager
+    _workflow_manager = WorkflowManager()
+    _workflow_manager.start_scheduler()
+    yield
+    if _workflow_manager:
+        _workflow_manager.stop_scheduler()
+
+
+app = FastAPI(title="PACCA", version="6.0.0", lifespan=lifespan)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # WhatsApp inbound: maps sender E.164 number → pending confirmation info
 # {"task_id": str, "conf_id": str} — set while agent awaits YES/NO from that user
@@ -221,8 +235,10 @@ async def status():
     circuit = {}
     if agent.llm_client:
         circuit = agent.llm_client.circuit_status()
+    mem_count = agent.memory.task_count()
+    wf_count = len(_workflow_manager.list_workflows()) if _workflow_manager else 0
     return {
-        "version": "5.2.0",
+        "version": "6.0.0",
         "provider": cfg.provider,
         "model": cfg.model,
         "offline_mode": cfg.offline_mode,
@@ -234,6 +250,8 @@ async def status():
         "risk_proceed_threshold": cfg.risk_proceed_threshold,
         "whatsapp_configured": _wa_configured(),
         "whatsapp_allowed_count": len(_wa_allowed_numbers()),
+        "memory_task_count": mem_count,
+        "workflow_count": wf_count,
         "whatsapp_secrets": {
             "access_token": bool(os.environ.get("WHATSAPP_ACCESS_TOKEN")),
             "phone_number_id": bool(os.environ.get("WHATSAPP_PHONE_NUMBER_ID")),
@@ -242,6 +260,70 @@ async def status():
             "webhook_secret": bool(os.environ.get("WHATSAPP_WEBHOOK_SECRET")),
         },
     }
+
+
+@app.get("/api/memory")
+async def get_memory(limit: int = 20, domain: str | None = None):
+    agent = get_agent()
+    recent = agent.memory.recent_tasks(limit=limit, domain=domain)
+    prefs = agent.memory.get_all_preferences()
+    return {"recent_tasks": recent, "preferences": prefs,
+            "task_count": agent.memory.task_count()}
+
+
+@app.get("/api/memory/search")
+async def search_memory(q: str, top_k: int = 5):
+    agent = get_agent()
+    results = agent.memory.semantic_search(q, top_k=top_k)
+    return {"query": q, "results": results}
+
+
+@app.post("/api/memory/preference")
+async def set_preference(body: dict):
+    agent = get_agent()
+    key = body.get("key", "")
+    value = body.get("value")
+    if not key:
+        raise HTTPException(status_code=400, detail="key required")
+    agent.memory.set_preference(key, value)
+    return {"status": "ok", "key": key, "value": value}
+
+
+@app.get("/api/workflows")
+async def list_workflows():
+    if not _workflow_manager:
+        return {"workflows": []}
+    return {"workflows": _workflow_manager.list_workflows()}
+
+
+@app.post("/api/workflows")
+async def create_workflow(body: dict):
+    if not _workflow_manager:
+        raise HTTPException(status_code=503, detail="Workflow manager not ready")
+    command = body.get("command", "")
+    steps = body.get("steps", [])
+    wf = parse_workflow_from_command(command, steps_hint=steps)
+    if not wf:
+        raise HTTPException(status_code=400, detail="Could not parse workflow")
+    _workflow_manager.save_workflow(wf)
+    return {"status": "ok", "workflow": wf.to_dict()}
+
+
+@app.delete("/api/workflows/{name}")
+async def delete_workflow(name: str):
+    if not _workflow_manager:
+        raise HTTPException(status_code=503, detail="Workflow manager not ready")
+    deleted = _workflow_manager.delete_workflow(name)
+    return {"status": "ok" if deleted else "not_found", "name": name}
+
+
+@app.post("/api/workflows/{name}/toggle")
+async def toggle_workflow(name: str, body: dict):
+    if not _workflow_manager:
+        raise HTTPException(status_code=503, detail="Workflow manager not ready")
+    enabled = body.get("enabled", True)
+    ok = _workflow_manager.toggle_workflow(name, enabled)
+    return {"status": "ok" if ok else "not_found", "name": name, "enabled": enabled}
 
 
 @app.get("/api/whatsapp-test")
@@ -420,12 +502,14 @@ async def websocket_endpoint(ws: WebSocket):
         await outgoing.put({"type": type_, "data": data})
 
     await put("welcome", {
-        "version": "5.2.0",
+        "version": "6.0.0",
         "provider": agent.config.provider,
         "model": agent.config.model,
         "llm_available": (agent.llm_client.is_available() if agent.llm_client else False),
         "onboarding_complete": is_onboarding_complete(),
-        "message": "PACCA v5.2 ready. Type a command, ask any question, or type 'help' for usage.",
+        "memory_count": agent.memory.task_count(),
+        "workflow_count": len(_workflow_manager.list_workflows()) if _workflow_manager else 0,
+        "message": "PACCA v6.0 ready. Type a command, ask a question, or type 'help'.",
     })
 
     try:
@@ -468,6 +552,8 @@ async def websocket_endpoint(ws: WebSocket):
                         "offline_mode": agent.config.offline_mode,
                         "onboarding": is_onboarding_complete(),
                         "circuit_breaker": cb,
+                        "memory_count": agent.memory.task_count(),
+                        "workflow_count": len(_workflow_manager.list_workflows()) if _workflow_manager else 0,
                     })
                     continue
 
@@ -480,6 +566,62 @@ async def websocket_endpoint(ws: WebSocket):
                     hist = agent.task_history.get_recent(10)
                     await put("history", {"records": hist})
                     continue
+
+                if low in ("memory", "show memory", "recall"):
+                    recent = agent.memory.recent_tasks(limit=15)
+                    prefs = agent.memory.get_all_preferences()
+                    await put("memory_data", {
+                        "recent_tasks": recent,
+                        "preferences": prefs,
+                        "task_count": agent.memory.task_count(),
+                    })
+                    continue
+
+                if low.startswith("remember "):
+                    fact = command[9:].strip()
+                    agent.memory.store_knowledge(fact, source="user")
+                    await put("status", {"message": f"Stored in memory: {fact[:80]}"})
+                    continue
+
+                if low in ("workflows", "list workflows", "show workflows"):
+                    wfs = _workflow_manager.list_workflows() if _workflow_manager else []
+                    await put("workflow_list", {"workflows": wfs})
+                    continue
+
+                if _workflow_manager and _workflow_manager.is_workflow_command(command):
+                    sub = _workflow_manager.is_workflow_command(command)
+                    if sub == "list":
+                        wfs = _workflow_manager.list_workflows()
+                        await put("workflow_list", {"workflows": wfs})
+                        continue
+                    elif sub == "save":
+                        from pacca.workflows.workflow_manager import parse_workflow_from_command
+                        wf = parse_workflow_from_command(command)
+                        if wf:
+                            _workflow_manager.save_workflow(wf)
+                            await put("workflow_saved", {
+                                "name": wf.name,
+                                "trigger": wf.trigger.type,
+                                "schedule": wf.trigger.schedule,
+                            })
+                        else:
+                            await put("error", {"message": "Could not parse workflow from command."})
+                        continue
+                    elif sub == "delete":
+                        m = __import__("re").search(r'(?:delete|remove)\s+workflow\s+["\']?([a-zA-Z0-9_ ]+)["\']?', low)
+                        if m:
+                            name = m.group(1).strip()
+                            ok = _workflow_manager.delete_workflow(name)
+                            await put("status", {"message": f"Workflow '{name}' {'deleted' if ok else 'not found'}."})
+                        continue
+                    elif sub == "toggle":
+                        m = __import__("re").search(r'\b(enable|disable|pause)\b.{0,20}\bworkflow\b\s+["\']?([a-zA-Z0-9_ ]+)["\']?', low)
+                        if m:
+                            enabled = m.group(1) == "enable"
+                            name = m.group(2).strip()
+                            _workflow_manager.toggle_workflow(name, enabled)
+                            await put("status", {"message": f"Workflow '{name}' {'enabled' if enabled else 'disabled'}."})
+                        continue
 
                 if low in ("audit", "audit log"):
                     log_path = Path.home() / ".pacca" / "audit.log"
@@ -558,79 +700,88 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 HELP_TEXT = """
-PACCA v5.2 — Personal AI Computer-Control Agent + Expert Advisor
+PACCA v6.0 — Personal AI Computer-Control Agent
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEW IN v6.0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🧠 Persistent Memory  — PACCA remembers past tasks across sessions
+  🌐 Browser Automation — click, type, screenshot, fill forms (Playwright)
+  🎯 Autonomous Goals   — multi-step goal decomposition + retry loop
+  🎙 Voice Interface    — mic button for speech-to-text input + TTS output
+  ⚙  Workflow Automation — save, schedule, and run repeating workflows
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ADVISOR MODE  (questions, analysis, guidance)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Ask any question or request analysis — no special prefix needed.
-  PACCA automatically detects advisory intent and responds as a
-  Principal Software Architect / expert consultant.
-
-ADVISOR EXAMPLES:
   how do I design a rate limiter for a REST API?
-  what's the difference between Docker and Kubernetes?
-  explain OAuth2 vs API keys — pros, cons, and when to use each
-  how should I structure a Python monorepo?
+  explain OAuth2 vs API keys — pros, cons, when to use each
   why is my PostgreSQL query slow and how do I optimize it?
-  what's the best approach to implement retry logic with backoff?
-  help me debug this error: connection refused on port 5432
-  compare Redis vs Memcached for session storage
-  what are the OWASP top 10 vulnerabilities I should know?
-  write a plan to migrate a monolith to microservices
   ask: how do I implement JWT authentication securely?
 
-  Tip: Start with "ask:" or "?" to always force advisor mode.
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-ACTION MODE  (computer control — files, apps, system)
+ACTION MODE  (computer control — files, apps, browser)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   list my downloads folder
-  show system cpu and memory usage
   search for *.pdf files in ~/Documents
-  git status in /path/to/repo
   git add and commit with message "fix bug" in ~/myproject
-  create a file called notes.txt with content "hello world"
-  read the file README.md
-  find all python files in current directory
-  open url https://example.com
+  open url https://example.com and take a screenshot
+  click the button with selector #submit on current page
+  fill form with name="Alice", email="alice@example.com"
   search the web for latest Python news
-  zip ~/Documents/report.pdf ~/Desktop/archive.zip
-  unzip ~/Downloads/archive.zip to ~/Desktop/extracted
-  send whatsapp message to +14155551234 saying "hello from PACCA"
-  dry-run: delete all *.log files in /tmp
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+AUTONOMOUS GOALS  (multi-step — runs sub-tasks automatically)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  research Python async patterns and create a summary document
+  check git status and then commit any changed files
+  search the web for top 5 AI tools and save results to report.txt
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MEMORY COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  memory              Show recent task history from memory
+  remember <fact>     Store a fact in persistent memory
+  recall              Show memory panel (same as 'memory')
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WORKFLOW COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  workflows                          List all saved workflows
+  save this as a workflow called X   Save current plan as workflow X
+  create workflow "daily backup" every day at 9am
+  run workflow daily_backup
+  delete workflow daily_backup
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VOICE INTERFACE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Click the 🎙 mic button (or press Ctrl+M) to speak a command.
+  PACCA will read responses aloud (toggle TTS in the toolbar).
+  Requires a browser that supports Web Speech API (Chrome/Edge).
 
 SPECIAL COMMANDS:
-  help          Show this help
-  tools         List all available tools with risk levels
-  status        Show agent status (provider, model, circuit breaker)
-  history       Show recent task history
-  audit         Show recent audit log entries
-  undo          Undo the last reversible action
-  onboard       Show data disclosure notice
+  help        This help text
+  tools       List all available tools
+  status      Agent status + memory/workflow counts
+  history     Recent task history
+  memory      Recent episodic memory
+  workflows   Saved workflow list
+  audit       Recent audit log entries
+  undo        Undo the last reversible action
 
 PREFIXES:
-  dry-run: <command>   Preview action plan without executing any tools
-  ask: <question>      Force advisor mode for any input
-
-WHATSAPP:
-  PACCA can send WhatsApp messages AND receive commands from WhatsApp.
-  Required Replit Secrets:
-    WHATSAPP_ACCESS_TOKEN      — Meta Cloud API Bearer token
-    WHATSAPP_PHONE_NUMBER_ID   — Your sending phone number ID
-    WHATSAPP_VERIFY_TOKEN      — Self-chosen token for Meta webhook setup
-    WHATSAPP_ALLOWED_NUMBERS   — Comma-separated E.164 numbers allowed to send commands
-    WHATSAPP_WEBHOOK_SECRET    — (optional) Meta App Secret for payload signature verification
-  Webhook URL: <your-replit-url>/webhook/whatsapp
+  dry-run: <command>   Preview plan without executing
+  ask: <question>      Force advisor mode
 
 SECURITY:
-  • Destructive actions require explicit YES confirmation (two-step)
-  • Credential paths (.ssh, .aws, etc.) are always blocked
-  • Commands are locally redacted before any LLM call
+  • Destructive actions require explicit YES confirmation
+  • Credential paths (.ssh, .aws, etc.) always blocked
+  • Commands redacted locally before any LLM call
   • Every tool call requires a single-use cryptographic grant
-  • Audit log written to ~/.pacca/audit.log (owner-only)
+  • Audit log: ~/.pacca/audit.log (owner-only, 0600)
 
-DOMAINS:  file | app | system | browser | document | git | messaging | advisor
+DOMAINS: file | app | system | browser | document | git | messaging | advisor
 """
 
 
