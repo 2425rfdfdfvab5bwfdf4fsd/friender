@@ -28,6 +28,7 @@ from pacca.security.used_grant_registry import UsedGrantRegistry
 from pacca.task_history import TaskHistory
 from pacca.tools.registry import TOOL_REGISTRY, policy_version
 from pacca.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
+from pacca.advisor import AdvisoryIntentDetector
 from pacca.llm_client import LLMClient
 
 import pacca.tools.file_tools as file_tools
@@ -169,6 +170,7 @@ class PACCAAgent:
         self.undo_manager = UndoManager(max_depth=50)
         self.task_history = TaskHistory()
         self.heuristic_planner = HeuristicPlanner()
+        self.advisory_detector = AdvisoryIntentDetector()
 
         llm_client: LLMClient | None = None
         if not self.config.offline_mode:
@@ -240,6 +242,52 @@ class PACCAAgent:
                 "message": "🔍 Dry-run mode — plan will be shown but NOT executed",
                 "task_id": task_id,
             })
+
+        # ── Advisory path: questions / analysis / expert guidance ─────────────
+        if self.advisory_detector.is_advisory(raw_cmd):
+            if (self.llm_client is not None and self.llm_client.is_available()
+                    and not self.config.offline_mode):
+                yield AgentEvent("status", {
+                    "message": f"Thinking… ({self.config.provider} / {self.config.model})",
+                    "task_id": task_id,
+                })
+                try:
+                    response = await self.llm_client.advise(raw_cmd)
+                    yield AgentEvent("advisory", {
+                        "task_id": task_id,
+                        "question": raw_cmd,
+                        "response": response,
+                        "provider": self.config.provider,
+                        "model": self.config.model,
+                    })
+                    self.audit_logger.log_event(
+                        task_id=task_id, step_id="advisor",
+                        event_type="advisory_response",
+                        command_redacted=self.redactor.redact(raw_cmd).redacted[:200],
+                    )
+                    return
+                except Exception as e:
+                    yield AgentEvent("warning", {
+                        "message": f"Advisor unavailable ({e}) — trying as command",
+                        "task_id": task_id,
+                    })
+                    # Fall through to normal pipeline
+            else:
+                yield AgentEvent("advisory", {
+                    "task_id": task_id,
+                    "question": raw_cmd,
+                    "response": (
+                        "**Advisory mode requires an API key.**\n\n"
+                        "To enable full AI advisory responses:\n"
+                        "1. Go to Replit Secrets (🔒 in the left sidebar)\n"
+                        "2. Add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`\n"
+                        "3. Restart the app\n\n"
+                        "In demo mode, only computer-control actions (file, git, system, browser) work with the heuristic planner."
+                    ),
+                    "provider": "offline",
+                    "model": "demo",
+                })
+                return
 
         yield AgentEvent("status", {"message": "Parsing command...", "task_id": task_id})
 

@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
 <style>
 :root {
   --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --surface3:#21262d;
@@ -242,12 +243,71 @@ body.fullscreen #sidebar{display:none}
 body.fullscreen #quickbar{display:none}
 body.fullscreen #header .hdr-btn:not(#btn-fullscreen):not(#btn-toggle){display:none}
 body.fullscreen #sys-stats{display:none}
+
+/* ── Advisory overlay ───────────────────────────────────────────────────── */
+#advisory-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-start;justify-content:center;z-index:80;backdrop-filter:blur(3px);padding:16px;overflow-y:auto}
+#advisory-overlay.hidden{display:none}
+#advisory-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(860px,96vw);max-width:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow);margin:auto}
+#advisory-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0}
+#advisory-hdr-title{font-size:13px;font-weight:700;color:var(--accent);flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#advisory-hdr-meta{font-size:10px;color:var(--muted);white-space:nowrap}
+#advisory-close{background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 12px;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-size:12px;transition:all .15s;white-space:nowrap}
+#advisory-close:hover{color:var(--text);border-color:var(--accent)}
+#advisory-body{padding:20px 24px;overflow-y:auto;max-height:75vh;font-family:'Cascadia Code','Fira Code','Consolas',monospace;font-size:12.5px;line-height:1.7;color:var(--text2)}
+#advisory-body h1,#advisory-body h2,#advisory-body h3,#advisory-body h4{color:var(--text);margin:1.1em 0 .45em;line-height:1.3}
+#advisory-body h1{font-size:1.25em;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:.3em}
+#advisory-body h2{font-size:1.1em;color:var(--accent)}
+#advisory-body h3{font-size:1em;color:var(--bblue, #79c0ff)}
+#advisory-body p{margin:.6em 0}
+#advisory-body ul,#advisory-body ol{margin:.5em 0;padding-left:1.6em}
+#advisory-body li{margin:.25em 0}
+#advisory-body code{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 6px;font-size:.92em;color:#f0a050;font-family:inherit}
+#advisory-body pre{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin:.8em 0;overflow-x:auto}
+#advisory-body pre code{background:none;border:none;padding:0;color:var(--text2);font-size:.93em}
+#advisory-body strong{color:var(--text);font-weight:700}
+#advisory-body em{color:var(--accent2)}
+#advisory-body blockquote{border-left:3px solid var(--accent);padding:.4em 1em;margin:.6em 0;color:var(--muted);background:rgba(88,166,255,.04);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+#advisory-body hr{border:none;border-top:1px solid var(--border);margin:1em 0}
+#advisory-body table{border-collapse:collapse;width:100%;margin:.7em 0;font-size:.93em}
+#advisory-body th{background:var(--surface2);color:var(--text);padding:6px 10px;border:1px solid var(--border);text-align:left}
+#advisory-body td{padding:5px 10px;border:1px solid var(--border2);color:var(--text2)}
+#advisory-body a{color:var(--accent);text-decoration:none}
+#advisory-body a:hover{text-decoration:underline}
+#advisory-ftr{padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;flex-shrink:0;background:var(--surface2)}
+.adv-ftr-btn{font:11px/1 monospace;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s}
+.adv-ftr-btn:hover{color:var(--text);border-color:var(--accent);background:rgba(88,166,255,.07)}
+#advisory-thinking{text-align:center;padding:32px 24px;color:var(--muted);display:none}
+#advisory-thinking.show{display:block}
+.adv-spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
 <!-- Toast container -->
 <div id="toast-container"></div>
+
+<!-- Advisory response overlay -->
+<div id="advisory-overlay" class="hidden">
+  <div id="advisory-panel">
+    <div id="advisory-hdr">
+      <span style="font-size:16px">🧠</span>
+      <div id="advisory-hdr-title">Expert Advisor</div>
+      <div id="advisory-hdr-meta"></div>
+      <button id="advisory-close" onclick="closeAdvisory()">✕ Close  <kbd style="font-size:9px;opacity:.6">Esc</kbd></button>
+    </div>
+    <div id="advisory-body">
+      <div id="advisory-thinking"><div class="adv-spinner"></div><div>Thinking…</div></div>
+      <div id="advisory-content"></div>
+    </div>
+    <div id="advisory-ftr">
+      <button class="adv-ftr-btn" onclick="copyAdvisory()" title="Copy response to clipboard">📋 Copy</button>
+      <button class="adv-ftr-btn" onclick="document.getElementById('cmd-input').focus();closeAdvisory()" title="Ask a follow-up question">💬 Follow-up</button>
+      <div style="flex:1"></div>
+      <span id="advisory-ftr-meta" style="font-size:10px;color:var(--muted)"></span>
+    </div>
+  </div>
+</div>
 
 <!-- Onboarding modal -->
 <div id="modal-overlay" class="hidden">
@@ -307,12 +367,13 @@ body.fullscreen #sys-stats{display:none}
   <span id="quickbar-label">Quick:</span>
   <button class="qa-btn" onclick="qa('show system cpu and memory usage')"><span class="qa-icon">📊</span>System Stats</button>
   <button class="qa-btn" onclick="qa('list files in current directory')"><span class="qa-icon">📁</span>List Files</button>
-  <button class="qa-btn" onclick="qa('show running apps and processes')"><span class="qa-icon">⚙</span>Processes</button>
-  <button class="qa-btn" onclick="qa('search for recently modified files')"><span class="qa-icon">🔍</span>Recent Files</button>
-  <div class="qa-sep"></div>
   <button class="qa-btn" onclick="qa('git status in current directory')"><span class="qa-icon">🌿</span>Git Status</button>
   <button class="qa-btn" onclick="qa('search the web for latest AI news')"><span class="qa-icon">🌐</span>Web Search</button>
-  <button class="qa-btn" onclick="qa('dry-run: list all python files in current directory')"><span class="qa-icon">🐍</span>Find Python</button>
+  <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')" title="Ask advisor"><span class="qa-icon">🧠</span>Rate Limiter</button>
+  <button class="qa-btn" onclick="qa('explain the difference between Docker and Kubernetes')" title="Ask advisor"><span class="qa-icon">🧠</span>Docker vs K8s</button>
+  <button class="qa-btn" onclick="qa('what are the best practices for securing a REST API?')" title="Ask advisor"><span class="qa-icon">🧠</span>API Security</button>
+  <button class="qa-btn" onclick="qa('how should I implement retry logic with exponential backoff?')" title="Ask advisor"><span class="qa-icon">🧠</span>Retry Logic</button>
   <div class="qa-sep"></div>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
   <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
@@ -384,6 +445,7 @@ const S = {
 
 // ── Common commands for autocomplete ────────────────────────────────────────
 const SUGGESTIONS = [
+  // Action commands
   {icon:'📊', label:'show system cpu and memory usage', hint:'system'},
   {icon:'📁', label:'list files in current directory', hint:'file'},
   {icon:'🔍', label:'search for files named *.py', hint:'file'},
@@ -396,6 +458,22 @@ const SUGGESTIONS = [
   {icon:'🌐', label:'search the web for', hint:'browser'},
   {icon:'🌐', label:'open url https://example.com', hint:'browser'},
   {icon:'📦', label:'zip folder ~/Documents to ~/backup.zip', hint:'file'},
+  // Advisory / expert mode
+  {icon:'🧠', label:'how do I design a rate limiter for a REST API?', hint:'advisor'},
+  {icon:'🧠', label:'how do I implement JWT authentication securely?', hint:'advisor'},
+  {icon:'🧠', label:'explain the difference between Docker and Kubernetes', hint:'advisor'},
+  {icon:'🧠', label:'what are the best practices for securing a REST API?', hint:'advisor'},
+  {icon:'🧠', label:'how should I implement retry logic with exponential backoff?', hint:'advisor'},
+  {icon:'🧠', label:'compare Redis vs Memcached for session storage', hint:'advisor'},
+  {icon:'🧠', label:'what is the best database for a high-read low-write workload?', hint:'advisor'},
+  {icon:'🧠', label:'explain SOLID principles with examples', hint:'advisor'},
+  {icon:'🧠', label:'how should I structure a Python monorepo?', hint:'advisor'},
+  {icon:'🧠', label:'why is my PostgreSQL query slow? how do I optimize it?', hint:'advisor'},
+  {icon:'🧠', label:'how do I set up CI/CD for a Python FastAPI app?', hint:'advisor'},
+  {icon:'🧠', label:'what are the OWASP top 10 vulnerabilities?', hint:'advisor'},
+  {icon:'🧠', label:'help me debug: connection refused on port 5432', hint:'advisor'},
+  {icon:'🧠', label:'ask: ', hint:'force advisor mode'},
+  // Special
   {icon:'↩', label:'undo', hint:'special'},
   {icon:'❓', label:'help', hint:'special'},
   {icon:'📋', label:'history', hint:'special'},
@@ -475,7 +553,10 @@ function badge(text,cls) { const el=document.getElementById('provider-badge'); e
 function route(type,d) {
   switch(type) {
     case 'welcome':              onWelcome(d); break;
-    case 'status':               pr(ts()+C.gray+d.message+C.rst); break;
+    case 'status':
+      pr(ts()+C.gray+d.message+C.rst);
+      if((d.message||'').startsWith('Thinking')) showAdvisoryThinking();
+      break;
     case 'warning':              pr(ts()+C.yellow+'⚠ '+d.message+C.rst); break;
     case 'scope':                onScope(d); break;
     case 'plan':                 onPlan(d); break;
@@ -494,6 +575,7 @@ function route(type,d) {
     case 'undo_result':          onUndoResult(d); break;
     case 'history':              onHistoryTxt(d); break;
     case 'audit_log':            onAuditTxt(d); break;
+    case 'advisory':             onAdvisory(d); break;
     case 'disclosure':           showModal(d.text); break;
     case 'pong':                 break;
     default: break;
@@ -755,6 +837,83 @@ function onConfirmReq(d) {
   pr('');
   showConfirmBar(d.message||'Confirm to proceed', isHigh);
   toast('Action requires your confirmation', isHigh?'err':'warn', 0);
+}
+
+// ── Advisory ──────────────────────────────────────────────────────────────────
+let _lastAdvisoryText = '';
+
+function showAdvisoryThinking() {
+  document.getElementById('advisory-overlay').classList.remove('hidden');
+  document.getElementById('advisory-thinking').classList.add('show');
+  document.getElementById('advisory-content').innerHTML = '';
+  document.getElementById('advisory-hdr-title').textContent = 'Expert Advisor — Thinking…';
+  document.getElementById('advisory-hdr-meta').textContent = '';
+  document.getElementById('advisory-ftr-meta').textContent = '';
+}
+
+function onAdvisory(d) {
+  S.running = false; setSendRunning(false);
+  const question = d.question || '';
+  const response = d.response || '';
+  const provider = d.provider || '';
+  const model = d.model || '';
+  _lastAdvisoryText = response;
+
+  // Write brief note to terminal
+  pr('');
+  pr(C.bold + C.bblue + '  🧠 Expert Advisor' + C.rst + C.gray +
+    (provider && provider !== 'offline' ? '  via ' + provider + ' / ' + model : '') + C.rst);
+  pr('  ' + C.gray + question.substring(0, 80) + (question.length > 80 ? '…' : '') + C.rst);
+  pr('  ' + C.cyan + '→ Response ready — panel opening…' + C.rst);
+  pr('');
+
+  // Show in advisory overlay
+  const overlay = document.getElementById('advisory-overlay');
+  const thinking = document.getElementById('advisory-thinking');
+  const content = document.getElementById('advisory-content');
+  const title = document.getElementById('advisory-hdr-title');
+  const meta = document.getElementById('advisory-hdr-meta');
+  const ftrMeta = document.getElementById('advisory-ftr-meta');
+
+  thinking.classList.remove('show');
+  title.textContent = question.length > 70 ? question.substring(0, 70) + '…' : question;
+  if (provider && provider !== 'offline') {
+    meta.textContent = provider + ' / ' + model;
+  } else {
+    meta.textContent = '';
+  }
+  ftrMeta.textContent = response.length + ' chars';
+
+  // Render markdown
+  try {
+    if (typeof marked !== 'undefined') {
+      content.innerHTML = marked.parse(response);
+    } else {
+      // Fallback: plain text with basic code block handling
+      content.innerHTML = '<pre style="white-space:pre-wrap">' + esc(response) + '</pre>';
+    }
+  } catch (e) {
+    content.innerHTML = '<pre style="white-space:pre-wrap">' + esc(response) + '</pre>';
+  }
+
+  overlay.classList.remove('hidden');
+  toast('Advisory response ready', 'info', 2500);
+}
+
+function closeAdvisory() {
+  document.getElementById('advisory-overlay').classList.add('hidden');
+  document.getElementById('advisory-thinking').classList.remove('show');
+  document.getElementById('advisory-content').innerHTML = '';
+  document.getElementById('cmd-input').focus();
+}
+
+function copyAdvisory() {
+  if (!_lastAdvisoryText) return;
+  navigator.clipboard.writeText(_lastAdvisoryText).then(() => {
+    toast('Response copied to clipboard', 'ok', 2000);
+  }).catch(() => {
+    toast('Copy failed — try selecting manually', 'warn', 2500);
+  });
 }
 
 function onHelp(d) {
@@ -1351,7 +1510,15 @@ connectWS();
 document.addEventListener('keydown', e=>{
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); pr(''); }
   if((e.ctrlKey||e.metaKey)&&e.key==='/'){ e.preventDefault(); document.getElementById('cmd-input').focus(); }
-  if(e.key==='Escape'&&S.fullscreen){ toggleFullscreen(); }
+  if(e.key==='Escape'){
+    const ov=document.getElementById('advisory-overlay');
+    if(!ov.classList.contains('hidden')){ closeAdvisory(); return; }
+    if(S.fullscreen){ toggleFullscreen(); }
+  }
+});
+// Click outside advisory panel to close
+document.getElementById('advisory-overlay').addEventListener('click', e=>{
+  if(e.target===document.getElementById('advisory-overlay')) closeAdvisory();
 });
 </script>
 </body>

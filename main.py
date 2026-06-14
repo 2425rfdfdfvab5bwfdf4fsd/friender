@@ -425,7 +425,7 @@ async def websocket_endpoint(ws: WebSocket):
         "model": agent.config.model,
         "llm_available": (agent.llm_client.is_available() if agent.llm_client else False),
         "onboarding_complete": is_onboarding_complete(),
-        "message": "PACCA v5.2 ready. Type a command or 'help' for usage.",
+        "message": "PACCA v5.2 ready. Type a command, ask any question, or type 'help' for usage.",
     })
 
     try:
@@ -558,13 +558,33 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 HELP_TEXT = """
-PACCA v5.2 — Personal AI Computer-Control Agent
+PACCA v5.2 — Personal AI Computer-Control Agent + Expert Advisor
 
-USAGE:
-  Type a natural language command and press Enter.
-  Prefix with  dry-run:  to preview the plan without executing.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ADVISOR MODE  (questions, analysis, guidance)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  Ask any question or request analysis — no special prefix needed.
+  PACCA automatically detects advisory intent and responds as a
+  Principal Software Architect / expert consultant.
 
-EXAMPLES:
+ADVISOR EXAMPLES:
+  how do I design a rate limiter for a REST API?
+  what's the difference between Docker and Kubernetes?
+  explain OAuth2 vs API keys — pros, cons, and when to use each
+  how should I structure a Python monorepo?
+  why is my PostgreSQL query slow and how do I optimize it?
+  what's the best approach to implement retry logic with backoff?
+  help me debug this error: connection refused on port 5432
+  compare Redis vs Memcached for session storage
+  what are the OWASP top 10 vulnerabilities I should know?
+  write a plan to migrate a monolith to microservices
+  ask: how do I implement JWT authentication securely?
+
+  Tip: Start with "ask:" or "?" to always force advisor mode.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ACTION MODE  (computer control — files, apps, system)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   list my downloads folder
   show system cpu and memory usage
   search for *.pdf files in ~/Documents
@@ -578,10 +598,11 @@ EXAMPLES:
   zip ~/Documents/report.pdf ~/Desktop/archive.zip
   unzip ~/Downloads/archive.zip to ~/Desktop/extracted
   send whatsapp message to +14155551234 saying "hello from PACCA"
+  dry-run: delete all *.log files in /tmp
 
 SPECIAL COMMANDS:
   help          Show this help
-  tools         List all 28 available tools with risk levels
+  tools         List all available tools with risk levels
   status        Show agent status (provider, model, circuit breaker)
   history       Show recent task history
   audit         Show recent audit log entries
@@ -589,7 +610,8 @@ SPECIAL COMMANDS:
   onboard       Show data disclosure notice
 
 PREFIXES:
-  dry-run: <command>   Preview plan without executing any tools
+  dry-run: <command>   Preview action plan without executing any tools
+  ask: <question>      Force advisor mode for any input
 
 WHATSAPP:
   PACCA can send WhatsApp messages AND receive commands from WhatsApp.
@@ -608,7 +630,7 @@ SECURITY:
   • Every tool call requires a single-use cryptographic grant
   • Audit log written to ~/.pacca/audit.log (owner-only)
 
-DOMAINS:  file | app | system | browser | document | git | messaging
+DOMAINS:  file | app | system | browser | document | git | messaging | advisor
 """
 
 
