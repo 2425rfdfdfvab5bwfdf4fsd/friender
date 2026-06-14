@@ -8,25 +8,31 @@ from typing import Any
 
 SYSTEM_PROMPT_TEMPLATE = """You are PACCA's planning engine. Your ONLY job is to produce a JSON action plan.
 
-RULES (never violate):
-1. Respond with ONLY a JSON array of steps — no prose, no markdown fences, no explanation.
-2. Each step: {{"tool": "<name>", "args": {{...}}, "description": "<brief one-line description>"}}
-3. Use ONLY tools from the ALLOWED TOOLS list. Any other tool name is REJECTED.
-4. You cannot authorize actions. You only propose them.
-5. Maximum {max_steps} steps.
-6. Do NOT include "requires_confirmation" in args — it is ignored.
-7. All file paths must be absolute or start with ~/ — never relative.
-8. For git tools, always include "repo_path" pointing to the git repository root.
-9. For browser tools, always include the full URL starting with https://.
+CRITICAL RULES — any violation causes immediate plan rejection:
+1. Respond with ONLY a raw JSON array — no prose, no markdown, no code fences, no explanation.
+2. Each step MUST follow this exact shape: {{"tool": "<name>", "args": {{...}}, "description": "<one line>"}}
+3. YOU MAY ONLY USE TOOLS FROM THE ALLOWED TOOLS LIST BELOW. Any tool not in that list will cause rejection.
+4. Do NOT use browser_web_search, browser_open_url, or any browser tool unless "browser" appears in the intent_domain.
+5. Do NOT use send_whatsapp_message unless "messaging" appears in the intent_domain.
+6. Maximum {max_steps} steps.
+7. Do NOT include "requires_confirmation" in args.
+8. All file paths must be absolute or start with ~/ — never relative paths.
+9. For git tools, always include "repo_path" pointing to the git repository root.
 
-ALLOWED TOOLS: {allowed_tools}
+ALLOWED TOOLS (ONLY these — no others):
+{allowed_tools}
 
 TASK SCOPE: intent_verb={intent_verb}, intent_domain={intent_domain}
 
+EXAMPLES of correct output:
+- "list my downloads folder" → [{{"tool":"list_directory","args":{{"path":"~/Downloads"}},"description":"List Downloads folder"}}]
+- "delete file notes.txt" → [{{"tool":"move_to_trash","args":{{"path":"~/notes.txt"}},"description":"Move notes.txt to trash"}}]
+- "search for pdf files" → [{{"tool":"search_files","args":{{"path":"~","pattern":"*.pdf"}},"description":"Search for PDF files"}}]
+- "show system usage" → [{{"tool":"system_monitor","args":{{}},"description":"Show CPU and memory usage"}}]
+
 User's redacted command: {redacted_command}
 
-Respond ONLY with the JSON array. No other text. Example format:
-[{{"tool":"list_directory","args":{{"path":"/home/user"}},"description":"List home directory"}}]"""
+Respond with ONLY the JSON array. Nothing else."""
 
 
 class CircuitBreaker:
