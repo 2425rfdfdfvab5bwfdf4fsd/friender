@@ -97,7 +97,9 @@ class PlanValidator:
 
         path_arg_names = {"path", "source", "destination", "src", "dst",
                           "file_path", "dir_path", "archive_path",
-                          "target_path", "repo_path"}
+                          "target_path", "repo_path", "output_path"}
+
+        list_path_arg_names = {"source_paths", "paths"}
 
         for key, value in args.items():
             if key in path_arg_names and isinstance(value, str):
@@ -111,6 +113,23 @@ class PlanValidator:
                     )
                 resolved_resources.append(resource)
                 validated_args[f"_resolved_{key}"] = resource.capability_token
+
+            elif key in list_path_arg_names and isinstance(value, list):
+                tokens = []
+                for i, p in enumerate(value):
+                    if not isinstance(p, str):
+                        continue
+                    resource = self.resolver.resolve(
+                        p, task_scope, PathExpectation.MAY_EXIST
+                    )
+                    if not resource.is_safe():
+                        raise PlanValidationError(
+                            f"Step {step_idx}: path '{p}' in '{key}[{i}]' blocked — "
+                            f"{resource.blocked_reason}"
+                        )
+                    resolved_resources.append(resource)
+                    tokens.append(resource.capability_token)
+                validated_args[f"_resolved_{key}"] = tokens
 
         return validated_args, resolved_resources
 

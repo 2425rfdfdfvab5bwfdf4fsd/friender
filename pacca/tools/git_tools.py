@@ -113,7 +113,12 @@ def git_add(repo_path: str, paths: list[str] | None = None,
 
         secrets = checker.scan_staged_diff_for_secrets(root)
         if secrets:
-            run_git("reset", "HEAD", repo_path=root)
+            try:
+                import subprocess as _sp
+                _sp.run(["git", "-C", root, "reset", "HEAD"],
+                        capture_output=True, timeout=30)
+            except Exception:
+                pass
             return {
                 "error": "Secret detected in staged files — git add reversed",
                 "blocked": True,

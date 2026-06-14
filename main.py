@@ -350,7 +350,7 @@ EXAMPLES:
 
 SPECIAL COMMANDS:
   help          Show this help
-  tools         List all 26 available tools with risk levels
+  tools         List all 27 available tools with risk levels
   status        Show agent status (provider, model, circuit breaker)
   history       Show recent task history
   audit         Show recent audit log entries

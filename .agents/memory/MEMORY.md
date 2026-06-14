@@ -1,1 +1,2 @@
-- [PACCA architecture](pacca-architecture.md) — full PRD v5.2 implementation; FastAPI+WebSocket terminal UI; 25 tools; security pipeline in pacca/ package
+- [PACCA architecture](pacca-architecture.md) — full PRD v5.2 implementation; FastAPI+WebSocket terminal UI; 27 tools; security pipeline in pacca/ package
+- [PACCA known quirks](pacca-quirks.md) — git_add secret-reset bypass; PlanValidator list-path gaps; settings UI threshold values
