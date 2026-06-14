@@ -234,7 +234,58 @@ async def status():
         "risk_proceed_threshold": cfg.risk_proceed_threshold,
         "whatsapp_configured": _wa_configured(),
         "whatsapp_allowed_count": len(_wa_allowed_numbers()),
+        "whatsapp_secrets": {
+            "access_token": bool(os.environ.get("WHATSAPP_ACCESS_TOKEN")),
+            "phone_number_id": bool(os.environ.get("WHATSAPP_PHONE_NUMBER_ID")),
+            "verify_token": bool(os.environ.get("WHATSAPP_VERIFY_TOKEN")),
+            "allowed_numbers": bool(os.environ.get("WHATSAPP_ALLOWED_NUMBERS")),
+            "webhook_secret": bool(os.environ.get("WHATSAPP_WEBHOOK_SECRET")),
+        },
     }
+
+
+@app.get("/api/whatsapp-test")
+async def whatsapp_test():
+    """Test the WhatsApp API connection using the configured credentials."""
+    from pacca.tools.whatsapp_tools import wa_token, wa_phone_id, wa_is_configured, WA_API_BASE
+    if not wa_is_configured():
+        return {
+            "ok": False,
+            "error": "Not configured — set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in Replit Secrets",
+        }
+    try:
+        import httpx
+        token = wa_token()
+        phone_id = wa_phone_id()
+
+        def _call():
+            return httpx.get(
+                f"{WA_API_BASE}/{phone_id}",
+                params={"fields": "verified_name,display_phone_number,quality_rating"},
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=10.0,
+            )
+
+        resp = await asyncio.to_thread(_call)
+        if resp.status_code == 200:
+            data = resp.json()
+            return {
+                "ok": True,
+                "phone": data.get("display_phone_number", ""),
+                "name": data.get("verified_name", ""),
+                "quality": data.get("quality_rating", ""),
+                "phone_number_id": phone_id,
+            }
+        else:
+            return {
+                "ok": False,
+                "error": f"API returned {resp.status_code}",
+                "detail": resp.text[:300],
+            }
+    except ImportError:
+        return {"ok": False, "error": "httpx not installed — run: pip install httpx"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/tools")

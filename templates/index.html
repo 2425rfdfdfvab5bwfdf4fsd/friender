@@ -107,6 +107,21 @@ select.setting-input option{background:var(--surface2)}
 .save-btn{width:100%;padding:7px;border-radius:4px;border:none;cursor:pointer;background:var(--accent);color:#0d1117;font-weight:700;font-family:inherit;font-size:12px;margin-top:4px}
 .save-btn:hover{opacity:.85}
 .setting-sep{border:none;border-top:1px solid var(--border);margin:12px 0}
+.wa-section-title{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#25D366;margin-bottom:8px}
+.wa-check{display:flex;align-items:center;gap:7px;font-size:10px;padding:4px 7px;border-radius:4px;margin-bottom:3px}
+.wa-check.set{color:#25D366;background:#071a0a;border:1px solid #1a3a1a}
+.wa-check.unset{color:var(--warn);background:#1e1800;border:1px solid #3d2e00}
+.wa-step{display:flex;gap:8px;padding:3px 0;font-size:10px;color:var(--muted);line-height:1.5}
+.wa-step-num{color:#25D366;font-weight:700;flex-shrink:0;width:14px;text-align:right}
+.wa-step a{color:var(--accent);text-decoration:none}
+.wa-step a:hover{text-decoration:underline}
+.wa-test-btn{width:100%;padding:7px;border-radius:4px;border:1px solid #25D366;cursor:pointer;background:transparent;color:#25D366;font-weight:700;font-family:inherit;font-size:12px;margin-top:4px;transition:background .15s}
+.wa-test-btn:hover{background:#071a0a}
+#wa-test-result{font-size:10px;margin-top:6px;padding:5px 8px;border-radius:4px;display:none}
+#wa-test-result.ok{display:block;color:#25D366;background:#071a0a;border:1px solid #1a3a1a}
+#wa-test-result.err{display:block;color:var(--danger);background:#1a0505;border:1px solid #3a0a0a}
+.wa-webhook-box{font-size:10px;padding:6px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;word-break:break-all;color:var(--text);cursor:pointer;margin-top:4px}
+.wa-webhook-box:hover{border-color:var(--accent)}
 
 /* History panel */
 .hist-item{padding:8px 0;border-bottom:1px solid var(--border)}
@@ -809,6 +824,54 @@ ${ok
     </div>
     <hr class="setting-sep">
     <button class="save-btn" style="background:var(--surface2);color:var(--muted);border:1px solid var(--border)" onclick="undoLast()">↩ Undo Last Action</button>
+    <hr class="setting-sep">
+    ${renderWASection(d)}
+  `;
+}
+
+function renderWASection(d) {
+  const s = d.whatsapp_secrets || {};
+  const configured = d.whatsapp_configured;
+  const webhookUrl = window.location.origin + '/webhook/whatsapp';
+
+  function chk(set, label) {
+    return `<div class="wa-check ${set?'set':'unset'}">${set?'✓':'✗'} ${label}</div>`;
+  }
+
+  return `
+    <div class="wa-section-title">WhatsApp Integration</div>
+    <div class="api-notice ${configured?'ok':''}">
+${configured
+  ? `✓ Connected — ${d.whatsapp_allowed_count||0} authorised number(s)`
+  : `○ Not configured — add the Replit Secrets below, then restart the app`
+}
+    </div>
+
+    <div style="margin-bottom:8px">
+      ${chk(s.access_token,    'WHATSAPP_ACCESS_TOKEN')}
+      ${chk(s.phone_number_id, 'WHATSAPP_PHONE_NUMBER_ID')}
+      ${chk(s.verify_token,    'WHATSAPP_VERIFY_TOKEN')}
+      ${chk(s.allowed_numbers, 'WHATSAPP_ALLOWED_NUMBERS')}
+      ${chk(s.webhook_secret,  'WHATSAPP_WEBHOOK_SECRET (optional)')}
+    </div>
+
+    <div class="setting-label" style="margin-bottom:6px">Setup steps</div>
+    <div style="margin-bottom:10px">
+      <div class="wa-step"><span class="wa-step-num">1</span><span>Open <a href="https://developers.facebook.com/apps/" target="_blank">Meta for Developers</a> → <b>Create app</b> → choose <b>Business</b> type.</span></div>
+      <div class="wa-step"><span class="wa-step-num">2</span><span>Inside your app → <b>Add product</b> → select <b>WhatsApp</b>.</span></div>
+      <div class="wa-step"><span class="wa-step-num">3</span><span>Go to <b>WhatsApp → API Setup</b>. Copy the <b>Temporary access token</b> → save as <code style="color:var(--accent)">WHATSAPP_ACCESS_TOKEN</code> in Replit Secrets 🔒.</span></div>
+      <div class="wa-step"><span class="wa-step-num">4</span><span>On the same page copy the <b>Phone number ID</b> → save as <code style="color:var(--accent)">WHATSAPP_PHONE_NUMBER_ID</code>.</span></div>
+      <div class="wa-step"><span class="wa-step-num">5</span><span>Invent any string (e.g. <code>pacca-42</code>) → save as <code style="color:var(--accent)">WHATSAPP_VERIFY_TOKEN</code>.</span></div>
+      <div class="wa-step"><span class="wa-step-num">6</span><span>Go to <b>WhatsApp → Configuration → Webhook</b> → paste the URL below and the same verify token, then subscribe to <b>messages</b>.</span></div>
+      <div class="wa-step"><span class="wa-step-num">7</span><span>Save your phone number(s) as <code style="color:var(--accent)">WHATSAPP_ALLOWED_NUMBERS</code> in E.164 without +, comma-separated (e.g. <code>14155551234</code>).</span></div>
+      <div class="wa-step"><span class="wa-step-num">8</span><span>Restart the app — badge turns green.</span></div>
+    </div>
+
+    <div class="setting-label">Webhook URL (click to copy)</div>
+    <div class="wa-webhook-box" onclick="copyWebhookUrl('${webhookUrl}')" title="Click to copy">${webhookUrl}</div>
+
+    <button class="wa-test-btn" onclick="testWA()">Test WhatsApp Connection</button>
+    <div id="wa-test-result"></div>
   `;
 }
 
@@ -826,6 +889,42 @@ async function saveSettings() {
   } catch(e) {
     pr(ts()+C.red+'✖ Save failed: '+e+C.rst);
   }
+}
+
+async function testWA() {
+  const el = document.getElementById('wa-test-result');
+  if (!el) return;
+  el.className = '';
+  el.style.display = 'block';
+  el.textContent = 'Testing connection…';
+  try {
+    const r = await fetch('/api/whatsapp-test');
+    const d = await r.json();
+    if (d.ok) {
+      el.className = 'ok';
+      el.textContent = '✓ Connected — ' + (d.phone||'') + (d.name?' ('+d.name+')':'') + (d.quality?' · quality: '+d.quality:'');
+    } else {
+      el.className = 'err';
+      el.textContent = '✗ ' + (d.error||'Unknown error') + (d.detail ? '\n'+d.detail : '');
+    }
+  } catch(e) {
+    el.className = 'err';
+    el.textContent = '✗ Request failed: ' + e;
+  }
+}
+
+function copyWebhookUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const boxes = document.querySelectorAll('.wa-webhook-box');
+    boxes.forEach(b => {
+      const orig = b.textContent;
+      b.textContent = '✓ Copied!';
+      b.style.color = '#25D366';
+      setTimeout(() => { b.textContent = orig; b.style.color = ''; }, 1500);
+    });
+  }).catch(() => {
+    prompt('Copy this URL:', url);
+  });
 }
 
 async function undoLast() {
