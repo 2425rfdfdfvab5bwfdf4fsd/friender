@@ -16,6 +16,7 @@ class PACCAConfig:
     model: str = "claude-opus-4-5"
     sanitizer_provider: str = "anthropic"
     sanitizer_model: str = "claude-haiku-4-5"
+    gemini_default_model: str = "gemini-2.0-flash"
     max_steps: int = 30
     risk_proceed_threshold: float = 30.0
     risk_confirm_threshold: float = 100.0

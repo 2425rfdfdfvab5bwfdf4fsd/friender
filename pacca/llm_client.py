@@ -88,6 +88,7 @@ class LLMClient:
         return {
             "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
             "openai": os.environ.get("OPENAI_API_KEY"),
+            "gemini": os.environ.get("GEMINI_API_KEY"),
         }.get(provider)
 
     def is_available(self) -> bool:
@@ -145,6 +146,8 @@ class LLMClient:
             return await self._call_anthropic(system, user, max_tokens)
         elif self.provider == "openai":
             return await self._call_openai(system, user, max_tokens)
+        elif self.provider == "gemini":
+            return await self._call_gemini(system, user, max_tokens)
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
@@ -164,6 +167,23 @@ class LLMClient:
     async def _call_openai(self, system: str, user: str, max_tokens: int) -> str:
         import openai
         client = openai.AsyncOpenAI(api_key=self.api_key)
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": user})
+        response = await client.chat.completions.create(
+            model=self.model,
+            messages=messages,
+            max_tokens=max_tokens,
+        )
+        return response.choices[0].message.content
+
+    async def _call_gemini(self, system: str, user: str, max_tokens: int) -> str:
+        import openai
+        client = openai.AsyncOpenAI(
+            api_key=self.api_key,
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+        )
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
