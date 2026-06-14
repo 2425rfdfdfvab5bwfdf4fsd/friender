@@ -18,7 +18,8 @@ class TaskScopeError(Exception):
 DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     "file": frozenset({
         "list_directory", "create_folder", "create_file", "read_file",
-        "move_file", "copy_file", "search_files", "unzip_archive", "move_to_trash",
+        "move_file", "copy_file", "search_files", "unzip_archive", "zip_files",
+        "move_to_trash",
     }),
     "app": frozenset({
         "open_known_app", "close_app", "list_running_apps",
@@ -65,7 +66,7 @@ def _sha256(data: str) -> str:
     return hashlib.sha256(data.encode("utf-8")).hexdigest()
 
 
-@dataclass(frozen=True)
+@dataclass
 class TaskScope:
     task_id: str
     raw_command: str
@@ -80,6 +81,7 @@ class TaskScope:
     created_at: float
     created_monotonic: float
     created_by: Literal["command_parser"] = "command_parser"
+    dry_run: bool = False
 
     @staticmethod
     def derive(task_id: str, command: str, redacted_command: str,

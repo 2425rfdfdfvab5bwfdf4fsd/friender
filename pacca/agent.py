@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import AsyncIterator, Callable, Any
 
 from pacca.config import PACCAConfig, get_grant_secret_key
+from pacca.heuristic_planner import HeuristicPlanner
 from pacca.models.audit_log import AuditLogger
 from pacca.models.provider_consent import ConsentStore
 from pacca.models.task_scope import TaskScope
@@ -24,7 +25,9 @@ from pacca.security.grant_verifier import GrantVerifier
 from pacca.security.local_text_redactor import LocalTextRedactor
 from pacca.security.safe_resource_resolver import SafeResourceResolver
 from pacca.security.used_grant_registry import UsedGrantRegistry
+from pacca.task_history import TaskHistory
 from pacca.tools.registry import TOOL_REGISTRY, policy_version
+from pacca.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
 from pacca.llm_client import LLMClient
 
 import pacca.tools.file_tools as file_tools
@@ -43,37 +46,78 @@ class AgentEvent:
 
 
 TOOL_DISPATCH: dict[str, Callable] = {
-    "list_directory": lambda args: file_tools.list_directory(**_file_args(args)),
-    "create_folder": lambda args: file_tools.create_folder(**_file_args(args)),
-    "create_file": lambda args: file_tools.create_file(**_file_args(args)),
-    "read_file": lambda args: file_tools.read_file(**_file_args(args)),
-    "move_file": lambda args: file_tools.move_file(**_file_args(args)),
-    "copy_file": lambda args: file_tools.copy_file(**_file_args(args)),
-    "search_files": lambda args: file_tools.search_files(**_file_args(args)),
-    "unzip_archive": lambda args: file_tools.unzip_archive(**_file_args(args)),
-    "move_to_trash": lambda args: file_tools.move_to_trash(**_file_args(args)),
-    "open_known_app": lambda args: app_tools.open_known_app(**_file_args(args)),
-    "close_app": lambda args: app_tools.close_app(**_file_args(args)),
+    "list_directory": lambda args: file_tools.list_directory(**_clean(args)),
+    "create_folder": lambda args: file_tools.create_folder(**_clean(args)),
+    "create_file": lambda args: file_tools.create_file(**_clean(args)),
+    "read_file": lambda args: file_tools.read_file(**_clean(args)),
+    "move_file": lambda args: file_tools.move_file(**_clean(args)),
+    "copy_file": lambda args: file_tools.copy_file(**_clean(args)),
+    "search_files": lambda args: file_tools.search_files(**_clean(args)),
+    "unzip_archive": lambda args: file_tools.unzip_archive(**_clean(args)),
+    "zip_files": lambda args: file_tools.zip_files(**_clean(args)),
+    "move_to_trash": lambda args: file_tools.move_to_trash(**_clean(args)),
+    "open_known_app": lambda args: app_tools.open_known_app(**_clean(args)),
+    "close_app": lambda args: app_tools.close_app(**_clean(args)),
     "list_running_apps": lambda args: app_tools.list_running_apps(),
-    "system_monitor": lambda args: system_tools.system_monitor(**_file_args(args)),
-    "browser_open_url": lambda args: browser_tools.browser_open_url(**_file_args(args)),
-    "browser_web_search": lambda args: browser_tools.browser_web_search(**_file_args(args)),
-    "browser_extract_page_text": lambda args: browser_tools.browser_extract_page_text(**_file_args(args)),
-    "browser_download_file": lambda args: browser_tools.browser_download_file(**_file_args(args)),
-    "browser_tab_management": lambda args: browser_tools.browser_tab_management(**_file_args(args)),
-    "create_docx": lambda args: document_tools.create_docx(**_file_args(args)),
-    "read_docx": lambda args: document_tools.read_docx(**_file_args(args)),
-    "create_xlsx": lambda args: document_tools.create_xlsx(**_file_args(args)),
-    "read_xlsx": lambda args: document_tools.read_xlsx(**_file_args(args)),
-    "git_status": lambda args: git_tools.git_status(**_file_args(args)),
-    "git_diff": lambda args: git_tools.git_diff(**_file_args(args)),
-    "git_add": lambda args: git_tools.git_add(**_file_args(args)),
-    "git_commit": lambda args: git_tools.git_commit(**_file_args(args)),
+    "system_monitor": lambda args: system_tools.system_monitor(**_clean(args)),
+    "browser_open_url": lambda args: browser_tools.browser_open_url(**_clean(args)),
+    "browser_web_search": lambda args: browser_tools.browser_web_search(**_clean(args)),
+    "browser_extract_page_text": lambda args: browser_tools.browser_extract_page_text(**_clean(args)),
+    "browser_download_file": lambda args: browser_tools.browser_download_file(**_clean(args)),
+    "browser_tab_management": lambda args: browser_tools.browser_tab_management(**_clean(args)),
+    "create_docx": lambda args: document_tools.create_docx(**_clean(args)),
+    "read_docx": lambda args: document_tools.read_docx(**_clean(args)),
+    "create_xlsx": lambda args: document_tools.create_xlsx(**_clean(args)),
+    "read_xlsx": lambda args: document_tools.read_xlsx(**_clean(args)),
+    "git_status": lambda args: git_tools.git_status(**_clean(args)),
+    "git_diff": lambda args: git_tools.git_diff(**_clean(args)),
+    "git_add": lambda args: git_tools.git_add(**_clean(args)),
+    "git_commit": lambda args: git_tools.git_commit(**_clean(args)),
 }
 
+# Tools whose results can feed the undo manager
+_UNDO_BUILDERS: dict[str, Callable[[dict, dict], tuple[str, Callable] | None]] = {}
 
-def _file_args(args: dict) -> dict:
+
+def _clean(args: dict) -> dict:
     return {k: v for k, v in args.items() if not k.startswith("_resolved_")}
+
+
+def _try_register_undo(undo_mgr: UndoManager, task_id: str, step_id: str,
+                        tool_name: str, args: dict, result: dict) -> None:
+    """Attempt to register an undo action for a successful tool call."""
+    try:
+        if tool_name == "create_file" and not result.get("error"):
+            path = args.get("path", "")
+            if path:
+                undo_mgr.record(
+                    task_id=task_id, step_id=step_id, tool_name=tool_name,
+                    description=f"Created file: {path}",
+                    undo_fn=make_create_undo(path),
+                    undo_description=f"Delete {path}",
+                )
+        elif tool_name == "create_folder" and not result.get("error"):
+            path = args.get("path", "")
+            if path:
+                undo_mgr.record(
+                    task_id=task_id, step_id=step_id, tool_name=tool_name,
+                    description=f"Created folder: {path}",
+                    undo_fn=make_create_folder_undo(path),
+                    undo_description=f"Remove folder {path}",
+                )
+        elif tool_name == "move_file" and not result.get("error"):
+            src = args.get("source", "")
+            dst = args.get("destination", "")
+            final = result.get("destination", dst)
+            if src and final:
+                undo_mgr.record(
+                    task_id=task_id, step_id=step_id, tool_name=tool_name,
+                    description=f"Moved {src} → {final}",
+                    undo_fn=make_move_undo(src_final=final, src_original=src),
+                    undo_description=f"Move back to {src}",
+                )
+    except Exception:
+        pass
 
 
 class PACCAAgent:
@@ -120,6 +164,9 @@ class PACCAAgent:
         self.state_machine = TaskStateMachine(
             on_transition=self._on_state_transition,
         )
+        self.undo_manager = UndoManager(max_depth=50)
+        self.task_history = TaskHistory()
+        self.heuristic_planner = HeuristicPlanner()
 
         llm_client: LLMClient | None = None
         if not self.config.offline_mode:
@@ -138,9 +185,8 @@ class PACCAAgent:
             max_file_egress_bytes=self.config.max_file_egress_bytes,
         )
 
-        self._pending_confirmations: dict[str, asyncio.Future] = {}
-        self._event_queues: dict[str, asyncio.Queue] = {}
-        self._active_tasks: dict[str, str] = {}
+        # Confirmation gates: key = "task_id:confirmation_id" → asyncio.Queue(1)
+        self._confirmation_gates: dict[str, asyncio.Queue] = {}
 
     def _on_state_transition(self, task_id: str, old: TaskState, new: TaskState) -> None:
         self.audit_logger.log_event(
@@ -152,10 +198,9 @@ class PACCAAgent:
         )
 
     async def run_command(self, command: str,
-                           task_id: str | None = None) -> AsyncIterator[AgentEvent]:
+                          task_id: str | None = None) -> AsyncIterator[AgentEvent]:
         task_id = task_id or str(uuid.uuid4())
         queue: asyncio.Queue = asyncio.Queue()
-        self._event_queues[task_id] = queue
 
         async def _produce():
             try:
@@ -177,14 +222,27 @@ class PACCAAgent:
                 break
             yield event
 
-        if task_id in self._event_queues:
-            del self._event_queues[task_id]
-
     async def _execute_pipeline(self, command: str,
                                  task_id: str) -> AsyncIterator[AgentEvent]:
+        # Detect dry-run prefix
+        dry_run = False
+        raw_cmd = command.strip()
+        for prefix in ("dry-run:", "dry run:", "dryrun:", "--dry-run"):
+            if raw_cmd.lower().startswith(prefix):
+                dry_run = True
+                raw_cmd = raw_cmd[len(prefix):].strip()
+                break
+
+        if dry_run:
+            yield AgentEvent("status", {
+                "message": "🔍 Dry-run mode — plan will be shown but NOT executed",
+                "task_id": task_id,
+            })
+
         yield AgentEvent("status", {"message": "Parsing command...", "task_id": task_id})
 
-        scope = self.command_parser.parse(command, task_id=task_id)
+        scope = self.command_parser.parse(raw_cmd, task_id=task_id)
+        scope.dry_run = dry_run
 
         self.audit_logger.log_event(
             task_id=task_id, step_id="init",
@@ -198,23 +256,44 @@ class PACCAAgent:
             "intent_verb": scope.intent_verb,
             "intent_domain": scope.intent_domain,
             "allowed_tools": sorted(scope.allowed_tools),
+            "dry_run": dry_run,
         })
 
-        if self.config.offline_mode or not self.llm_client or not self.llm_client.is_available():
-            yield AgentEvent("status", {"message": "⚠ No LLM available — dry-run demo mode"})
-            plan = self._demo_plan(scope)
-        else:
+        use_llm = (
+            not self.config.offline_mode
+            and not dry_run
+            and self.llm_client is not None
+            and self.llm_client.is_available()
+        )
+
+        if use_llm:
             yield AgentEvent("status", {
                 "message": f"Planning with {self.config.provider} / {self.config.model}..."
             })
             try:
-                raw_plan = await self.llm_client.plan(scope)
-                plan = raw_plan
+                plan = await self.llm_client.plan(scope)
             except Exception as e:
-                yield AgentEvent("error", {"message": f"LLM planning failed: {e}"})
-                return
+                yield AgentEvent("warning", {
+                    "message": f"LLM unavailable ({e}) — falling back to heuristic planner"
+                })
+                plan = self.heuristic_planner.plan(scope)
+        else:
+            mode = "dry-run" if dry_run else "demo"
+            yield AgentEvent("status", {
+                "message": f"⚠ Using heuristic planner ({mode} mode)"
+            })
+            plan = self.heuristic_planner.plan(scope)
 
-        yield AgentEvent("status", {"message": f"Validating plan ({len(plan)} steps)..."})
+        if not plan:
+            yield AgentEvent("error", {
+                "message": "Planner produced an empty plan.",
+                "task_id": task_id,
+            })
+            return
+
+        yield AgentEvent("status", {
+            "message": f"Validating plan ({len(plan)} step{'s' if len(plan) != 1 else ''})..."
+        })
 
         try:
             validated = self.plan_validator.validate(plan, scope)
@@ -230,22 +309,48 @@ class PACCAAgent:
             return
 
         risk_score = self.risk_evaluator.evaluate(validated, TOOL_REGISTRY)
-        task = self.state_machine.create(task_id, total_steps=len(validated))
+        self.state_machine.create(task_id, total_steps=len(validated))
+
+        # Record in task history
+        hist_record = self.task_history.record_start(
+            task_id=task_id,
+            command_redacted=scope.redacted_command[:200],
+            intent_domain=scope.intent_domain,
+            intent_verb=scope.intent_verb,
+            steps_total=len(validated),
+            risk_score=risk_score.total,
+        )
 
         yield AgentEvent("plan", {
             "task_id": task_id,
+            "dry_run": dry_run,
             "steps": [{
                 "step_id": s["step_id"],
                 "tool": s["tool"],
                 "description": s.get("description", ""),
                 "args_preview": {k: str(v)[:80] for k, v in s["args"].items()
                                  if not k.startswith("_")},
+                "risk_level": (TOOL_REGISTRY[s["tool"]].risk_level.value
+                               if s["tool"] in TOOL_REGISTRY else "unknown"),
+                "reversible": (TOOL_REGISTRY[s["tool"]].reversible
+                               if s["tool"] in TOOL_REGISTRY else False),
             } for s in validated],
             "risk_score": risk_score.total,
             "risk_gate": risk_score.gate,
             "risk_breakdown": risk_score.breakdown,
         })
 
+        if dry_run:
+            yield AgentEvent("dry_run_complete", {
+                "task_id": task_id,
+                "message": "Dry-run complete — no tools were executed.",
+                "steps": len(validated),
+                "risk_score": risk_score.total,
+            })
+            self.task_history.update_status(task_id, "dry_run")
+            return
+
+        # Plan-level risk gate
         if risk_score.requires_yes or risk_score.requires_acknowledge:
             gate_msg = (
                 f"⚠ Risk score {risk_score.total:.0f} — "
@@ -253,6 +358,7 @@ class PACCAAgent:
             )
             yield AgentEvent("confirmation_required", {
                 "task_id": task_id,
+                "confirmation_id": "plan_risk",
                 "type": "plan_risk",
                 "message": gate_msg,
                 "requires_yes": risk_score.requires_yes,
@@ -261,6 +367,7 @@ class PACCAAgent:
             confirmed = await self._wait_for_confirmation(task_id, "plan_risk")
             if not confirmed:
                 self.state_machine.cancel(task_id)
+                self.task_history.update_status(task_id, "cancelled")
                 yield AgentEvent("cancelled", {"task_id": task_id, "reason": "User declined"})
                 return
 
@@ -270,18 +377,22 @@ class PACCAAgent:
         yield AgentEvent("executing", {"task_id": task_id})
 
         results = []
+        files_affected: list[str] = []
+
         for i, step in enumerate(validated):
             if self.state_machine.is_cancelled(task_id):
                 yield AgentEvent("cancelled", {"task_id": task_id})
-                return
+                break
 
             tool_name = step["tool"]
             meta = TOOL_REGISTRY.get(tool_name)
             step_id = step["step_id"]
 
+            # Step-level confirmation for HIGH-risk tools
             if meta and meta.requires_confirmation:
                 yield AgentEvent("confirmation_required", {
                     "task_id": task_id,
+                    "confirmation_id": step_id,
                     "step_id": step_id,
                     "type": "step_confirmation",
                     "tool": tool_name,
@@ -297,6 +408,8 @@ class PACCAAgent:
                 confirmed = await self._wait_for_confirmation(task_id, step_id)
                 if not confirmed:
                     self.state_machine.transition(task_id, TaskState.CANCELLED)
+                    self.task_history.update_status(task_id, "cancelled",
+                                                     steps_executed=len(results))
                     yield AgentEvent("cancelled", {
                         "task_id": task_id,
                         "reason": f"User declined step {step_id}",
@@ -317,7 +430,7 @@ class PACCAAgent:
                     task_id=task_id,
                     step_id=step_id,
                     tool_name=tool_name,
-                    args=_file_args(step["args"]),
+                    args=_clean(step["args"]),
                     resources=step.get("resolved_resources", []),
                     task_scope=scope,
                     confirmation_receipt_id=confirmation_receipt_id,
@@ -340,11 +453,23 @@ class PACCAAgent:
 
                 result = await self._execute_tool(tool_name, step["args"])
 
+                # Track undo
+                _try_register_undo(
+                    self.undo_manager, task_id, step_id, tool_name,
+                    _clean(step["args"]), result
+                )
+
+                # Track affected files
+                for field_name in ("path", "source", "destination", "archive_path"):
+                    val = step["args"].get(field_name, "")
+                    if val and isinstance(val, str):
+                        files_affected.append(val)
+
                 self.audit_logger.log_event(
                     task_id=task_id, step_id=step_id,
                     event_type="tool_executed",
                     tool_name=tool_name,
-                    sanitized_args=_file_args(step["args"]),
+                    sanitized_args=_clean(step["args"]),
                     result_summary=str(result)[:200],
                     grant_id=grant.grant_id,
                 )
@@ -369,10 +494,21 @@ class PACCAAgent:
                     event_type="tool_error", error=str(e),
                 )
 
-        self.state_machine.transition(task_id, TaskState.COMPLETED)
+        final_status = "completed" if not self.state_machine.is_cancelled(task_id) else "cancelled"
+        if not self.state_machine.is_cancelled(task_id):
+            self.state_machine.transition(task_id, TaskState.COMPLETED)
+
+        self.task_history.update_status(
+            task_id, final_status,
+            steps_executed=len(results),
+            files_affected=files_affected,
+        )
+
+        can_undo = self.undo_manager.can_undo()
         yield AgentEvent("completed", {
             "task_id": task_id,
             "steps_executed": len(results),
+            "can_undo": can_undo,
             "results_summary": [
                 {"step": r["step_id"], "tool": r["tool"],
                  "success": "error" not in r["result"]}
@@ -381,7 +517,7 @@ class PACCAAgent:
         })
 
     async def _execute_tool(self, tool_name: str, args: dict) -> dict:
-        clean_args = _file_args(args)
+        clean_args = _clean(args)
         handler = TOOL_DISPATCH.get(tool_name)
         if not handler:
             return {"error": f"No handler for tool: {tool_name}"}
@@ -391,63 +527,41 @@ class PACCAAgent:
         return result
 
     async def _wait_for_confirmation(self, task_id: str,
-                                      confirmation_id: str) -> bool:
+                                      confirmation_id: str,
+                                      timeout: float = 300.0) -> bool:
         key = f"{task_id}:{confirmation_id}"
-        future: asyncio.Future = asyncio.get_event_loop().create_future()
-        self._pending_confirmations[key] = future
+        gate: asyncio.Queue = asyncio.Queue(maxsize=1)
+        self._confirmation_gates[key] = gate
         try:
-            return await asyncio.wait_for(future, timeout=300.0)
+            return await asyncio.wait_for(gate.get(), timeout=timeout)
         except asyncio.TimeoutError:
             return False
         finally:
-            self._pending_confirmations.pop(key, None)
+            self._confirmation_gates.pop(key, None)
 
-    def confirm(self, task_id: str, confirmation_id: str,
-                response: str) -> bool:
+    def confirm(self, task_id: str, confirmation_id: str, response: str) -> bool:
         key = f"{task_id}:{confirmation_id}"
-        future = self._pending_confirmations.get(key)
-        if not future or future.done():
+        gate = self._confirmation_gates.get(key)
+        if gate is None:
             return False
-        accepted = response.strip().upper() in ("YES", "Y", "ENTER", "")
-        future.set_result(accepted)
-        return True
+        accepted = response.strip().upper() in ("YES", "Y", "OK", "ENTER", "")
+        try:
+            gate.put_nowait(accepted)
+            return True
+        except asyncio.QueueFull:
+            return False
 
     def cancel_task(self, task_id: str) -> None:
         self.state_machine.cancel(task_id)
-        for key, future in list(self._pending_confirmations.items()):
-            if key.startswith(f"{task_id}:") and not future.done():
-                future.set_result(False)
-
-    def _demo_plan(self, scope: TaskScope) -> list[dict]:
-        """Generate a demo plan when no LLM is available."""
-        domain = scope.intent_domain
-        verb = scope.intent_verb
-        command = scope.redacted_command.lower()
-
-        if domain == "system" or "monitor" in command or "cpu" in command:
-            return [{"tool": "system_monitor", "args": {},
-                     "description": "Show system resource usage"}]
-        if domain == "app" or "list" in command and "app" in command:
-            return [{"tool": "list_running_apps", "args": {},
-                     "description": "List running applications"}]
-        if "list" in verb or "ls" in command:
-            import os
-            path = os.path.expanduser("~")
-            return [{"tool": "list_directory", "args": {"path": path},
-                     "description": f"List home directory"}]
-        if domain == "git" or "git" in command:
-            import os
-            return [{"tool": "git_status", "args": {"repo_path": os.getcwd()},
-                     "description": "Check git status"}]
-        if "search" in verb:
-            import os
-            return [{"tool": "search_files",
-                     "args": {"path": os.path.expanduser("~"), "pattern": "*.txt"},
-                     "description": "Search for text files"}]
-        import os
-        return [{"tool": "list_directory",
-                 "args": {"path": os.getcwd()},
-                 "description": "List current directory"}]
+        # Release all pending confirmation gates for this task
+        for key in list(self._confirmation_gates.keys()):
+            if key.startswith(f"{task_id}:"):
+                gate = self._confirmation_gates.pop(key, None)
+                if gate:
+                    try:
+                        gate.put_nowait(False)
+                    except asyncio.QueueFull:
+                        pass
 
     def has_provider_consent(self, provider_id: str) -> bool:
         return self.consent_store.has_consent(provider_id)

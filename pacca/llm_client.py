@@ -1,27 +1,79 @@
-"""LLM client — wraps Anthropic/OpenAI with retry, fallback, and consent checking."""
+"""LLM client — wraps Anthropic/OpenAI with retry, circuit breaker, and consent checking."""
 from __future__ import annotations
 import asyncio
 import json
 import os
+import time
 from typing import Any
 
 SYSTEM_PROMPT_TEMPLATE = """You are PACCA's planning engine. Your ONLY job is to produce a JSON action plan.
 
 RULES (never violate):
-1. Respond with ONLY a JSON array of steps — no prose, no markdown.
-2. Each step: {{"tool": "<name>", "args": {{...}}, "description": "<brief>"}}
-3. Use ONLY tools from the allowed list below. Any other tool is REJECTED.
+1. Respond with ONLY a JSON array of steps — no prose, no markdown fences, no explanation.
+2. Each step: {{"tool": "<name>", "args": {{...}}, "description": "<brief one-line description>"}}
+3. Use ONLY tools from the ALLOWED TOOLS list. Any other tool name is REJECTED.
 4. You cannot authorize actions. You only propose them.
 5. Maximum {max_steps} steps.
-6. Do not include "requires_confirmation" — it is ignored.
+6. Do NOT include "requires_confirmation" in args — it is ignored.
+7. All file paths must be absolute or start with ~/ — never relative.
+8. For git tools, always include "repo_path" pointing to the git repository root.
+9. For browser tools, always include the full URL starting with https://.
 
 ALLOWED TOOLS: {allowed_tools}
 
-TASK SCOPE: intent={intent_verb}, domain={intent_domain}
+TASK SCOPE: intent_verb={intent_verb}, intent_domain={intent_domain}
 
-User command (redacted): {redacted_command}
+User's redacted command: {redacted_command}
 
-Respond with the JSON array only. No other text."""
+Respond ONLY with the JSON array. No other text. Example format:
+[{{"tool":"list_directory","args":{{"path":"/home/user"}},"description":"List home directory"}}]"""
+
+
+class CircuitBreaker:
+    """Prevents repeated calls to a failing provider."""
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+    def __init__(self, failure_threshold: int = 3, reset_timeout: float = 60.0):
+        self.state = self.CLOSED
+        self.failure_count = 0
+        self.failure_threshold = failure_threshold
+        self.reset_timeout = reset_timeout
+        self._last_failure: float = 0.0
+
+    def record_success(self) -> None:
+        self.state = self.CLOSED
+        self.failure_count = 0
+
+    def record_failure(self) -> None:
+        self.failure_count += 1
+        self._last_failure = time.monotonic()
+        if self.failure_count >= self.failure_threshold:
+            self.state = self.OPEN
+
+    def can_attempt(self) -> bool:
+        if self.state == self.CLOSED:
+            return True
+        if self.state == self.OPEN:
+            if time.monotonic() - self._last_failure > self.reset_timeout:
+                self.state = self.HALF_OPEN
+                return True
+            return False
+        return True  # HALF_OPEN — allow one probe
+
+    def is_tripped(self) -> bool:
+        return self.state == self.OPEN and (
+            time.monotonic() - self._last_failure <= self.reset_timeout
+        )
+
+    def status(self) -> dict:
+        return {
+            "state": self.state,
+            "failure_count": self.failure_count,
+            "reset_in": max(0, self.reset_timeout - (time.monotonic() - self._last_failure))
+            if self.state == self.OPEN else 0,
+        }
 
 
 class LLMClient:
@@ -30,17 +82,31 @@ class LLMClient:
         self.provider = provider
         self.model = model
         self.api_key = api_key or self._get_api_key(provider)
+        self._circuit_breaker = CircuitBreaker(failure_threshold=3, reset_timeout=60.0)
 
     def _get_api_key(self, provider: str) -> str | None:
-        keys = {
+        return {
             "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
             "openai": os.environ.get("OPENAI_API_KEY"),
-        }
-        return keys.get(provider)
+        }.get(provider)
+
+    def is_available(self) -> bool:
+        return bool(self.api_key) and not self._circuit_breaker.is_tripped()
+
+    def circuit_status(self) -> dict:
+        return self._circuit_breaker.status()
 
     async def plan(self, task_scope: Any, context: str = "",
                    retries: int = 3) -> list[dict]:
-        """Generate an action plan for the given task scope."""
+        if not self.api_key:
+            raise RuntimeError(f"No API key for provider '{self.provider}'")
+        if self._circuit_breaker.is_tripped():
+            status = self._circuit_breaker.status()
+            raise RuntimeError(
+                f"Circuit breaker OPEN for {self.provider} — "
+                f"{status['failure_count']} failures, resets in {status['reset_in']:.0f}s"
+            )
+
         system = SYSTEM_PROMPT_TEMPLATE.format(
             max_steps=task_scope.max_steps,
             allowed_tools=", ".join(sorted(task_scope.allowed_tools)),
@@ -50,28 +116,31 @@ class LLMClient:
         )
         prompt = task_scope.redacted_command
         if context:
-            prompt += f"\n\nContext:\n{context}"
+            prompt += f"\n\nAdditional context:\n{context}"
 
         last_error = None
         delay = 1.0
         for attempt in range(retries):
+            if not self._circuit_breaker.can_attempt():
+                raise RuntimeError(f"Circuit breaker OPEN — skipping attempt {attempt + 1}")
             try:
-                response = await self._call(system, prompt)
-                plan = self._parse_plan(response)
+                raw = await self._call(system, prompt)
+                plan = self._parse_plan(raw)
+                self._circuit_breaker.record_success()
                 return plan
             except Exception as e:
                 last_error = e
+                self._circuit_breaker.record_failure()
                 if attempt < retries - 1:
                     await asyncio.sleep(delay)
-                    delay *= 2
+                    delay = min(delay * 2, 30)
 
         raise RuntimeError(f"LLM planning failed after {retries} attempts: {last_error}")
 
     async def complete_text(self, prompt: str, max_tokens: int = 1000) -> str:
-        """Simple text completion for sanitizer use."""
         return await self._call("", prompt, max_tokens=max_tokens)
 
-    async def _call(self, system: str, user: str, max_tokens: int = 2000) -> str:
+    async def _call(self, system: str, user: str, max_tokens: int = 2048) -> str:
         if self.provider == "anthropic":
             return await self._call_anthropic(system, user, max_tokens)
         elif self.provider == "openai":
@@ -81,8 +150,6 @@ class LLMClient:
 
     async def _call_anthropic(self, system: str, user: str, max_tokens: int) -> str:
         import anthropic
-        if not self.api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY not set")
         client = anthropic.AsyncAnthropic(api_key=self.api_key)
         kwargs: dict[str, Any] = {
             "model": self.model,
@@ -96,8 +163,6 @@ class LLMClient:
 
     async def _call_openai(self, system: str, user: str, max_tokens: int) -> str:
         import openai
-        if not self.api_key:
-            raise RuntimeError("OPENAI_API_KEY not set")
         client = openai.AsyncOpenAI(api_key=self.api_key)
         messages = []
         if system:
@@ -115,17 +180,26 @@ class LLMClient:
         if text.startswith("```"):
             lines = text.split("\n")
             text = "\n".join(lines[1:])
-            if text.endswith("```"):
-                text = text[:-3].strip()
-        try:
-            plan = json.loads(text)
-            if isinstance(plan, list):
-                return plan
-            if isinstance(plan, dict) and "steps" in plan:
-                return plan["steps"]
-            raise ValueError("LLM response is not a list of steps")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"LLM returned invalid JSON: {e}\n\nRaw: {raw[:500]}")
+            if "```" in text:
+                text = text[:text.rfind("```")].strip()
+        for candidate in (text, raw.strip()):
+            try:
+                parsed = json.loads(candidate)
+                if isinstance(parsed, list):
+                    return parsed
+                if isinstance(parsed, dict) and "steps" in parsed:
+                    return parsed["steps"]
+            except json.JSONDecodeError:
+                pass
+        start = text.find("[")
+        end = text.rfind("]")
+        if start != -1 and end != -1:
+            try:
+                return json.loads(text[start:end + 1])
+            except json.JSONDecodeError:
+                pass
+        raise ValueError(f"LLM returned invalid plan JSON.\nRaw: {raw[:500]}")
 
-    def is_available(self) -> bool:
-        return bool(self.api_key)
+    def update_key(self, api_key: str) -> None:
+        self.api_key = api_key
+        self._circuit_breaker = CircuitBreaker()

@@ -298,3 +298,64 @@ def unzip_archive(archive_path: str, destination: str,
         }
     except Exception as e:
         return {"error": str(e)}
+
+
+def zip_files(source_paths: list[str], output_path: str,
+              dry_run: bool = False) -> dict:
+    """Create a ZIP archive from one or more files or directories."""
+    import zipfile
+    from pathlib import Path
+
+    sources = [Path(p) for p in source_paths]
+    missing = [str(s) for s in sources if not s.exists()]
+    if missing:
+        return {"error": f"Source(s) not found: {', '.join(missing)}"}
+
+    out = Path(output_path)
+    if out.exists():
+        return {"error": f"Output already exists: {output_path}. Delete it first."}
+    if not out.suffix:
+        out = out.with_suffix(".zip")
+
+    total_bytes = 0
+    entries: list[tuple[str, str]] = []
+    for src in sources:
+        if src.is_dir():
+            for f in src.rglob("*"):
+                if f.is_file():
+                    arcname = str(f.relative_to(src.parent))
+                    entries.append((str(f), arcname))
+                    total_bytes += f.stat().st_size
+        else:
+            entries.append((str(src), src.name))
+            total_bytes += src.stat().st_size
+
+    MAX_BYTES = 2 * 1024 * 1024 * 1024  # 2 GB
+    MAX_FILES = 10_000
+    if len(entries) > MAX_FILES:
+        return {"error": f"Too many files ({len(entries)} > {MAX_FILES})"}
+    if total_bytes > MAX_BYTES:
+        return {"error": f"Total size too large ({total_bytes} > {MAX_BYTES})"}
+
+    if dry_run:
+        return {
+            "dry_run": True,
+            "output": str(out),
+            "entry_count": len(entries),
+            "total_bytes": total_bytes,
+        }
+
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(str(out), "w", compression=zipfile.ZIP_DEFLATED) as zf:
+            for file_path, arcname in entries:
+                zf.write(file_path, arcname)
+        return {
+            "created": str(out),
+            "entry_count": len(entries),
+            "size_bytes": out.stat().st_size,
+        }
+    except Exception as e:
+        if out.exists():
+            out.unlink()
+        return {"error": str(e)}
