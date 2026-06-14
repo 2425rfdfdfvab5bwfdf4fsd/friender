@@ -310,6 +310,17 @@ async def get_disclosure():
     return {"text": DISCLOSURE_TEXT}
 
 
+@app.get("/api/sysmon")
+async def get_sysmon():
+    """Return live system stats for the dashboard panel."""
+    try:
+        from pacca.tools.system_tools import system_monitor
+        data = await asyncio.to_thread(system_monitor, include_processes=True, top_n_processes=10)
+        return data
+    except Exception as e:
+        return {"error": str(e)}
+
+
 @app.get("/api/task-history")
 async def get_task_history(n: int = 20):
     agent = get_agent()
