@@ -169,6 +169,7 @@ select.setting-input option{background:var(--surface2)}
       <select id="prov-sel">
         <option value="anthropic">Anthropic (Claude)</option>
         <option value="openai">OpenAI (GPT)</option>
+        <option value="gemini">Google (Gemini)</option>
       </select>
       <div class="spacer"></div>
       <button class="modal-btn" id="btn-decline">Decline</button>
@@ -798,6 +799,7 @@ ${ok
       <select class="setting-input" id="s-prov">
         <option value="anthropic" ${d.provider==='anthropic'?'selected':''}>Anthropic (Claude)</option>
         <option value="openai" ${d.provider==='openai'?'selected':''}>OpenAI (GPT)</option>
+        <option value="gemini" ${d.provider==='gemini'?'selected':''}>Google (Gemini)</option>
       </select>
     </div>
     <div class="setting-group">
@@ -874,6 +876,18 @@ ${configured
     <div id="wa-test-result"></div>
   `;
 }
+
+const PROVIDER_DEFAULTS = {
+  anthropic: 'claude-opus-4-5',
+  openai:    'gpt-4o',
+  gemini:    'gemini-2.0-flash',
+};
+document.addEventListener('change', e => {
+  if (e.target && e.target.id === 's-prov') {
+    const m = document.getElementById('s-model');
+    if (m) m.value = PROVIDER_DEFAULTS[e.target.value] || '';
+  }
+});
 
 async function saveSettings() {
   const body = {
