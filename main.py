@@ -6,8 +6,11 @@ import os
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+import hashlib
+import hmac
+
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -24,6 +27,10 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 _agent: PACCAAgent | None = None
 _config: PACCAConfig | None = None
+
+# WhatsApp inbound: maps sender E.164 number → pending confirmation info
+# {"task_id": str, "conf_id": str} — set while agent awaits YES/NO from that user
+_wa_pending: dict[str, dict] = {}
 
 
 def get_agent() -> PACCAAgent:
@@ -48,6 +55,165 @@ async def index():
         return f.read()
 
 
+def _wa_configured() -> bool:
+    return bool(
+        os.environ.get("WHATSAPP_ACCESS_TOKEN")
+        and os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    )
+
+
+def _wa_allowed_numbers() -> set[str]:
+    raw = os.environ.get("WHATSAPP_ALLOWED_NUMBERS", "")
+    return {n.strip().lstrip("+") for n in raw.split(",") if n.strip()}
+
+
+def _wa_is_allowed(phone: str) -> bool:
+    allowed = _wa_allowed_numbers()
+    if not allowed:
+        return False
+    return phone.lstrip("+") in allowed
+
+
+def _wa_verify_signature(body: bytes, signature: str) -> bool:
+    secret = os.environ.get("WHATSAPP_WEBHOOK_SECRET", "")
+    if not secret:
+        return True
+    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+    return hmac.compare_digest(signature, expected)
+
+
+async def _wa_send_reply(to: str, text: str) -> None:
+    """Send a WhatsApp reply (runs httpx in thread to avoid blocking the loop)."""
+    from pacca.tools.whatsapp_tools import send_whatsapp_message
+    await asyncio.to_thread(send_whatsapp_message, to=to, message=text)
+
+
+async def _run_wa_command(command: str, sender: str) -> None:
+    """Execute an agent command triggered by WhatsApp and send results back."""
+    agent = get_agent()
+    output_lines: list[str] = []
+
+    try:
+        async for event in agent.run_command(command):
+            etype = event.type
+            data = event.data
+
+            if etype == "error":
+                output_lines.append(f"❌ {data.get('message', 'Error')}")
+
+            elif etype == "plan":
+                steps = data.get("steps", [])
+                score = data.get("risk_score", 0)
+                output_lines.append(f"📋 Plan: {len(steps)} step(s), risk score {score:.0f}")
+
+            elif etype == "confirmation_required":
+                tid = data.get("task_id", "")
+                cid = data.get("confirmation_id", "")
+                msg = data.get("message", "Confirmation required")
+
+                await _wa_send_reply(
+                    sender,
+                    f"⚠️ PACCA needs your approval:\n{msg}\n\nReply *YES* to proceed or *NO* to cancel."
+                )
+                _wa_pending[sender] = {"task_id": tid, "conf_id": cid}
+
+            elif etype == "step_complete":
+                tool = data.get("tool", "")
+                result = data.get("result", {})
+                if "error" not in result:
+                    output_lines.append(f"✓ {tool}: done")
+                else:
+                    output_lines.append(f"✗ {tool}: {result['error'][:80]}")
+
+            elif etype == "step_error":
+                output_lines.append(f"⚠ Step error: {data.get('error', '')[:80]}")
+
+            elif etype == "completed":
+                steps = data.get("steps_executed", 0)
+                output_lines.append(f"✅ Done — {steps} step(s) executed.")
+
+            elif etype == "cancelled":
+                output_lines.append("🚫 Task cancelled.")
+
+            elif etype == "dry_run_complete":
+                steps = data.get("steps", 0)
+                score = data.get("risk_score", 0)
+                output_lines.append(f"🔍 Dry-run: {steps} step(s) planned, risk {score:.0f}.")
+
+    except Exception as e:
+        output_lines.append(f"❌ Internal error: {e}")
+    finally:
+        _wa_pending.pop(sender, None)
+
+    summary = "\n".join(output_lines) or "Task complete."
+    if len(summary) > 4000:
+        summary = summary[:3950] + "\n…(truncated)"
+    await _wa_send_reply(sender, summary)
+
+
+@app.get("/webhook/whatsapp")
+async def whatsapp_verify(request: Request):
+    """Meta webhook verification handshake."""
+    params = dict(request.query_params)
+    mode = params.get("hub.mode")
+    token = params.get("hub.verify_token")
+    challenge = params.get("hub.challenge")
+    expected = os.environ.get("WHATSAPP_VERIFY_TOKEN", "")
+    if mode == "subscribe" and token == expected and challenge and expected:
+        return PlainTextResponse(challenge)
+    raise HTTPException(status_code=403, detail="Webhook verification failed")
+
+
+@app.post("/webhook/whatsapp")
+async def whatsapp_receive(request: Request):
+    """Receive inbound WhatsApp messages and route to the agent."""
+    body_bytes = await request.body()
+    sig = request.headers.get("X-Hub-Signature-256", "")
+    if not _wa_verify_signature(body_bytes, sig):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        payload = json.loads(body_bytes)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    try:
+        entry = payload["entry"][0]
+        change = entry["changes"][0]
+        value = change["value"]
+        messages = value.get("messages", [])
+
+        for msg in messages:
+            sender: str = msg["from"]
+            msg_type: str = msg.get("type", "")
+
+            if msg_type != "text":
+                continue
+
+            text: str = msg["text"]["body"].strip()
+
+            if sender in _wa_pending:
+                pending = _wa_pending.pop(sender, None)
+                if pending:
+                    agent = get_agent()
+                    agent.confirm(pending["task_id"], pending["conf_id"], text)
+                continue
+
+            if not _wa_is_allowed(sender):
+                await _wa_send_reply(
+                    sender,
+                    "⛔ Unauthorized — your number is not in PACCA's allowed list."
+                )
+                continue
+
+            asyncio.create_task(_run_wa_command(text, sender))
+
+    except (KeyError, IndexError):
+        pass
+
+    return {"status": "ok"}
+
+
 @app.get("/api/status")
 async def status():
     agent = get_agent()
@@ -66,6 +232,8 @@ async def status():
         "circuit_breaker": circuit,
         "risk_confirm_threshold": cfg.risk_confirm_threshold,
         "risk_proceed_threshold": cfg.risk_proceed_threshold,
+        "whatsapp_configured": _wa_configured(),
+        "whatsapp_allowed_count": len(_wa_allowed_numbers()),
     }
 
 
@@ -347,10 +515,11 @@ EXAMPLES:
   search the web for latest Python news
   zip ~/Documents/report.pdf ~/Desktop/archive.zip
   unzip ~/Downloads/archive.zip to ~/Desktop/extracted
+  send whatsapp message to +14155551234 saying "hello from PACCA"
 
 SPECIAL COMMANDS:
   help          Show this help
-  tools         List all 27 available tools with risk levels
+  tools         List all 28 available tools with risk levels
   status        Show agent status (provider, model, circuit breaker)
   history       Show recent task history
   audit         Show recent audit log entries
@@ -360,6 +529,16 @@ SPECIAL COMMANDS:
 PREFIXES:
   dry-run: <command>   Preview plan without executing any tools
 
+WHATSAPP:
+  PACCA can send WhatsApp messages AND receive commands from WhatsApp.
+  Required Replit Secrets:
+    WHATSAPP_ACCESS_TOKEN      — Meta Cloud API Bearer token
+    WHATSAPP_PHONE_NUMBER_ID   — Your sending phone number ID
+    WHATSAPP_VERIFY_TOKEN      — Self-chosen token for Meta webhook setup
+    WHATSAPP_ALLOWED_NUMBERS   — Comma-separated E.164 numbers allowed to send commands
+    WHATSAPP_WEBHOOK_SECRET    — (optional) Meta App Secret for payload signature verification
+  Webhook URL: <your-replit-url>/webhook/whatsapp
+
 SECURITY:
   • Destructive actions require explicit YES confirmation (two-step)
   • Credential paths (.ssh, .aws, etc.) are always blocked
@@ -367,7 +546,7 @@ SECURITY:
   • Every tool call requires a single-use cryptographic grant
   • Audit log written to ~/.pacca/audit.log (owner-only)
 
-DOMAINS:  file | app | system | browser | document | git
+DOMAINS:  file | app | system | browser | document | git | messaging
 """
 
 

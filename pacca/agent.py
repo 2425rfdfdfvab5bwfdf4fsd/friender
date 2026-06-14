@@ -36,6 +36,7 @@ import pacca.tools.system_tools as system_tools
 import pacca.tools.browser_tools as browser_tools
 import pacca.tools.document_tools as document_tools
 import pacca.tools.git_tools as git_tools
+import pacca.tools.whatsapp_tools as whatsapp_tools
 
 
 @dataclass
@@ -73,6 +74,7 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "git_diff": lambda args: git_tools.git_diff(**_clean(args)),
     "git_add": lambda args: git_tools.git_add(**_clean(args)),
     "git_commit": lambda args: git_tools.git_commit(**_clean(args)),
+    "send_whatsapp_message": lambda args: whatsapp_tools.send_whatsapp_message(**_clean(args)),
 }
 
 # Tools whose results can feed the undo manager

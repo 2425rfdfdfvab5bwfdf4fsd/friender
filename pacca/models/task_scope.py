@@ -37,6 +37,9 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     "git": frozenset({
         "git_status", "git_diff", "git_add", "git_commit",
     }),
+    "messaging": frozenset({
+        "send_whatsapp_message",
+    }),
 }
 
 INTENT_VERB_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -50,6 +53,7 @@ INTENT_VERB_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(browse|navigate|visit|go to|open url|web|search web|google)\b', re.I), "browse"),
     (re.compile(r'\b(zip|unzip|extract|compress|archive)\b', re.I), "archive"),
     (re.compile(r'\b(monitor|cpu|ram|memory|disk|process|system)\b', re.I), "monitor"),
+    (re.compile(r'\b(send|message|notify|text|whatsapp)\b', re.I), "send"),
 ]
 
 DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -59,6 +63,7 @@ DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(app|application|program|launch|quit|close)\b', re.I), "app"),
     (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|uptime)\b', re.I), "system"),
     (re.compile(r'\b(file|folder|directory|path|\.pdf|\.txt|\.py|\.js|\.zip)\b', re.I), "file"),
+    (re.compile(r'\b(whatsapp|send message|notify|notification|text message)\b', re.I), "messaging"),
 ]
 
 
@@ -72,7 +77,7 @@ class TaskScope:
     raw_command: str
     redacted_command: str
     intent_verb: str
-    intent_domain: Literal["file", "app", "system", "browser", "document", "git", "mixed"]
+    intent_domain: Literal["file", "app", "system", "browser", "document", "git", "messaging", "mixed"]
     allowed_tools: frozenset
     allowed_path_prefixes: tuple
     allowed_url_patterns: tuple | None

@@ -25,6 +25,8 @@ body{background:var(--bg);color:var(--text);font-family:'Cascadia Code','Fira Co
 #status-dot.warn{background:var(--warn)}
 #provider-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--muted);white-space:nowrap;margin-left:4px}
 #provider-badge.live{color:var(--accent);border-color:var(--accent)}
+#wa-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:2px 7px;color:var(--muted);white-space:nowrap;margin-left:4px}
+#wa-badge.live{color:#25D366;border-color:#25D366}
 .spacer{flex:1}
 .hdr-btn{font:11px/1 monospace;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;transition:color .15s,border-color .15s}
 .hdr-btn:hover{color:var(--text);border-color:var(--accent)}
@@ -165,6 +167,7 @@ select.setting-input option{background:var(--surface2)}
   <div id="logo">PACCA v5.2 <span>Personal AI Computer-Control Agent</span></div>
   <div id="status-dot" title="Connecting…"></div>
   <div id="provider-badge">offline</div>
+  <div id="wa-badge" title="WhatsApp not configured">WhatsApp ✗</div>
   <div class="spacer"></div>
   <button class="hdr-btn" onclick="switchPanel('tools')">Tools ▸</button>
   <button class="hdr-btn" onclick="switchPanel('history')">History</button>
@@ -289,6 +292,18 @@ function badge(text, cls) {
   const el = document.getElementById('provider-badge');
   el.textContent = text;
   el.className   = cls;
+}
+function waBadge(configured) {
+  const el = document.getElementById('wa-badge');
+  if (configured) {
+    el.textContent = 'WhatsApp ✓';
+    el.className = 'live';
+    el.title = 'WhatsApp connected';
+  } else {
+    el.textContent = 'WhatsApp ✗';
+    el.className = '';
+    el.title = 'WhatsApp not configured — see help for setup';
+  }
 }
 
 // ── Event router ──────────────────────────────────────────────────────────────
@@ -839,6 +854,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Check if onboarding needed
   fetch('/api/status').then(r=>r.json()).then(d=>{
     if (!d.onboarding_complete) fetchAndShowModal();
+    waBadge(!!d.whatsapp_configured);
   }).catch(()=>{});
 });
 </script>

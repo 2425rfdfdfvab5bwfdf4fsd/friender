@@ -1,4 +1,4 @@
-"""Tool registry — all 25 v1.0 tools with full metadata."""
+"""Tool registry — 28 tools (27 v1.0 + send_whatsapp_message)."""
 from __future__ import annotations
 import hashlib
 import json
@@ -450,6 +450,23 @@ _REGISTRY_DATA = [
         requires_screenshot=False, can_indirectly_execute_code=True,
         code_execution_mitigations=["--no-verify mandatory; hook detection informational"],
         platforms=ALL_PLATFORMS, domain="git", batchable=False, idempotent=False,
+    ),
+    ToolMetadata(
+        name="send_whatsapp_message",
+        description="Send a WhatsApp text message via Meta Cloud API",
+        risk_level=RiskLevel.MEDIUM, reversible=False, reversible_notes=None,
+        requires_confirmation=True,
+        conditional_confirmation_rules=[
+            "Always: show recipient number and message preview before sending",
+        ],
+        data_egress=True, egress_type="outbound_api", network_behavior="outbound",
+        path_scope_required=False, max_files_without_confirmation=None,
+        max_total_bytes_without_confirmation=None, overwrite_policy="allow",
+        secret_scan_required=True, requires_diff_preview=False,
+        dry_run_supported=True, undo_supported=False, atomic=True,
+        requires_screenshot=False, can_indirectly_execute_code=False,
+        code_execution_mitigations=None, platforms=ALL_PLATFORMS,
+        domain="messaging", batchable=False, idempotent=False,
     ),
 ]
 
