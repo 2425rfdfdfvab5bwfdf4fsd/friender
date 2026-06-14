@@ -1,6 +1,8 @@
 modules = ["python-3.11"]
 [agent]
 expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+integrations = ["python_anthropic_ai_integrations:1.0.0"]
 
 [workflows]
 runButton = "Project"
@@ -29,3 +31,7 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[nix]
+channel = "stable-25_05"
+packages = ["cargo", "gitFull", "libiconv", "libxcrypt", "openssl", "pkg-config", "playwright-driver", "rustc"]
