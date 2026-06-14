@@ -68,21 +68,19 @@ class HeuristicPlanner:
         low = cmd.lower()
         domain = scope.intent_domain
 
-        if domain == "system" or any(w in low for w in ("cpu", "ram", "memory", "monitor", "uptime", "process")):
+        if domain == "system":
             return self._plan_system(low)
-
-        if domain == "app" or any(w in low for w in ("open app", "launch", "close app", "running app")):
+        if domain == "app":
             return self._plan_app(low, cmd)
-
-        if domain == "git" or any(w in low for w in ("git ", "commit", "git status", "git diff", "git add")):
+        if domain == "git":
             return self._plan_git(low, cmd)
-
-        if domain == "browser" or any(w in low for w in ("browse", "open url", "website", "search web", "google", "download")):
+        if domain == "browser":
             return self._plan_browser(low, cmd)
-
-        if domain == "document" or any(w in low for w in ("docx", "xlsx", "word", "excel", "spreadsheet")):
+        if domain == "document":
             return self._plan_document(low, cmd)
-
+        if domain == "messaging":
+            return self._plan_messaging(low, cmd)
+        # "file", "mixed", or unknown — use file planner
         return self._plan_file(low, cmd)
 
     def _plan_system(self, low: str) -> list[dict]:
@@ -248,6 +246,21 @@ class HeuristicPlanner:
                          "description": f"Copy {src} → {dst}"}]
 
         if "trash" in low or "delete" in low or "remove" in low:
+            # Try explicit paths first; then fall back to quoted names or bare tokens
+            if not paths:
+                quoted = QUOTE_RE.findall(cmd)
+                if quoted:
+                    paths = [os.path.join(_cwd(), q) for q in quoted]
+                else:
+                    # Extract a bare filename token after "delete"/"trash"/"remove"
+                    m = re.search(
+                        r'\b(?:delete|trash|remove)\s+(?:this\s+)?(?:file\s+)?([^\s]+)',
+                        cmd, re.I)
+                    if m:
+                        token = m.group(1)
+                        if not token.startswith(("~/", "/", ".")):
+                            token = os.path.join(_cwd(), token)
+                        paths = [os.path.expanduser(token)]
             if paths:
                 return [{"tool": "move_to_trash",
                          "args": {"paths": paths},
@@ -272,3 +285,10 @@ class HeuristicPlanner:
 
         return [{"tool": "list_directory", "args": {"path": _cwd()},
                  "description": "List current directory"}]
+
+    def _plan_messaging(self, low: str, cmd: str) -> list[dict]:
+        quotes = QUOTE_RE.findall(cmd)
+        msg = quotes[0] if quotes else cmd
+        return [{"tool": "send_whatsapp_message",
+                 "args": {"message": msg},
+                 "description": f"Send WhatsApp message: {msg[:40]}"}]

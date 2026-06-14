@@ -88,7 +88,7 @@ class LLMClient:
         self.provider = provider
         self.model = model
         self.api_key = api_key or self._get_api_key(provider)
-        self._circuit_breaker = CircuitBreaker(failure_threshold=3, reset_timeout=60.0)
+        self._circuit_breaker = CircuitBreaker(failure_threshold=5, reset_timeout=30.0)
 
     def _get_api_key(self, provider: str) -> str | None:
         return {
