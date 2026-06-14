@@ -1,0 +1,1 @@
+- [PACCA architecture](pacca-architecture.md) — full PRD v5.2 implementation; FastAPI+WebSocket terminal UI; 25 tools; security pipeline in pacca/ package
