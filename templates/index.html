@@ -361,7 +361,7 @@ function onWelcome(d) {
     pr('  '+C.green+'✓ Connected'+C.rst+C.gray+'  '+d.provider+' / '+C.white+d.model+C.rst);
   } else {
     pr('  '+C.yellow+'⚠ No API key — heuristic (demo) mode'+C.rst);
-    pr('  '+C.gray+'Add '+C.yellow+'ANTHROPIC_API_KEY'+C.gray+' or '+C.yellow+'OPENAI_API_KEY'+C.gray+' in Replit Secrets ⚙'+C.rst);
+    pr('  '+C.gray+'Add '+C.yellow+'ANTHROPIC_API_KEY'+C.gray+', '+C.yellow+'OPENAI_API_KEY'+C.gray+', or '+C.yellow+'GEMINI_API_KEY'+C.gray+' in Replit Secrets ⚙'+C.rst);
   }
   pr('  '+C.gray+'Type a command and press Enter  •  '+C.cyan+'help'+C.gray+' for usage guide'+C.rst);
   pr('');
@@ -789,7 +789,7 @@ function renderSettings(d) {
     <div class="api-notice ${ok?'ok':''}">
 ${ok
   ? '✓ LLM connected — '+esc(d.model)
-  : '⚠ No API key — heuristic demo mode.\nTo enable full LLM planning:\nAdd ANTHROPIC_API_KEY or OPENAI_API_KEY\nin Replit Secrets (🔒 left panel).'
+  : '⚠ No API key — heuristic demo mode.\nTo enable full LLM planning:\nAdd ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY\nin Replit Secrets (🔒 left panel).'
 }
     </div>
     ${cb.state==='open'?`<div class="api-notice">⚡ Circuit breaker OPEN — ${cb.failure_count} failures</div>`:''}

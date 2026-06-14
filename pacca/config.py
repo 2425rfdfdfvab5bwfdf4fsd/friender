@@ -54,6 +54,22 @@ class PACCAConfig:
             cwd = os.getcwd()
             cfg.allowed_path_prefixes = list({home, cwd, str(PACCA_DIR)})
 
+        # Auto-switch provider to match whichever key is actually present
+        key_map = {
+            "anthropic": "ANTHROPIC_API_KEY",
+            "openai": "OPENAI_API_KEY",
+            "gemini": "GEMINI_API_KEY",
+        }
+        if not os.environ.get(key_map.get(cfg.provider, "")):
+            for prov, env in key_map.items():
+                if os.environ.get(env):
+                    cfg.provider = prov
+                    if prov == "gemini":
+                        cfg.model = cfg.gemini_default_model
+                    elif prov == "openai":
+                        cfg.model = "gpt-4o"
+                    break
+
         return cfg
 
     def save(self) -> None:
