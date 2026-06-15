@@ -1,4 +1,4 @@
-"""PACCA v7.0 — FastAPI web server with WebSocket terminal interface."""
+"""PACCA v8.0 — FastAPI web server with WebSocket terminal interface."""
 from __future__ import annotations
 import asyncio
 import json
@@ -52,10 +52,42 @@ async def lifespan(app_: FastAPI):
     yield
     if _workflow_manager:
         _workflow_manager.stop_scheduler()
+    # Gracefully close any open Playwright browser instances
+    try:
+        from pacca.tools.browser_tools import close_browser
+        await close_browser()
+    except Exception:
+        pass
 
 
-app = FastAPI(title="PACCA", version="7.0.0", lifespan=lifespan)
+app = FastAPI(title="PACCA", version="8.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ── Auth middleware ───────────────────────────────────────────────────────────
+# When PACCA_ADMIN_TOKEN is set, all non-public HTTP routes require
+# Authorization: Bearer <token>. WebSocket auth is handled separately below.
+
+_ADMIN_TOKEN: str = os.environ.get("PACCA_ADMIN_TOKEN", "")
+_PUBLIC_PATHS = frozenset({"/", "/favicon.ico", "/webhook/whatsapp"})
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    if not _ADMIN_TOKEN:
+        return await call_next(request)
+    path = request.url.path
+    if path in _PUBLIC_PATHS or path.startswith("/static/"):
+        return await call_next(request)
+    # WebSocket upgrade requests are authenticated inside the WS handler
+    if request.headers.get("upgrade", "").lower() == "websocket":
+        return await call_next(request)
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer ") or auth[7:] != _ADMIN_TOKEN:
+        return JSONResponse(
+            {"error": "Unauthorized — set Authorization: Bearer <PACCA_ADMIN_TOKEN>"},
+            status_code=401,
+        )
+    return await call_next(request)
 
 # WhatsApp inbound: maps sender E.164 number → pending confirmation info
 # {"task_id": str, "conf_id": str} — set while agent awaits YES/NO from that user
@@ -255,7 +287,7 @@ async def status():
     llm_available = agent.llm_client.is_available() if agent.llm_client else False
     llm_error = agent.llm_client.key_error() if agent.llm_client else "No LLM client"
     return {
-        "version": "7.0.0",
+        "version": "8.0.0",
         "provider": cfg.provider,
         "model": cfg.model,
         "offline_mode": cfg.offline_mode,
@@ -1004,8 +1036,38 @@ async def delete_calendar_event_api(event_id: str):
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
+    # ── Origin validation ─────────────────────────────────────────────────────
+    origin = ws.headers.get("origin", "")
+    cfg = get_agent().config
+    allowed_origins: list[str] = getattr(cfg, "allowed_ws_origins", []) or []
+    env_origins = os.environ.get("PACCA_ALLOWED_ORIGINS", "")
+    if env_origins:
+        allowed_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
+    if allowed_origins and origin:
+        from urllib.parse import urlparse as _urlparse
+        origin_host = _urlparse(origin).hostname or ""
+        if not any(
+            origin_host == o or origin_host.endswith(f".{o}") or origin == o
+            for o in allowed_origins
+        ):
+            await ws.close(code=4403)
+            return
+
+    # ── Token auth (when PACCA_ADMIN_TOKEN is set) ────────────────────────────
+    # The frontend sends {"type":"auth","token":"..."} as the first message.
     await ws.accept()
     agent = get_agent()
+    if _ADMIN_TOKEN:
+        try:
+            raw_auth = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
+            auth_msg = json.loads(raw_auth)
+            if auth_msg.get("type") != "auth" or auth_msg.get("token") != _ADMIN_TOKEN:
+                await ws.send_json({"type": "error", "data": {"message": "Unauthorized"}})
+                await ws.close(code=4401)
+                return
+        except Exception:
+            await ws.close(code=4401)
+            return
 
     # Outgoing queue: agent events → WebSocket
     outgoing: asyncio.Queue = asyncio.Queue()
@@ -1035,7 +1097,7 @@ async def websocket_endpoint(ws: WebSocket):
         "onboarding_complete": is_onboarding_complete(),
         "memory_count": agent.memory.task_count(),
         "workflow_count": len(_workflow_manager.list_workflows()) if _workflow_manager else 0,
-        "message": "PACCA v7.0 ready. Type a command, ask a question, or type 'help'.",
+        "message": "PACCA v8.0 ready. Type a command, ask a question, or type 'help'.",
     })
 
     try:
@@ -1264,7 +1326,7 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 HELP_TEXT = """
-PACCA v7.0 — Personal AI Computer-Control Agent
+PACCA v8.0 — Personal AI Computer-Control Agent
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FEATURES

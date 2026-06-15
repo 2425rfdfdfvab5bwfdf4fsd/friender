@@ -53,6 +53,13 @@ def _load_or_create_chain_key() -> bytes:
     return key
 
 
+_EMAIL_RE = re.compile(r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}\b')
+
+
+def _redact_email(text: str) -> str:
+    return _EMAIL_RE.sub("[REDACTED:email]", text)
+
+
 def _redact_url(url: str) -> str:
     if '?' in url:
         return url.split('?')[0] + "?[QUERY REDACTED]"
@@ -145,7 +152,7 @@ class AuditLogger:
                 elif k == "content":
                     sanitized[k] = f"[CONTENT OMITTED — {len(v)} bytes]"
                 else:
-                    sanitized[k] = _redact_secrets(v)
+                    sanitized[k] = _redact_secrets(_redact_email(v))
             else:
                 sanitized[k] = v
         return sanitized

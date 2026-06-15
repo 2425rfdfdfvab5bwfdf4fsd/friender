@@ -51,7 +51,7 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     }),
     "coding": frozenset({
         "generate_code", "explain_code", "refactor_code", "write_tests",
-        "analyze_code_quality",
+        "analyze_code_quality", "run_code",
     }),
     "research": frozenset({
         "research_topic", "summarize_url",

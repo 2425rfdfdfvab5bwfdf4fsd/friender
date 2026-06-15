@@ -1,0 +1,355 @@
+You are a senior full-stack engineer, security architect, and product designer.
+
+I have a project called PACCA v7.2 — Personal AI Computer-Control Agent. It is a security-first LLM-powered local computer-control agent with:
+
+- FastAPI server
+- WebSocket terminal UI
+- REST API
+- LLM planner with heuristic fallback
+- 9-layer security pipeline
+- HMAC capability grants
+- path scoping
+- risk scoring
+- audit logging
+- memory system
+- workflow scheduler
+- morning brief
+- undo manager
+- user profiles
+- browser/file/git/system/document tools
+
+Your mission is to upgrade this project into a more production-quality, safer, more useful version: PACCA v8.0.
+
+Important rules:
+
+1. Do not remove or bypass the security pipeline.
+2. Do not create reverse shells, RAT-like features, exploit tools, credential harvesters, unauthorized scanners, or stealthy persistence.
+3. Remote-control features such as WhatsApp, REST API, and WebSocket control must be authenticated, rate-limited, logged, and disabled or localhost-only by default.
+4. Prefer safe defaults.
+5. Preserve backward compatibility where possible.
+6. Do not assume the README is accurate. Inspect the actual codebase first.
+7. Every important change must include tests and documentation.
+8. If something is risky, gate it behind config and explicit user approval.
+9. If information is missing, choose the safest reasonable default and document it.
+
+Start by auditing the repository.
+
+Phase 1: Repository Audit
+
+Inspect the full project and produce an `UPGRADE_PLAN.md` containing:
+
+- Actual current architecture
+- Mismatches between README and code
+- Security weaknesses
+- Reliability issues
+- Missing tests
+- UX problems
+- Installation/deployment problems
+- Highest-impact improvements
+- Step-by-step implementation plan
+- Risks and migration notes
+
+Do not implement major changes until the audit and plan are written.
+
+Phase 2: Security Hardening
+
+Implement the following improvements if missing:
+
+1. Authentication and session security
+   - Add local admin token or login flow for REST/WebSocket access.
+   - Bind to localhost by default.
+   - Add explicit config for public exposure.
+   - Add CSRF/CORS protections where relevant.
+   - Add WebSocket origin validation.
+   - Add rate limits for API, WebSocket commands, and WhatsApp webhook.
+
+2. Safer remote integrations
+   - WhatsApp webhook must verify signatures/tokens.
+   - Remote commands must require a trusted user allowlist.
+   - High-risk remote tasks must require explicit approval from a local dashboard unless configured otherwise.
+   - Log all remote-origin commands clearly in audit logs.
+
+3. Capability grant hardening
+   - Ensure grants are single-use.
+   - Ensure TTL expiry works.
+   - Ensure tool name, task ID, args hash, user/session ID, and scope are bound into the HMAC payload.
+   - Add tests for replay, tampering, expiry, and wrong-tool usage.
+
+4. Path safety
+   - Strengthen SafeResourceResolver.
+   - Prevent path traversal.
+   - Prevent symlink escape.
+   - Prevent TOCTOU path swapping.
+   - Normalize paths consistently.
+   - Add property-based tests for path resolution.
+
+5. URL/network safety
+   - Validate URLs before browser/network tools.
+   - Block localhost, private IP ranges, link-local IPs, file URLs, metadata service IPs, and redirect-to-private-IP cases.
+   - Re-check after DNS resolution and after redirects.
+   - Add tests for blocked URL patterns.
+
+6. Audit log
+   - Verify tamper-evident hash chaining.
+   - Add `/api/audit/verify` if incomplete.
+   - Ensure log permissions are `0600`.
+   - Redact secrets before writing logs.
+   - Add tests for redaction and hash chain verification.
+
+7. Dangerous operations
+   - Any destructive, irreversible, high-egress, or remote-control action must be risk-scored and approval-gated.
+   - Add dry-run previews for file deletion, moves, writes, git commits, downloads, and workflow execution.
+
+Phase 3: Reliability and Maintainability
+
+Improve code quality:
+
+1. Add or improve typed models using Pydantic.
+2. Standardize tool schemas.
+3. Standardize tool result format:
+   - success: boolean
+   - data
+   - error
+   - warnings
+   - risk_notes
+   - audit_metadata
+4. Add structured error handling.
+5. Add task cancellation support.
+6. Add timeout handling for every tool.
+7. Add graceful shutdown for browser, scheduler, DB, and background tasks.
+8. Add config validation and config migration.
+9. Add atomic writes for config, profile, workflows, and memory.
+10. Add dependency pinning or a lockfile.
+
+Phase 4: UX Improvements
+
+Make PACCA much more useful for normal users:
+
+1. Add an onboarding wizard
+   - choose allowed folders
+   - choose LLM provider
+   - configure offline mode
+   - set timezone/profile
+   - explain risk levels
+   - create initial config safely
+
+2. Improve the web dashboard
+   - Plan preview before execution
+   - Risk explanation panel
+   - Approval buttons
+   - Active task monitor
+   - Audit log viewer
+   - Memory search UI
+   - Workflow manager UI
+   - Undo history UI
+   - Settings page
+
+3. Improve terminal responses
+   - Clear markdown formatting
+   - Step-by-step progress
+   - Plain-language risk explanation
+   - Show what will be changed before changing files
+   - Show final summary with files touched and undo options
+
+4. Improve advisory mode
+   - Better command/question detection
+   - No tool execution for advisory answers
+   - Clear label: “Advisory only — no actions taken”
+
+5. Add command examples/help
+   - `/help`
+   - `/tools`
+   - `/memory`
+   - `/workflows`
+   - `/undo`
+   - `/settings`
+   - `/status`
+
+Phase 5: Memory Improvements
+
+Upgrade memory safely:
+
+1. Add SQLite migrations.
+2. Add semantic memory deduplication.
+3. Add memory privacy controls.
+4. Add “forget” API for deleting memory entries.
+5. Add memory export/import.
+6. Add memory search ranking improvements.
+7. Add background memory compression with safe scheduling.
+8. Do not store secrets in memory.
+9. Add tests for redaction before memory writes.
+
+Phase 6: Planner Improvements
+
+Improve planning quality:
+
+1. Add strict JSON schema validation for LLM-generated plans.
+2. Add plan repair only if safe.
+3. Add deterministic heuristic fallback tests.
+4. Add planner confidence scores.
+5. Add “ask user” step type when intent is ambiguous.
+6. Add skill matching before LLM planning.
+7. Add plan simulation/dry-run.
+8. Add maximum cumulative file egress enforcement.
+9. Add clear explanations for why a plan was blocked.
+
+Phase 7: Tool Improvements
+
+Improve tools while keeping security first:
+
+1. File tools
+   - Add preview diff before overwriting files.
+   - Add persistent undo records where practical.
+   - Add safe trash instead of permanent delete.
+   - Add file size limits.
+   - Add encoding handling.
+
+2. Git tools
+   - Add branch/status safety checks.
+   - Show diff summary before commit.
+   - Require approval for large commits.
+   - Never push by default unless explicitly added and approved.
+
+3. Browser tools
+   - Add redirect validation.
+   - Add download MIME/type checks.
+   - Add download size limits.
+   - Add browser session cleanup.
+
+4. Document tools
+   - Improve DOCX/XLSX parsing.
+   - Add PDF read support if not present, safely.
+   - Add generated-report templates.
+
+5. Code execution
+   - Ensure `run_code` is sandboxed.
+   - Disable network by default.
+   - Add CPU/memory/time limits.
+   - Add file-system restrictions.
+   - Log all execution metadata.
+
+Phase 8: Testing
+
+Add a serious test suite.
+
+Required tests:
+
+- Unit tests for:
+  - TaskScope
+  - PlanValidator
+  - RiskEvaluator
+  - CapabilityGrant
+  - UsedGrantRegistry
+  - SafeResourceResolver
+  - RuntimeStepValidator
+  - LocalTextRedactor
+  - AuditLogger
+  - HeuristicPlanner
+
+- Integration tests for:
+  - simple file task
+  - blocked path traversal
+  - blocked private URL
+  - grant replay attack
+  - high-risk approval gate
+  - dry-run mode
+  - workflow creation/deletion
+  - memory search
+  - audit verification
+
+- UI/API tests for:
+  - `/api/status`
+  - `/api/tools`
+  - `/api/audit/verify`
+  - `/api/memory/search`
+  - WebSocket command flow
+
+- Mock all LLM calls in tests.
+
+Add CI workflow that runs:
+
+- formatting
+- linting
+- type checking
+- unit tests
+- integration tests
+- security-focused tests
+
+Phase 9: Packaging and Deployment
+
+Make the project easy to install and run:
+
+1. Add `pyproject.toml` if missing.
+2. Add clear install commands.
+3. Add `.env.example`.
+4. Add Dockerfile only if it preserves safe defaults.
+5. Add `pacca doctor` command to check:
+   - Python version
+   - Playwright installed
+   - config permissions
+   - audit log permissions
+   - DB access
+   - API keys
+   - allowed path prefixes
+6. Add `pacca init` command for setup.
+7. Add `pacca serve` command.
+8. Add version command.
+
+Phase 10: Documentation
+
+Update documentation:
+
+1. README
+2. SECURITY.md
+3. PRIVACY.md
+4. CONFIGURATION.md
+5. API.md
+6. TOOL_DEVELOPMENT.md
+7. ARCHITECTURE.md
+8. TESTING.md
+9. CHANGELOG.md
+10. Migration guide from v7.2 to v8.0
+
+The docs must explain:
+
+- Security model
+- Threat model
+- Safe defaults
+- How approvals work
+- How audit logs work
+- How to disable remote control
+- How to configure allowed paths
+- What data may leave the computer
+- How memory works
+- How to delete memory
+- How to run fully offline
+
+Phase 11: Final Verification
+
+Before finishing:
+
+1. Run all tests.
+2. Run lint/type checks.
+3. Start the server locally.
+4. Verify the dashboard loads.
+5. Verify a simple advisory question works.
+6. Verify a low-risk file listing works.
+7. Verify a path traversal attempt is blocked.
+8. Verify a private URL request is blocked.
+9. Verify high-risk tasks require confirmation.
+10. Verify audit log integrity check passes.
+11. Verify offline mode works without API keys.
+
+Final output should include:
+
+- Summary of changes
+- Files changed
+- Tests added
+- Security improvements
+- UX improvements
+- Known limitations
+- How to run
+- How to test
+- Suggested next roadmap
+
+Focus on producing a secure, polished, user-friendly PACCA v8.0.

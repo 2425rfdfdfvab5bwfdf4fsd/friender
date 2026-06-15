@@ -70,6 +70,10 @@ class MemoryManager:
         PACCA_DIR.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(MEMORY_DB), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
+        # Enable WAL mode to prevent "database is locked" errors during concurrent
+        # reads from REST endpoints and background compression.
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA synchronous=NORMAL")
         self._init_schema()
         self._prefs: dict = self._load_prefs()
         # Gap #2 (TF-IDF fallback): IDF cache — recomputed lazily

@@ -35,6 +35,11 @@ class PACCAConfig:
     show_egress_notices: bool = True
     grant_ttl_seconds: int = 300
     browser_headless: bool = True
+    tool_timeout_seconds: int = 60
+    require_auth: bool = False
+    allowed_ws_origins: list[str] = field(default_factory=list)  # empty = allow all origins
+    api_rate_limit_per_minute: int = 120
+    ws_command_rate_limit_per_minute: int = 20
 
     @classmethod
     def load(cls) -> "PACCAConfig":

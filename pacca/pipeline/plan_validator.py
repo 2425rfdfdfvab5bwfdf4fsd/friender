@@ -8,13 +8,30 @@ from pacca.models.resolved_resource import ResolvedResource, PathExpectation
 from pacca.security.safe_resource_resolver import SafeResourceResolver
 
 PRIVATE_IP_PATTERNS = [
-    re.compile(r'^https?://localhost'),
+    re.compile(r'^https?://localhost', re.I),
     re.compile(r'^https?://127\.'),
     re.compile(r'^https?://10\.'),
     re.compile(r'^https?://192\.168\.'),
     re.compile(r'^https?://172\.(1[6-9]|2[0-9]|3[01])\.'),
     re.compile(r'^file://'),
     re.compile(r'^https?://0\.0\.0\.0'),
+    # Link-local / cloud metadata service endpoints
+    re.compile(r'^https?://169\.254\.'),
+    # IPv6 loopback, link-local, and unique local
+    re.compile(r'^https?://\[::1\]'),
+    re.compile(r'^https?://\[fe80:', re.I),
+    re.compile(r'^https?://\[fc', re.I),
+    re.compile(r'^https?://\[fd', re.I),
+    # Any IPv6 bracket address (catch-all for unknown private ranges)
+    re.compile(r'^https?://\['),
+    # data: URIs
+    re.compile(r'^data:', re.I),
+    # Credentials embedded in URL (user:pass@host)
+    re.compile(r'^https?://[^/\s]*:[^/\s]*@'),
+    # Octal / zero-prefixed IP notation (e.g. http://0177.0.0.1)
+    re.compile(r'^https?://0\d+\.'),
+    # Null/zero host
+    re.compile(r'^https?://0+\.'),
 ]
 
 PAYMENT_URL_PATTERNS = [

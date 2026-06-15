@@ -72,21 +72,61 @@ SAFE_EXTENSIONS = {
 }
 
 PRIVATE_IP_RE = re.compile(
-    r'^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.0\.0\.0)'
+    r'^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[01])\.|0\.0\.0\.0'
+    r'|169\.254\.'           # link-local / AWS/GCP metadata IP
+    r'|0\d+\.'               # octal IP
+    r')',
+    re.I,
+)
+# IPv6 matched on already-decoded hostname (no brackets), case-insensitive
+PRIVATE_IPV6_RE = re.compile(
+    r'^(::1'                 # loopback
+    r'|fe80:'                # link-local
+    r'|fc[0-9a-f]{2}:'      # unique-local fc00::/7 (fc)
+    r'|fd[0-9a-f]{2}:'      # unique-local fc00::/7 (fd)
+    r')',
+    re.I,
 )
 PAYMENT_URL_RE = re.compile(r'(stripe|paypal|braintree|square)\.com/(pay|checkout)', re.I)
 
 
 def _check_url_safety(url: str) -> tuple[bool, str]:
+    if not url:
+        return False, "Empty URL"
     parsed = urllib.parse.urlparse(url)
-    if parsed.scheme == "file":
-        return False, "file:// URLs are blocked"
-    host = parsed.netloc.split(":")[0].lower()
-    if PRIVATE_IP_RE.match(host):
+    if parsed.scheme in ("file", "data", "javascript", "vbscript"):
+        return False, f"{parsed.scheme}:// URLs are blocked"
+    if not parsed.scheme.startswith("http"):
+        return False, f"Non-HTTP scheme blocked: {parsed.scheme}"
+    # Block embedded credentials  (user:pass@host)
+    netloc = parsed.netloc
+    if "@" in netloc:
+        return False, "URLs with embedded credentials are blocked"
+    # parsed.hostname handles IPv6 brackets and returns lowercase without brackets
+    host = parsed.hostname or ""
+    if PRIVATE_IP_RE.match(host) or PRIVATE_IP_RE.match(f"{host}."):
         return False, f"Private/local URL blocked: {host}"
+    if PRIVATE_IPV6_RE.match(host):
+        return False, f"Private IPv6 URL blocked: {host}"
     if PAYMENT_URL_RE.search(url):
         return False, f"Payment URL blocked: {url}"
     return True, ""
+
+
+# ── Module-level browser instance for graceful shutdown ──────────────────────
+
+_module_browser: "BrowserController | None" = None
+
+
+async def close_browser() -> None:
+    """Gracefully stop the module-level browser instance (called on server shutdown)."""
+    global _module_browser
+    if _module_browser is not None:
+        try:
+            await _module_browser.stop()
+        except Exception:
+            pass
+        _module_browser = None
 
 
 # ── Vision-click fallback helpers (Gap #4) ────────────────────────────────────

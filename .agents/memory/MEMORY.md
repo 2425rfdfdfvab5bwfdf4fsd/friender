@@ -6,3 +6,4 @@
 - [PACCA v7.2 vector memory](pacca-v72-vector.md) — Gap #2 complete: VectorIndex in pacca/memory/vector_index.py; OpenAI text-embedding-3-small + numpy cosine; TF-IDF fallback; wired in agent.py via OPENAI_API_KEY
 - [PACCA playwright nix setup](pacca-playwright-nix.md) — nix provides playwright-browsers-1.55.0-with-cjk (chromium-1187); pip playwright 1.49.1 needs executable_path override to use it
 - [PACCA Google Calendar](pacca-calendar.md) — 3 tools wired end-to-end; heuristic planner _plan_calendar(); DELETE /api/calendar/events/{id}; upgraded UI panel with form + day grouping
+- [PACCA v8.0 security & reliability](pacca-v80-upgrades.md) — SEC/REL hardening: auth middleware, WS origin check, persistent grant registry, WAL mode, tool timeout, graceful shutdown; 44-test suite; pyproject.toml

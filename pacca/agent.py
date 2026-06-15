@@ -921,9 +921,21 @@ class PACCAAgent:
         handler = TOOL_DISPATCH.get(tool_name)
         if not handler:
             return {"error": f"No handler for tool: {tool_name}"}
-        result = handler(clean_args)
-        if asyncio.iscoroutine(result):
-            result = await result
+        timeout = getattr(self.config, "tool_timeout_seconds", 60)
+        try:
+            result = handler(clean_args)
+            if asyncio.iscoroutine(result):
+                result = await asyncio.wait_for(result, timeout=float(timeout))
+            else:
+                result = await asyncio.wait_for(
+                    asyncio.get_event_loop().run_in_executor(None, lambda: result),
+                    timeout=float(timeout),
+                )
+        except asyncio.TimeoutError:
+            return {
+                "error": f"Tool '{tool_name}' timed out after {timeout}s",
+                "timeout": True,
+            }
         return result
 
     async def _wait_for_confirmation(self, task_id: str,
