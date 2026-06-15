@@ -171,6 +171,9 @@ class LLMClient:
             return not self._circuit_breaker.is_tripped()
         if not self.api_key:
             return False
+        # Gemini keys must start with "AIza" — OAuth tokens (AQ.*, ya29.*) always 401
+        if self.provider == "gemini" and not self.api_key.startswith("AIza"):
+            return False
         return not self._circuit_breaker.is_tripped()
 
     def key_error(self) -> str | None:
@@ -179,6 +182,11 @@ class LLMClient:
             return (
                 "No API key configured. Add ANTHROPIC_API_KEY or GEMINI_API_KEY "
                 "in Replit Secrets (🔒 sidebar)."
+            )
+        if self.provider == "gemini" and not self.api_key.startswith("AIza"):
+            return (
+                "GEMINI_API_KEY looks like an OAuth token, not an AI Studio key. "
+                "Get a real key at aistudio.google.com (must start with 'AIza')."
             )
         if self._circuit_breaker.is_tripped():
             s = self._circuit_breaker.status()
@@ -214,9 +222,11 @@ class LLMClient:
 
         last_error = None
         delay = 1.0
+        actual_attempts = 0
         for attempt in range(retries):
             if not self._circuit_breaker.can_attempt():
                 raise RuntimeError(f"Circuit breaker OPEN — skipping attempt {attempt + 1}")
+            actual_attempts += 1
             try:
                 raw = await self._call(system, prompt)
                 plan = self._parse_plan(raw)
@@ -232,7 +242,7 @@ class LLMClient:
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, 30)
 
-        raise RuntimeError(f"LLM planning failed after {retries} attempts: {last_error}")
+        raise RuntimeError(f"LLM planning failed after {actual_attempts} attempt(s): {last_error}")
 
     async def advise(self, question: str, context: str = "",
                      max_tokens: int = 4096) -> str:
@@ -279,7 +289,8 @@ class LLMClient:
         import anthropic
         # Use Replit AI Integrations proxy URL when available
         base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
-        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        api_key = self.api_key or os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY", "")
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
         if base_url:
             client_kwargs["base_url"] = base_url
         client = anthropic.AsyncAnthropic(**client_kwargs)

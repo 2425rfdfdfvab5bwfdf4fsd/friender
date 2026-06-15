@@ -48,6 +48,18 @@ def set_llm_client(client) -> None:
     _llm_client = client
 
 
+import re as _re
+_FENCE_RE = _re.compile(r'^```[^\n]*\n(.*?)(?:\n```\s*)?$', _re.DOTALL)
+
+def _strip_code_fences(text: str) -> str:
+    """Remove outer markdown code fences safely, preserving interior backticks."""
+    text = text.strip()
+    m = _FENCE_RE.match(text)
+    if m:
+        return m.group(1).strip()
+    return text
+
+
 def _require_llm() -> object:
     if _llm_client is None or not _llm_client.is_available():
         hint = _llm_client.key_error() if _llm_client else "No LLM client configured."
@@ -88,12 +100,7 @@ async def generate_code(description: str, language: str = "python",
         "Output ONLY the raw code. No markdown fences, no explanation, no preamble."
     )
     code = await client._call(_CODE_SYSTEM, prompt, max_tokens=4096)
-    code = code.strip()
-    if code.startswith("```"):
-        lines = code.split("\n")
-        code = "\n".join(lines[1:])
-        if "```" in code:
-            code = code[:code.rfind("```")].strip()
+    code = _strip_code_fences(code)
 
     result: dict = {"code": code, "language": language, "description": description[:100]}
 
@@ -139,12 +146,7 @@ async def refactor_code(file_path: str, instructions: str,
         "Output ONLY the refactored code. No markdown fences, no explanation."
     )
     refactored = await client._call(_CODE_SYSTEM, prompt, max_tokens=4096)
-    refactored = refactored.strip()
-    if refactored.startswith("```"):
-        lines = refactored.split("\n")
-        refactored = "\n".join(lines[1:])
-        if "```" in refactored:
-            refactored = refactored[:refactored.rfind("```")].strip()
+    refactored = _strip_code_fences(refactored)
 
     result: dict = {
         "file": file_path,
@@ -188,12 +190,7 @@ async def write_tests(file_path: str, test_framework: str = "pytest",
         "Output ONLY the test file. No markdown, no explanation."
     )
     tests = await client._call(system, prompt, max_tokens=4096)
-    tests = tests.strip()
-    if tests.startswith("```"):
-        lines = tests.split("\n")
-        tests = "\n".join(lines[1:])
-        if "```" in tests:
-            tests = tests[:tests.rfind("```")].strip()
+    tests = _strip_code_fences(tests)
 
     out_p = Path(output_path).expanduser()
     out_p.parent.mkdir(parents=True, exist_ok=True)

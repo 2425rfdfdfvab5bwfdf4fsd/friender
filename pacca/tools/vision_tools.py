@@ -49,7 +49,13 @@ async def _vision_call(image_path: str, question: str) -> str:
 
     if provider == "anthropic":
         import anthropic
-        client = anthropic.AsyncAnthropic(api_key=api_key)
+        import os as _os
+        base_url = _os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+        _ak = api_key or _os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY", "")
+        _kw = {"api_key": _ak}
+        if base_url:
+            _kw["base_url"] = base_url
+        client = anthropic.AsyncAnthropic(**_kw)
         msg = await client.messages.create(
             model=_llm_client.model,
             max_tokens=1024,

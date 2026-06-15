@@ -57,6 +57,24 @@ CumulativePlanRiskEvaluator defaults: `risk_proceed_threshold=30`, `risk_confirm
 
 **How to apply:** Whenever a new tool is added, add it to `DOMAIN_TOOL_MAP` AND add a detection pattern to `DOMAIN_KEYWORD_PATTERNS`.
 
+## config.py auto-switch must validate Gemini key format
+
+`PACCAConfig.load()` auto-switches to whichever provider has a valid key. The switch must check that Gemini keys start with "AIza" before treating them as valid — OAuth tokens (starting "AQ.") must be skipped. A `_key_valid(prov, val)` helper handles this.
+
+**Why:** Without format validation, the auto-switch would land on Gemini with an OAuth token, causing 401s on every call despite the fallback logic in `llm_client.py`.
+
+## apscheduler must be listed in requirements.txt
+
+`workflow_manager.py` conditionally imports `apscheduler`. Install via `pip install apscheduler==3.11.2`. Added to requirements.txt. The `AsyncIOScheduler.start()` must be called from within an async event loop (FastAPI lifespan) — calling it from synchronous code raises `RuntimeError: no running event loop`.
+
+## research_tools truncation should be explicit
+
+`research_tools.py` silently truncates `all_text` to 12 000 chars for synthesis. Added an explicit `_MAX_RESEARCH_CHARS` constant and a note appended to the prompt when truncation occurs, so the LLM knows data was cut.
+
+## code_tools code fence stripping needs regex, not split
+
+`_strip_code_fences()` must use regex (`re.match(r'^```\w*\n(.*?)^```$', s, re.DOTALL | re.MULTILINE)`) rather than triple-backtick string split, because interior backtick sequences in the code body would break a naive split approach.
+
 ## HeuristicPlanner system-keyword fallback in _plan_file
 
 When domain detection misclassifies a system command as "file" (e.g. "check system resources" before "resources" was added to the pattern), `_plan_file` falls through to `list_directory`. Added explicit `_SYS_KW` check at the top of `_plan_file` and a `_plan_llm_required` method for vision/coding/research domains that returns the real domain tool (not `list_directory`) so PlanValidator passes and the tool surfaces a clear "API key required" error.

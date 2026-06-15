@@ -243,7 +243,11 @@ class WorkflowManager:
             self._scheduler.start()
             self._scheduler_started = True
         except ImportError:
-            pass
+            import logging
+            logging.getLogger("pacca.workflows").warning(
+                "apscheduler not installed — cron workflows will NOT run automatically. "
+                "Install it with: pip install apscheduler"
+            )
 
     def stop_scheduler(self) -> None:
         if self._scheduler and self._scheduler_started:

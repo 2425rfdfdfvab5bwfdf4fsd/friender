@@ -161,11 +161,15 @@ async def research_topic(topic: str, depth: int = 3,
     date_str = time.strftime("%B %d, %Y")
     sources_str = "\n".join(f"{i+1}. {s}" for i, s in enumerate(sources[:10]))
 
+    _MAX_RESEARCH_CHARS = 12000
+    truncation_note = ""
+    if len(all_text) > _MAX_RESEARCH_CHARS:
+        truncation_note = f"\n[NOTE: Research data truncated from {len(all_text):,} to {_MAX_RESEARCH_CHARS:,} chars for synthesis]"
     synthesis_prompt = (
         f"Research Topic: {topic}\n"
         f"Date: {date_str}\n"
         f"Sources consulted: {len(research_data)} search queries\n\n"
-        f"Raw research data:\n{all_text[:12000]}\n\n"
+        f"Raw research data:\n{all_text[:_MAX_RESEARCH_CHARS]}{truncation_note}\n\n"
         f"Source URLs:\n{sources_str}\n\n"
         f"Synthesize this into a comprehensive research report."
     )
@@ -201,8 +205,8 @@ async def research_topic(topic: str, depth: int = 3,
                 saved_path=saved_path,
             )
             result["report_id"] = report_id
-        except Exception:
-            pass
+        except Exception as _e:
+            result["report_store_warning"] = f"Report generated but not saved to memory: {_e}"
 
     return result
 

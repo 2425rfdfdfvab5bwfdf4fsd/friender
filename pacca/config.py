@@ -67,15 +67,24 @@ class PACCAConfig:
                 cfg.model = "claude-sonnet-4-5"
             return cfg
 
-        # Auto-switch provider to match whichever key is actually present
+        # Auto-switch provider to match whichever key is actually present and valid
+        def _key_valid(prov: str, val: str) -> bool:
+            if not val:
+                return False
+            if prov == "gemini" and not val.startswith("AIza"):
+                return False  # OAuth token, not an AI Studio key
+            return True
+
         key_map = {
             "anthropic": "ANTHROPIC_API_KEY",
             "openai": "OPENAI_API_KEY",
             "gemini": "GEMINI_API_KEY",
         }
-        if not os.environ.get(key_map.get(cfg.provider, "")):
+        current_key = os.environ.get(key_map.get(cfg.provider, ""), "")
+        if not _key_valid(cfg.provider, current_key):
             for prov, env in key_map.items():
-                if os.environ.get(env):
+                val = os.environ.get(env, "")
+                if _key_valid(prov, val):
                     cfg.provider = prov
                     if prov == "gemini":
                         cfg.model = cfg.gemini_default_model

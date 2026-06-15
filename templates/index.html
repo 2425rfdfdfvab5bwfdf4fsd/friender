@@ -2423,6 +2423,8 @@ function showWeeklyOverlay(s) {
   } else {
     section.style.display = 'none';
   }
+  const weeklyBody = document.getElementById('weekly-body');
+  if (weeklyBody) weeklyBody.scrollTop = 0;
   overlay.classList.remove('hidden');
 }
 
@@ -2469,7 +2471,7 @@ function renderReports(reports, total) {
     div.innerHTML = `
       <div class="rep-topic">${esc(rep.topic)}</div>
       <div class="rep-meta">
-        <span>${esc(rep.created_at_str)}</span>
+        <span>${esc(rep.created_at_str || rep.generated_at || '')}</span>
         ${queries ? `<span>${queries} search${queries !== 1 ? 'es' : ''}</span>` : ''}
         ${rep.sources_count ? `<span>${rep.sources_count} sources</span>` : ''}
         ${rep.saved_path ? `<span style="color:var(--accent2)">💾 saved</span>` : ''}
@@ -2490,7 +2492,7 @@ async function viewReport(id) {
     const rep = await r.json();
     const overlay = document.getElementById('rep-full-overlay');
     document.getElementById('rep-full-title').textContent = rep.topic;
-    document.getElementById('rep-full-date').textContent = rep.created_at_str;
+    document.getElementById('rep-full-date').textContent = rep.created_at_str || rep.generated_at || '';
     const body = document.getElementById('rep-full-body');
     if (typeof marked !== 'undefined') {
       body.innerHTML = marked.parse(rep.content);
@@ -2552,7 +2554,7 @@ async function loadInsights(){
   try{
     const r=await fetch('/api/memory/stats');
     const d=await r.json();
-    if(d.error && d.total_tasks===0){
+    if(d.error || d.total_tasks===0){
       panel.innerHTML=`<div style="color:var(--muted);font-size:11px;padding:10px 0">
         <div style="font-size:16px;margin-bottom:8px">📈</div>
         <div style="margin-bottom:6px">No data yet — complete some tasks to see insights.</div>
