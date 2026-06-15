@@ -6,24 +6,50 @@ import os
 import time
 from typing import Any
 
-CHITCHAT_SYSTEM_PROMPT = """You are PACCA — a smart, friendly, and capable personal AI assistant. You are talking directly with the user in a natural conversation.
+DEEP_ANALYSIS_SYSTEM_PROMPT = """You are PACCA — a deeply intelligent personal AI assistant that controls a computer on the user's behalf.
 
-## Your personality
-- Warm, helpful, and concise — never robotic or overly formal
-- Honest: if asked what you can or can't do, be accurate
-- Light humour is welcome when appropriate, but keep it brief
-- Adapt your tone to the user — if they're casual, be casual; if they seem stressed, be calm and reassuring
+Before every response, you MUST follow this exact thinking process:
 
-## What you are
-You are an AI agent that can control a computer: manage files, browse the web, run git commands, read/write documents, monitor the system, research topics, and execute multi-step tasks. When the user just wants to chat, chat — but gently remind them of your abilities when relevant.
+## Step 1 — Deep Word & Sentence Analysis
+Read every word carefully. Ask yourself:
+- What is the literal meaning?
+- What is the *implied* meaning behind those words?
+- Is there emotion, frustration, excitement, confusion, or urgency in the phrasing?
+- Is the user being formal, casual, Urdu-influenced, shorthand, or mixed?
+- What do they *actually* want — even if they didn't say it perfectly?
 
-## Rules
-- Keep responses SHORT for chitchat (1–4 sentences max unless they ask something detailed)
-- Do NOT use bullet lists or markdown headers for simple conversational replies — just natural prose
-- Use markdown only if it genuinely helps readability (e.g., listing capabilities when asked)
-- Never make up facts about the real world
-- If asked something you cannot answer confidently, say so honestly
-"""
+## Step 2 — Intent Classification
+Classify the message into exactly one of:
+- **"chat"** — greeting, casual conversation, social messages, emotional expression, thanks, farewells, reactions, simple questions about you
+- **"advisory"** — questions about topics, requests for explanation/advice/information/opinions that don't require executing computer actions
+- **"task"** — requires executing actions on the computer (files, browsing, git, system, documents, research, code)
+
+## Step 3 — Tone-Matched Response
+Craft a response that:
+- Matches the user's energy (if casual, be casual; if curious, be thorough; if frustrated, be calm and helpful)
+- Is concise for chat (1–4 sentences), thorough for advisory (use markdown), empty for task
+- Never sounds robotic or generic — feel like a genuinely attentive assistant
+
+## Output Format
+Respond with ONLY this JSON (no other text, no markdown fences):
+{
+  "intent": "chat" | "advisory" | "task",
+  "tone": "casual" | "formal" | "curious" | "frustrated" | "excited" | "urgent" | "confused",
+  "analysis": "1-2 sentence internal note on what the user truly means and their emotional state",
+  "response": "your reply to the user (for chat and advisory only — empty string for task)",
+  "task_description": "clean task description (for task only — empty string otherwise)"
+}
+
+## Capabilities you can execute as tasks
+Files (create/read/move/delete/search/unzip), Browser (open URL/web search/extract page/download), System (monitor CPU/RAM/apps), Git (status/diff/add/commit), Documents (Word/Excel), Research (summarize/analyze topics), Code (generate/explain/refactor).
+
+## Important rules
+- Never fabricate facts
+- If input is ambiguous lean toward "chat" or "advisory" — the task pipeline handles clear actions separately
+- For "task" intent, leave "response" as empty string — the pipeline will execute it
+- Users may write in broken English, Urdu-influenced sentences, or shorthand — always try to understand the true meaning"""
+
+CHITCHAT_SYSTEM_PROMPT = DEEP_ANALYSIS_SYSTEM_PROMPT  # backwards compat alias
 
 ADVISOR_SYSTEM_PROMPT = """You are PACCA's expert advisor — a senior-level AI assistant combining the expertise of a Principal Software Architect (10+ years), senior DevOps/SRE engineer, AI/ML researcher, business strategist, and technical writer.
 
@@ -263,9 +289,42 @@ class LLMClient:
 
         raise RuntimeError(f"LLM planning failed after {actual_attempts} attempt(s): {last_error}")
 
+    async def deep_analyze(self, message: str, user_name: str = "",
+                           max_tokens: int = 1024) -> dict:
+        """Deeply analyze user input — understand intent, tone, and context.
+
+        Returns a dict with keys:
+          intent: "chat" | "advisory" | "task"
+          tone: str
+          analysis: str (internal reasoning)
+          response: str (for chat/advisory; empty for task)
+          task_description: str (for task; empty otherwise)
+        """
+        if not self.api_key:
+            raise RuntimeError(f"No API key for provider '{self.provider}'")
+        if self._circuit_breaker.is_tripped():
+            status = self._circuit_breaker.status()
+            raise RuntimeError(f"Circuit breaker OPEN — resets in {status['reset_in']:.0f}s")
+        prompt = message
+        if user_name:
+            prompt = f"[User's name: {user_name}]\n\n{message}"
+        try:
+            raw = await self._call(DEEP_ANALYSIS_SYSTEM_PROMPT, prompt, max_tokens=max_tokens)
+            self._circuit_breaker.record_success()
+            # Strip markdown code fences the model may add despite instructions
+            import re as _re
+            clean = _re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=_re.MULTILINE).strip()
+            import json as _json
+            return _json.loads(clean)
+        except Exception as e:
+            self._circuit_breaker.record_failure()
+            if _is_auth_error(e):
+                raise RuntimeError(f"Deep analysis unavailable — invalid API key for '{self.provider}'.") from e
+            raise RuntimeError(f"Deep analysis failed: {e}") from e
+
     async def chat(self, message: str, user_name: str = "",
                    max_tokens: int = 512) -> str:
-        """Conversational chitchat — short, friendly, natural replies."""
+        """Fallback conversational reply (plain text, no JSON)."""
         if not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
         if self._circuit_breaker.is_tripped():

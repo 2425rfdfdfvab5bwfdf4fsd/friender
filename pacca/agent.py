@@ -338,86 +338,102 @@ class PACCAAgent:
             })
             return
 
-        # ── Chitchat / conversational detection ──────────────────────────────────
-        # Guard: never intercept if the message contains action keywords — let the task pipeline handle it
-        _ACTION_KEYWORDS = (
-            "create", "make", "write", "generate", "build",
-            "delete", "remove", "trash", "move", "rename", "copy",
-            "read", "open", "show", "list", "find", "search",
-            "download", "upload", "extract", "unzip",
-            "run", "execute", "start", "launch", "close", "kill",
-            "git", "commit", "push", "pull", "diff",
-            "install", "update", "edit", "modify", "change",
-            "send", "email", "message", "whatsapp",
-            "schedule", "remind", "set", "enable", "disable",
-            "analyse", "analyze", "research", "summarize", "summarise",
-            "translate", "convert", "calculate",
+        # ── LLM-First Deep Intent Analysis ───────────────────────────────────────
+        # For every non-obvious command, the LLM deeply analyzes words/sentences/paragraphs
+        # to understand true intent, tone, and context before deciding how to respond.
+        # Clear action-prefixed commands skip this to avoid wasted latency.
+        _CLEAR_ACTION_PREFIXES = (
+            "list ", "ls ", "create file", "create folder", "create a file", "create a folder",
+            "make file", "make folder", "make a ", "move ", "mv ", "copy ", "cp ",
+            "rename ", "delete ", "trash ", "remove file", "remove folder",
+            "read file", "read the file", "open file", "open url", "open app",
+            "unzip ", "extract ", "zip ", "search files", "search for files", "find files",
+            "git status", "git diff", "git add", "git commit", "git log", "git push",
+            "download ", "show system", "send whatsapp", "dry-run:", "dry run:",
         )
-        _has_action = any(kw in _lower for kw in _ACTION_KEYWORDS)
-        if not dry_run and is_chitchat(raw_cmd) and not _has_action:
-            user_name = ""
-            try:
-                prefs = self.memory.get_all_preferences()
-                user_name = prefs.get("name", "") or ""
-            except Exception:
-                pass
+        _is_clear_action = any(_lower.startswith(p) for p in _CLEAR_ACTION_PREFIXES)
 
-            # Route through LLM when available for truly intelligent responses
-            if (self.llm_client is not None and self.llm_client.is_available()
-                    and not self.config.offline_mode):
-                try:
-                    response = await self.llm_client.chat(raw_cmd, user_name=user_name)
+        # Get user name once for use across all branches
+        _user_name = ""
+        try:
+            _user_prefs = self.memory.get_all_preferences()
+            _user_name = _user_prefs.get("name", "") or ""
+        except Exception:
+            pass
+
+        if not dry_run and not _is_clear_action and self.llm_client is not None \
+                and self.llm_client.is_available() and not self.config.offline_mode:
+            try:
+                analysis = await self.llm_client.deep_analyze(raw_cmd, user_name=_user_name)
+                intent = analysis.get("intent", "task")
+                response_text = analysis.get("response", "").strip()
+
+                if intent in ("chat", "advisory") and response_text:
                     yield AgentEvent("advisory", {
                         "task_id": task_id,
                         "question": raw_cmd,
-                        "response": response,
+                        "response": response_text,
                         "provider": self.config.provider,
                         "model": self.config.model,
                     })
                     return
-                except Exception:
-                    pass  # fall through to offline response
+                # intent == "task" → fall through to pipeline below
 
-            # Offline / fallback: smart canned response
-            greeting_name = f", {user_name}" if user_name else ""
-            _lc = _lower
-            if any(w in _lc for w in ("bye", "goodbye", "see you", "later", "cya", "farewell")):
-                offline_response = f"Goodbye{greeting_name}! Come back whenever you need me. 👋"
-            elif any(w in _lc for w in ("thanks", "thank you", "thx", "ty", "cheers")):
-                offline_response = f"Happy to help{greeting_name}! Let me know if there's anything else. 😊"
-            elif any(w in _lc for w in ("how are you", "how r u", "how are u", "how's it going", "you doing")):
-                offline_response = f"I'm doing great{greeting_name}, thanks for asking! Ready to help — just give me a task or ask me anything."
-            elif any(w in _lc for w in ("who are you", "what are you", "what is your name", "tell me about yourself")):
-                offline_response = (
-                    f"I'm PACCA{greeting_name} — your Personal AI Computer-Control Agent! "
-                    "I can manage files, browse the web, run git commands, monitor your system, "
-                    "create documents, and execute complex multi-step tasks. What can I do for you?"
-                )
-            elif any(w in _lc for w in ("what can you do", "what do you do", "your capabilities")):
-                offline_response = (
-                    f"Here's what I can do{greeting_name}:\n\n"
-                    "- 📁 **Files** — create, read, move, copy, search, unzip\n"
-                    "- 🌐 **Browser** — open URLs, search the web, extract page content, download files\n"
-                    "- 💻 **System** — monitor CPU/RAM, list running apps\n"
-                    "- 🔀 **Git** — status, diff, add, commit\n"
-                    "- 📄 **Documents** — create/read Word and Excel files\n"
-                    "- 🤖 **Research & Code** — answer questions, analyze topics, write code\n"
-                    "- 🎯 **Multi-step goals** — chain complex tasks together automatically\n\n"
-                    "Just type a command and I'll get it done!"
-                )
-            else:
-                offline_response = (
-                    f"Hey{greeting_name}! I'm PACCA, your personal AI assistant. "
-                    "I'm ready to help — just tell me what you'd like to do."
-                )
-            yield AgentEvent("advisory", {
-                "task_id": task_id,
-                "question": raw_cmd,
-                "response": offline_response,
-                "provider": "offline",
-                "model": "demo",
-            })
-            return
+            except Exception:
+                # Deep analysis failed — fall through to offline pattern-based routing
+                pass
+
+        # ── Offline / fallback pattern-based routing (when LLM unavailable) ──
+        if not dry_run and not _is_clear_action:
+            _has_action = any(kw in _lower for kw in (
+                "create", "make", "write", "generate", "build", "delete", "remove",
+                "trash", "move", "rename", "copy", "read", "open", "show", "list",
+                "find", "search", "download", "upload", "extract", "unzip", "run",
+                "execute", "start", "launch", "close", "kill", "git", "commit",
+                "push", "pull", "diff", "install", "update", "edit", "modify",
+                "send", "email", "message", "whatsapp", "schedule", "remind",
+                "analyse", "analyze", "research", "summarize", "translate",
+            ))
+            if is_chitchat(raw_cmd) and not _has_action:
+                greeting_name = f", {_user_name}" if _user_name else ""
+                _lc = _lower
+                if any(w in _lc for w in ("bye", "goodbye", "see you", "later", "cya", "farewell")):
+                    offline_resp = f"Goodbye{greeting_name}! Come back whenever you need me. 👋"
+                elif any(w in _lc for w in ("thanks", "thank you", "thx", "ty", "cheers")):
+                    offline_resp = f"Happy to help{greeting_name}! Let me know if there's anything else. 😊"
+                elif any(w in _lc for w in ("how are you", "how r u", "how are u", "you doing")):
+                    offline_resp = f"I'm doing great{greeting_name}, thanks for asking! Ready to help — just give me a task or ask me anything."
+                elif any(w in _lc for w in ("who are you", "what are you", "what is your name")):
+                    offline_resp = (
+                        f"I'm PACCA{greeting_name} — your Personal AI Computer-Control Agent! "
+                        "I can manage files, browse the web, run git commands, monitor your system, "
+                        "create documents, and execute complex multi-step tasks. What can I do for you?"
+                    )
+                elif any(w in _lc for w in ("what can you do", "what do you do")):
+                    offline_resp = (
+                        f"Here's what I can do{greeting_name}:\n\n"
+                        "- 📁 **Files** — create, read, move, copy, search, unzip\n"
+                        "- 🌐 **Browser** — open URLs, search the web, extract page content, download files\n"
+                        "- 💻 **System** — monitor CPU/RAM, list running apps\n"
+                        "- 🔀 **Git** — status, diff, add, commit\n"
+                        "- 📄 **Documents** — create/read Word and Excel files\n"
+                        "- 🤖 **Research & Code** — answer questions, analyze topics, write code\n"
+                        "- 🎯 **Multi-step goals** — chain complex tasks together automatically\n\n"
+                        "Just type a command and I'll get it done!"
+                    )
+                else:
+                    offline_resp = (
+                        f"Hey{greeting_name}! I'm PACCA, your personal AI assistant. "
+                        "I'm ready to help — just tell me what you'd like to do."
+                    )
+                yield AgentEvent("advisory", {
+                    "task_id": task_id,
+                    "question": raw_cmd,
+                    "response": offline_resp,
+                    "provider": "offline",
+                    "model": "demo",
+                })
+                return
 
         # ── Autonomous goal execution path ─────────────────────────────────────
         if is_multi_step_goal(raw_cmd) and not dry_run:
