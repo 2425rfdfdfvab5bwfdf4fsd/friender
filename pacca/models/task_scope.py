@@ -27,6 +27,9 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     "system": frozenset({
         "system_monitor",
     }),
+    "calendar": frozenset({
+        "list_calendar_events", "create_calendar_event", "delete_calendar_event",
+    }),
     "browser": frozenset({
         "browser_open_url", "browser_web_search", "browser_extract_page_text",
         "browser_download_file", "browser_tab_management",
@@ -75,6 +78,7 @@ DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(docx|xlsx|word|excel|spreadsheet|document)\b', re.I), "document"),
     (re.compile(r'\b(app|application|program|launch|quit|close)\b', re.I), "app"),
     (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|system info|system status|system check|system stats|system resources|uptime|resources|hardware|performance|sysmon|stats)\b', re.I), "system"),
+    (re.compile(r'\b(calendar|event|schedule|meeting|appointment|reminder|agenda|gcal|google calendar|add event|create event|book|booking|due date|deadlines?)\b', re.I), "calendar"),
     (re.compile(r'\b(file|folder|directory|path|\.pdf|\.txt|\.py|\.js|\.zip)\b', re.I), "file"),
     (re.compile(r'\b(whatsapp|send message|notify|notification|text message)\b', re.I), "messaging"),
     (re.compile(r'\b(image|photo|picture|screenshot|vision|analyze image|describe image|capture)\b', re.I), "vision"),
@@ -93,7 +97,7 @@ class TaskScope:
     raw_command: str
     redacted_command: str
     intent_verb: str
-    intent_domain: Literal["file", "app", "system", "browser", "document", "git", "messaging", "vision", "coding", "research", "mixed"]
+    intent_domain: Literal["file", "app", "system", "calendar", "browser", "document", "git", "messaging", "vision", "coding", "research", "mixed"]
     allowed_tools: frozenset
     allowed_path_prefixes: tuple
     allowed_url_patterns: tuple | None

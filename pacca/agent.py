@@ -45,6 +45,7 @@ import pacca.tools.whatsapp_tools as whatsapp_tools
 import pacca.tools.vision_tools as vision_tools
 import pacca.tools.code_tools as code_tools
 import pacca.tools.research_tools as research_tools
+import pacca.tools.calendar_tools as calendar_tools
 
 
 @dataclass
@@ -106,6 +107,10 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "summarize_url": lambda args: research_tools.summarize_url(**_clean(args)),
     # Sandbox code execution (Gap #1)
     "run_code": lambda args: code_tools.run_code(**_clean(args)),
+    # Google Calendar tools
+    "list_calendar_events": lambda args: calendar_tools.list_calendar_events(**_clean(args)),
+    "create_calendar_event": lambda args: calendar_tools.create_calendar_event(**_clean(args)),
+    "delete_calendar_event": lambda args: calendar_tools.delete_calendar_event(**_clean(args)),
 }
 
 # Tools whose results can feed the undo manager

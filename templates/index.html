@@ -565,13 +565,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .proc-mem{width:45px;text-align:right;color:var(--accent2)}
 
 /* Calendar panel */
-.cal-event{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:5px;border-left:3px solid var(--accent)}
-.cal-event-title{font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:3px}
+.cal-toolbar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.cal-toolbar select{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:11px;padding:4px 8px;cursor:pointer}
+.cal-toolbar button{background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);font-size:11px;padding:4px 10px;cursor:pointer}
+.cal-toolbar button:hover{opacity:.85}
+.cal-toolbar .cal-refresh-btn{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.cal-add-form{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:10px;display:none}
+.cal-add-form.open{display:block}
+.cal-add-form h4{font-size:11px;font-weight:700;color:var(--text);margin:0 0 8px}
+.cal-add-form input,.cal-add-form textarea{width:100%;box-sizing:border-box;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-size:11px;padding:5px 8px;margin-bottom:6px;font-family:var(--font)}
+.cal-add-form textarea{resize:vertical;min-height:40px}
+.cal-add-form .cal-form-row{display:flex;gap:6px}
+.cal-add-form .cal-form-row input{flex:1}
+.cal-add-form .cal-form-btns{display:flex;gap:6px;margin-top:4px}
+.cal-add-form .cal-form-btns button{flex:1;font-size:11px;padding:5px;border-radius:var(--radius-sm);border:none;cursor:pointer}
+.cal-add-form .cal-save-btn{background:var(--accent);color:#fff}
+.cal-add-form .cal-cancel-btn{background:var(--surface2);color:var(--text2);border:1px solid var(--border)!important;border:none}
+.cal-event{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 10px;margin-bottom:5px;border-left:3px solid var(--accent);position:relative}
+.cal-event-title{font-size:11.5px;font-weight:700;color:var(--text);margin-bottom:3px;padding-right:20px}
 .cal-event-time{font-size:10px;color:var(--muted)}
 .cal-event-loc{font-size:10px;color:var(--text2);margin-top:2px}
-.cal-setup{background:var(--surface2);border:1px solid rgba(var(--warn-rgb),.2);border-radius:var(--radius);padding:14px;margin-top:8px}
-.cal-setup-title{font-size:12px;font-weight:700;color:var(--warn);margin-bottom:8px}
-.cal-setup-text{font-size:11px;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.cal-event-del{position:absolute;top:6px;right:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px;line-height:1}
+.cal-event-del:hover{color:var(--danger)}
+.cal-day-header{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 4px;padding-bottom:3px;border-bottom:1px solid var(--border)}
+.cal-setup{background:var(--surface2);border:1px solid rgba(255,180,0,.25);border-radius:var(--radius);padding:14px;margin-top:8px}
+.cal-setup-title{font-size:12px;font-weight:700;color:#f5a623;margin-bottom:8px}
+.cal-setup-steps{font-size:11px;color:var(--text2);line-height:1.8;counter-reset:step}
+.cal-setup-steps li{counter-increment:step;list-style:none;padding-left:20px;position:relative;margin-bottom:4px}
+.cal-setup-steps li::before{content:counter(step);position:absolute;left:0;background:var(--accent);color:#fff;border-radius:50%;width:14px;height:14px;font-size:9px;display:flex;align-items:center;justify-content:center;font-weight:700;top:1px}
+.cal-setup-steps a{color:var(--accent);text-decoration:none}
+.cal-setup-steps a:hover{text-decoration:underline}
+.cal-setup-copy{display:inline-block;background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-family:monospace;font-size:10px;color:var(--text2);cursor:pointer;margin-top:4px}
+.cal-status-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:auto}
+.cal-status-badge.connected{background:rgba(39,174,96,.15);color:#27ae60}
+.cal-status-badge.disconnected{background:rgba(245,166,35,.15);color:#f5a623}
 
 /* ── Onboarding ──────────────────────────────────────────────────────────── */
 #onboarding-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
@@ -771,6 +798,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 
       <!-- Calendar panel -->
       <div id="panel-calendar" class="panel">
+        <div class="cal-toolbar">
+          <span style="font-size:11px;font-weight:700;color:var(--text)">📅 Google Calendar</span>
+          <span id="cal-status-badge" class="cal-status-badge disconnected">⚪ Not connected</span>
+          <select id="cal-days-select" onchange="loadCalendarEvents()" style="margin-left:auto">
+            <option value="1">Today</option>
+            <option value="7" selected>Next 7 days</option>
+            <option value="14">Next 14 days</option>
+            <option value="30">Next 30 days</option>
+          </select>
+          <button class="cal-refresh-btn" onclick="loadCalendar()" title="Refresh">↺</button>
+          <button id="cal-add-btn" onclick="toggleCalAddForm()" title="New event">+ Event</button>
+        </div>
+        <div class="cal-add-form" id="cal-add-form">
+          <h4>New Event</h4>
+          <input id="cal-title" placeholder="Event title *" />
+          <div class="cal-form-row">
+            <input id="cal-start" type="datetime-local" title="Start" />
+            <input id="cal-end" type="datetime-local" title="End" />
+          </div>
+          <input id="cal-location" placeholder="Location (optional)" />
+          <textarea id="cal-desc" placeholder="Description (optional)" rows="2"></textarea>
+          <div class="cal-form-btns">
+            <button class="cal-save-btn" onclick="submitCalEvent()">Save Event</button>
+            <button class="cal-cancel-btn" onclick="toggleCalAddForm()">Cancel</button>
+          </div>
+        </div>
         <div id="cal-content"><div class="panel-empty">Loading calendar…</div></div>
       </div>
 
@@ -2381,32 +2434,143 @@ async function deleteNote(e, id) {
 function searchNotes(q) { clearTimeout(searchNotes._t); searchNotes._t = setTimeout(() => loadNotes(q), 300); }
 
 // ── Calendar panel ────────────────────────────────────────────────────────────
+let _calConfigured = false;
+
 async function loadCalendar() {
   try {
     const r = await fetch('/api/calendar/status');
     const d = await r.json();
-    const el = document.getElementById('cal-content');
+    _calConfigured = d.configured;
+    const badge = document.getElementById('cal-status-badge');
+    const addBtn = document.getElementById('cal-add-btn');
     if (!d.configured) {
-      el.innerHTML = `<div class="cal-setup"><div class="cal-setup-title">📅 Google Calendar — Not Connected</div><div class="cal-setup-text">${esc(d.setup_instructions||'')}</div></div>`;
+      if (badge) { badge.className='cal-status-badge disconnected'; badge.textContent='⚪ Not connected'; }
+      if (addBtn) addBtn.style.display='none';
+      document.getElementById('cal-content').innerHTML = `
+        <div class="cal-setup">
+          <div class="cal-setup-title">📅 Google Calendar — Not Connected</div>
+          <ol class="cal-setup-steps">
+            <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> and enable the <strong>Google Calendar API</strong></li>
+            <li>Create <strong>OAuth 2.0 credentials</strong> (Desktop app type) → download the JSON</li>
+            <li>Use <a href="https://developers.google.com/oauthplayground/" target="_blank">OAuth Playground</a> to get a refresh token<br>
+              <span style="font-size:10px;color:var(--muted)">Scope: https://www.googleapis.com/auth/calendar</span></li>
+            <li>Add these three secrets in <strong>Replit → Secrets</strong>:<br>
+              <span class="cal-setup-copy">GOOGLE_CALENDAR_CLIENT_ID</span><br>
+              <span class="cal-setup-copy">GOOGLE_CALENDAR_CLIENT_SECRET</span><br>
+              <span class="cal-setup-copy">GOOGLE_CALENDAR_REFRESH_TOKEN</span></li>
+            <li>Restart the app — Calendar will connect automatically</li>
+          </ol>
+        </div>`;
       return;
     }
-    el.innerHTML = '<div class="panel-empty">Loading events…</div>';
-    const r2 = await fetch('/api/calendar/events?days=7');
+    if (badge) { badge.className='cal-status-badge connected'; badge.textContent='🟢 Connected'; }
+    if (addBtn) addBtn.style.display='';
+    await loadCalendarEvents();
+  } catch(e) {
+    document.getElementById('cal-content').innerHTML = '<div class="panel-empty">Error loading calendar</div>';
+  }
+}
+
+async function loadCalendarEvents() {
+  const el = document.getElementById('cal-content');
+  if (!_calConfigured) return;
+  el.innerHTML = '<div class="panel-empty">Loading events…</div>';
+  const days = document.getElementById('cal-days-select')?.value || 7;
+  try {
+    const r2 = await fetch(`/api/calendar/events?days=${days}`);
     const d2 = await r2.json();
-    if (!d2.ok) { el.innerHTML = `<div class="panel-empty">Error: ${esc(d2.error||'Unknown')}</div>`; return; }
-    const events = d2.events||[];
-    if (!events.length) { el.innerHTML = '<div class="panel-empty">No events in the next 7 days.</div>'; return; }
-    el.innerHTML = events.map(ev => {
+    if (!d2.ok) { el.innerHTML = `<div class="panel-empty">⚠️ ${esc(d2.error||'Unknown error')}</div>`; return; }
+    const events = d2.events || [];
+    if (!events.length) { el.innerHTML = `<div class="panel-empty">No events in the next ${days} day${days>1?'s':''}.</div>`; return; }
+
+    // Group by day
+    const byDay = {};
+    for (const ev of events) {
       const start = ev.start ? new Date(ev.start) : null;
-      const timeStr = start ? (ev.all_day ? start.toLocaleDateString() : start.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})) : '';
-      return `<div class="cal-event">
-        <div class="cal-event-title">${esc(ev.title)}</div>
-        <div class="cal-event-time">🕐 ${esc(timeStr)}</div>
-        ${ev.location?`<div class="cal-event-loc">📍 ${esc(ev.location)}</div>`:''}
-        ${ev.meeting_link?`<a href="${esc(ev.meeting_link)}" target="_blank" style="font-size:10px;color:var(--accent)">🎥 Join meeting</a>`:''}
-      </div>`;
-    }).join('');
-  } catch(e) { document.getElementById('cal-content').innerHTML = '<div class="panel-empty">Error loading calendar</div>'; }
+      const dayKey = start ? start.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'}) : 'No date';
+      if (!byDay[dayKey]) byDay[dayKey] = [];
+      byDay[dayKey].push({...ev, _startDate: start});
+    }
+
+    let html = '';
+    for (const [day, evs] of Object.entries(byDay)) {
+      html += `<div class="cal-day-header">${esc(day)}</div>`;
+      for (const ev of evs) {
+        const timeStr = ev._startDate
+          ? (ev.all_day ? 'All day' : ev._startDate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}))
+          : '';
+        const endDate = ev.end ? new Date(ev.end) : null;
+        const endStr = endDate && !ev.all_day ? ' – ' + endDate.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+        html += `<div class="cal-event">
+          <button class="cal-event-del" onclick="deleteCalEvent('${esc(ev.id||'')}', this)" title="Delete event">✕</button>
+          <div class="cal-event-title">${esc(ev.title)}</div>
+          <div class="cal-event-time">🕐 ${esc(timeStr+endStr)}</div>
+          ${ev.location?`<div class="cal-event-loc">📍 ${esc(ev.location)}</div>`:''}
+          ${ev.description?`<div class="cal-event-loc" style="color:var(--muted)">💬 ${esc(ev.description.slice(0,80))}</div>`:''}
+          ${ev.meeting_link?`<a href="${esc(ev.meeting_link)}" target="_blank" style="font-size:10px;color:var(--accent);display:block;margin-top:3px">🎥 Join meeting</a>`:''}
+        </div>`;
+      }
+    }
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div class="panel-empty">Error loading events</div>';
+  }
+}
+
+function toggleCalAddForm() {
+  const f = document.getElementById('cal-add-form');
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) {
+    // Default start = now + 1h, end = now + 2h
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const fmt = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const s = new Date(now.getTime() + 3600000);
+    const e = new Date(now.getTime() + 7200000);
+    document.getElementById('cal-start').value = fmt(s);
+    document.getElementById('cal-end').value = fmt(e);
+    document.getElementById('cal-title').focus();
+  }
+}
+
+async function submitCalEvent() {
+  const title = document.getElementById('cal-title').value.trim();
+  const start = document.getElementById('cal-start').value;
+  const end   = document.getElementById('cal-end').value;
+  if (!title) { toast('Event title is required', 'warn'); return; }
+  if (!start) { toast('Start time is required', 'warn'); return; }
+  const body = {
+    title,
+    start: start + ':00',
+    end:   (end || start) + ':00',
+    location: document.getElementById('cal-location').value.trim(),
+    description: document.getElementById('cal-desc').value.trim(),
+  };
+  try {
+    const r = await fetch('/api/calendar/events', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const d = await r.json();
+    if (d.ok) {
+      toast('Event created ✓', 'success');
+      document.getElementById('cal-title').value='';
+      document.getElementById('cal-location').value='';
+      document.getElementById('cal-desc').value='';
+      document.getElementById('cal-add-form').classList.remove('open');
+      await loadCalendarEvents();
+    } else {
+      toast('Failed: ' + (d.error||'Unknown'), 'error');
+    }
+  } catch(e) { toast('Network error', 'error'); }
+}
+
+async function deleteCalEvent(eventId, btn) {
+  if (!eventId) { toast('No event ID', 'warn'); return; }
+  if (!confirm('Delete this event from Google Calendar?')) return;
+  try {
+    const r = await fetch(`/api/calendar/events/${encodeURIComponent(eventId)}`, {method:'DELETE'});
+    const d = await r.json();
+    if (d.ok) { toast('Event deleted', 'success'); await loadCalendarEvents(); }
+    else toast('Delete failed: ' + (d.error||'Unknown'), 'error');
+  } catch(e) { toast('Network error', 'error'); }
 }
 
 // ── Memory panel ──────────────────────────────────────────────────────────────

@@ -995,6 +995,13 @@ async def create_calendar_event(body: dict):
     return result
 
 
+@app.delete("/api/calendar/events/{event_id}")
+async def delete_calendar_event_api(event_id: str):
+    from pacca.tools.calendar_tools import delete_calendar_event
+    result = await asyncio.to_thread(delete_calendar_event, event_id=event_id)
+    return result
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()

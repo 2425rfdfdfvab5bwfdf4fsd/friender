@@ -80,6 +80,8 @@ class HeuristicPlanner:
             return self._plan_document(low, cmd)
         if domain == "messaging":
             return self._plan_messaging(low, cmd)
+        if domain == "calendar":
+            return self._plan_calendar(low, cmd)
         if domain in ("vision", "coding", "research"):
             # These require LLM; heuristic mode produces a clear no-op notice
             return self._plan_llm_required(domain, cmd)
@@ -120,6 +122,57 @@ class HeuristicPlanner:
             "tool": "system_monitor",
             "args": {"include_processes": include_procs, "top_n_processes": 10},
             "description": "Show system CPU, memory, disk, and uptime",
+        }]
+
+    def _plan_calendar(self, low: str, cmd: str) -> list[dict]:
+        quotes = QUOTE_RE.findall(cmd)
+        # Create event
+        if any(w in low for w in ("create", "add", "schedule", "new", "book", "set up")):
+            title = quotes[0] if quotes else cmd[:60]
+            # Try to extract start/end from command (best-effort; LLM handles complex NL dates)
+            import re as _re
+            dt_re = _re.compile(
+                r'(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)',
+            )
+            times = dt_re.findall(cmd.replace(" ", "T") if re.search(r'\d{4}-\d{2}-\d{2} \d{2}:\d{2}', cmd) else cmd)
+            start = times[0].replace(" ", "T") if times else ""
+            end   = times[1].replace(" ", "T") if len(times) > 1 else ""
+            if not start:
+                # No datetime found — return a user-friendly error step
+                return [{
+                    "tool": "create_calendar_event",
+                    "args": {"title": title, "start": "", "end": ""},
+                    "description": f"Create calendar event: {title[:50]} (provide start/end in ISO format)",
+                }]
+            return [{
+                "tool": "create_calendar_event",
+                "args": {"title": title, "start": start, "end": end or start},
+                "description": f"Create calendar event: {title[:50]} at {start}",
+            }]
+        # Delete event
+        if any(w in low for w in ("delete", "remove", "cancel")):
+            ev_id = quotes[0] if quotes else ""
+            return [{
+                "tool": "delete_calendar_event",
+                "args": {"event_id": ev_id},
+                "description": f"Delete calendar event{': ' + ev_id if ev_id else ''}",
+            }]
+        # Default: list events
+        days = 7
+        _days_re = re.compile(r'\b(\d+)\s*days?\b', re.I)
+        m = _days_re.search(low)
+        if m:
+            days = min(int(m.group(1)), 90)
+        elif "today" in low:
+            days = 1
+        elif "week" in low:
+            days = 7
+        elif "month" in low:
+            days = 30
+        return [{
+            "tool": "list_calendar_events",
+            "args": {"days_ahead": days},
+            "description": f"List upcoming calendar events (next {days} days)",
         }]
 
     def _plan_app(self, low: str, cmd: str) -> list[dict]:
