@@ -74,3 +74,4 @@ rich
 uvicorn[standard]
 websockets
 anthropic
+anthropic
