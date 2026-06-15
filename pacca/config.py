@@ -100,10 +100,22 @@ class PACCAConfig:
         return cfg
 
     def save(self) -> None:
+        """Atomically write config to disk using write-then-rename."""
+        import tempfile
         PACCA_DIR.mkdir(parents=True, exist_ok=True)
-        with open(CONFIG_FILE, "w") as f:
-            json.dump(asdict(self), f, indent=2)
-        os.chmod(CONFIG_FILE, 0o600)
+        data = json.dumps(asdict(self), indent=2)
+        fd, tmp_path = tempfile.mkstemp(dir=PACCA_DIR, suffix=".tmp", prefix="config_")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(data)
+            os.chmod(tmp_path, 0o600)
+            os.replace(tmp_path, CONFIG_FILE)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 _GRANT_SECRET_KEY: bytes | None = None

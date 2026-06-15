@@ -210,6 +210,69 @@ class MemoryManager:
         self._conn.execute("DELETE FROM episodic WHERE created_at < ?", (cutoff,))
         self._conn.commit()
 
+    def delete_episodic_by_id(self, row_id: int) -> bool:
+        """Delete a single episodic record by its primary key (forget)."""
+        cur = self._conn.execute("DELETE FROM episodic WHERE id = ?", (row_id,))
+        self._conn.commit()
+        self._idf_dirty = True
+        return cur.rowcount > 0
+
+    def export_episodic(self) -> list[dict]:
+        """Return all episodic records as a list of dicts (for export/backup)."""
+        rows = self._conn.execute(
+            """SELECT id, task_id, command, intent_verb, intent_domain, outcome,
+                      steps_executed, risk_score, files_affected, tags, created_at
+               FROM episodic ORDER BY created_at ASC"""
+        ).fetchall()
+        result = []
+        for row in rows:
+            result.append({
+                "id": row[0],
+                "task_id": row[1],
+                "command": row[2],
+                "intent_verb": row[3],
+                "intent_domain": row[4],
+                "outcome": row[5],
+                "steps_executed": row[6],
+                "risk_score": row[7],
+                "files_affected": json.loads(row[8] or "[]"),
+                "tags": json.loads(row[9] or "[]"),
+                "created_at": row[10],
+            })
+        return result
+
+    def import_episodic(self, records: list[dict]) -> int:
+        """Import episodic records from export format. Skips duplicate task_ids.
+        Returns count of rows actually inserted."""
+        inserted = 0
+        for rec in records:
+            try:
+                self._conn.execute(
+                    """INSERT OR IGNORE INTO episodic
+                       (task_id, command, intent_verb, intent_domain, outcome,
+                        steps_executed, risk_score, files_affected, tags, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        rec.get("task_id", ""),
+                        str(rec.get("command", ""))[:500],
+                        rec.get("intent_verb", ""),
+                        rec.get("intent_domain", ""),
+                        rec.get("outcome", ""),
+                        rec.get("steps_executed", 0),
+                        rec.get("risk_score", 0.0),
+                        json.dumps(rec.get("files_affected", [])),
+                        json.dumps(rec.get("tags", [])),
+                        rec.get("created_at", time.time()),
+                    ),
+                )
+                if self._conn.execute("SELECT changes()").fetchone()[0] > 0:
+                    inserted += 1
+            except Exception:
+                pass
+        self._conn.commit()
+        self._idf_dirty = True
+        return inserted
+
     def compress_old_sessions(
         self,
         days: int = 7,

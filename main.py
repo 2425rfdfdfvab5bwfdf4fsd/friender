@@ -11,6 +11,9 @@ from pathlib import Path
 import hashlib
 import hmac
 
+import collections
+import time as _time
+
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -87,6 +90,48 @@ async def auth_middleware(request: Request, call_next):
             {"error": "Unauthorized — set Authorization: Bearer <PACCA_ADMIN_TOKEN>"},
             status_code=401,
         )
+    return await call_next(request)
+
+
+# ── Rate limiting (sliding window per IP) ────────────────────────────────────
+# Tracks (ip → deque of request timestamps). Cleaned up per-request.
+
+_rate_buckets: dict[str, collections.deque] = collections.defaultdict(
+    lambda: collections.deque()
+)
+_RATE_WINDOW = 60.0  # seconds
+
+
+def _get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return (request.client.host if request.client else "unknown")
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    cfg = get_agent().config
+    limit = cfg.api_rate_limit_per_minute
+    if limit <= 0:
+        return await call_next(request)
+    # Skip static files from rate counting
+    if request.url.path.startswith("/static/") or request.url.path == "/favicon.ico":
+        return await call_next(request)
+    ip = _get_client_ip(request)
+    now = _time.monotonic()
+    bucket = _rate_buckets[ip]
+    # Drop timestamps older than the window
+    while bucket and now - bucket[0] > _RATE_WINDOW:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        retry_after = int(_RATE_WINDOW - (now - bucket[0])) + 1
+        return JSONResponse(
+            {"error": "Rate limit exceeded", "retry_after_seconds": retry_after},
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+    bucket.append(now)
     return await call_next(request)
 
 # WhatsApp inbound: maps sender E.164 number → pending confirmation info
@@ -639,6 +684,41 @@ async def get_vector_stats():
         return agent.memory.vector_index_stats()
     except Exception as e:
         return {"error": str(e), "count": 0, "available": False, "provider": "none"}
+
+
+@app.get("/api/memory/export")
+async def export_memory():
+    """Export all episodic memory as JSON — useful for backup/migration."""
+    import time as _t
+    agent = get_agent()
+    records = agent.memory.export_episodic()
+    return JSONResponse({
+        "version": "8.0.0",
+        "exported_at": _t.time(),
+        "episodic_count": len(records),
+        "episodic": records,
+    })
+
+
+@app.post("/api/memory/import")
+async def import_memory(body: dict):
+    """Import episodic records from a previously exported JSON payload."""
+    agent = get_agent()
+    records = body.get("episodic", [])
+    if not isinstance(records, list):
+        raise HTTPException(status_code=400, detail="'episodic' must be a list")
+    inserted = agent.memory.import_episodic(records)
+    return {"status": "ok", "imported": inserted, "skipped": len(records) - inserted}
+
+
+@app.delete("/api/memory/episodic/{row_id}")
+async def forget_episodic(row_id: int):
+    """Delete a single episodic memory entry by its ID (right to be forgotten)."""
+    agent = get_agent()
+    deleted = agent.memory.delete_episodic_by_id(row_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail=f"No episodic entry with id={row_id}")
+    return {"status": "ok", "deleted_id": row_id}
 
 
 @app.get("/api/memory/weekly")

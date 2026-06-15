@@ -1,69 +1,48 @@
 ---
 name: PACCA v8.0 security & reliability upgrades
-description: All SEC/REL hardening changes made in the v7.2→v8.0 sprint, test suite, and packaging files added.
+description: All SEC/REL hardening, rate limiting, memory APIs, CLI, 98-test suite, and docs added in v8.0
 ---
 
-# PACCA v8.0 Security & Reliability Upgrades
+## Security fixes (Sprint 1)
+- **SEC-01**: `auth_middleware` checks `Authorization: Bearer <token>` on non-public routes when `PACCA_ADMIN_TOKEN` is set. Public paths: `/`, `/favicon.ico`, `/webhook/whatsapp`, `/static/`.
+- **SEC-04/05**: WS origin validation; **default empty list = allow all** (Replit proxy uses 10.60.x.x).
+- **SEC-07**: `_check_url_safety` uses `parsed.hostname` (handles IPv6 brackets); `PRIVATE_IPV6_RE`; blocks `data:`, `javascript:`, `vbscript:`, `@`-credential URLs, `169.254.`.
+- **SEC-08**: Email redaction in audit logs → `[REDACTED:email_address]` (not `[EMAIL]`).
+- **SEC-03**: `UsedGrantRegistry` fully rewritten to SQLite-backed persistent replay prevention.
 
-## Security fixes
+## Reliability fixes (Sprint 1)
+- **REL-01**: WAL mode on all SQLite DBs in `MemoryManager`.
+- **REL-03**: Per-tool timeout via `asyncio.wait_for`; configurable via `tool_timeout_seconds`.
+- **REL-04**: Graceful Playwright shutdown via `close_browser()` in lifespan.
+- **REL-05**: Atomic config saves (write `.tmp` → rename).
+- **REL-06**: `run_code` added to `DOMAIN_TOOL_MAP["coding"]`.
 
-### SEC-01: HTTP auth middleware
-- `main.py`: `auth_middleware` checks `Authorization: Bearer <token>` on all non-public routes when `PACCA_ADMIN_TOKEN` env var is set.
-- Public paths: `/`, `/favicon.ico`, `/webhook/whatsapp`, `/static/`.
-- WebSocket auth: first message must be `{"type":"auth","token":"..."}` within 10 s timeout.
+## Rate limiting (main.py)
+- Sliding-window per IP: `_rate_buckets: defaultdict(deque)`, `_RATE_WINDOW = 60s`.
+- Returns 429 + `Retry-After` header. Configured via `cfg.api_rate_limit_per_minute` (0 = disabled).
 
-### SEC-04/05: WebSocket origin validation
-- `main.py` `websocket_endpoint`: reads `Origin` header, checks against `PACCA_ALLOWED_ORIGINS` env var (comma-separated host names) or config `allowed_ws_origins` list.
-- **Default is empty list = allow all** — needed for Replit proxy (IPs come from 10.60.x.x subnet).
-- Closing with code 4403 on mismatch, 4401 on auth failure.
+## Memory APIs (main.py + memory_manager.py)
+- `GET /api/memory/export`, `POST /api/memory/import`, `DELETE /api/memory/episodic/{row_id}`
+- `MemoryManager`: `export_episodic()`, `import_episodic()` (INSERT OR IGNORE on task_id), `delete_episodic_by_id()`
 
-### SEC-07: Extended URL blocklist
-- `pacca/tools/browser_tools.py`: `_check_url_safety` now uses `parsed.hostname` (handles IPv6 brackets).
-- Added `PRIVATE_IPV6_RE` for `::1`, `fe80:`, `fc...:`, `fd...:`.
-- Blocks: `data:`, `javascript:`, `vbscript:` schemes; URLs with `@` (embedded credentials); `169.254.` (AWS/GCP metadata).
-- **Critical**: Use `parsed.hostname` not manual `split(":"` for IPv6 — `.split(":")[0]` on `[::1]` yields `[`, breaking the check.
+## CLI (pacca/cli.py)
+- Commands: `doctor`, `init`, `serve`, `version`
+- pyproject.toml entry point: `pacca = "pacca.cli:main"` (was broken as `main:run`)
 
-### SEC-08: Email redaction in audit logs
-- `pacca/models/audit_log.py`: `_redact_email()` helper; replaces emails with `[REDACTED:email]`.
-- Called in `_sanitize_args` for all string argument values.
+## Test suite — 98 tests, all passing
+Key quirks to remember:
+- `ResolvedResource` uses `.is_safe()` method, not `.allowed` attribute
+- Risk gate values are uppercase: `"PROCEED"`, `"ACKNOWLEDGE"`, `"YES_REQUIRED"`
+- To test grant expiry via `GrantVerifier`: mock `pacca.security.grant_verifier.time.monotonic` — changing `expires_monotonic` via `dataclasses.replace` invalidates the HMAC (field is in canonical dict)
+- `check_toctou()` returns `(bool, reason_str)` tuple, not bare bool
+- `PlanValidator(resolver, tool_registry)` requires two positional args — use `MagicMock()`
 
-### SEC-03: Persistent UsedGrantRegistry
-- `pacca/security/used_grant_registry.py`: full rewrite — SQLite-backed (`~/.pacca/used_grants.db`).
-- In-memory set provides O(1) lookup; DB provides replay protection across restarts.
-- WAL mode + `INSERT OR IGNORE`; background prune every 10 min of expired entries.
-
-## Reliability fixes
-
-### REL-01: SQLite WAL mode for MemoryManager
-- `pacca/memory/memory_manager.py` `__init__`: adds `PRAGMA journal_mode=WAL` + `PRAGMA synchronous=NORMAL` immediately after connect.
-
-### REL-03: Per-tool timeout
-- `pacca/config.py`: new field `tool_timeout_seconds: int = 60`.
-- `pacca/agent.py` `_execute_tool`: wraps coroutine with `asyncio.wait_for(timeout=tool_timeout_seconds)`; non-coroutine results run in executor (they're already resolved by the time we get them, so executor overhead is ~0).
-- Returns `{"error": "...", "timeout": True}` on `asyncio.TimeoutError`.
-
-### REL-04: Graceful Playwright shutdown
-- `main.py` lifespan shutdown calls `await close_browser()` (new module-level fn in `browser_tools.py`).
-- `_module_browser` global in `browser_tools.py` can be set to track the active instance.
-
-### REL-06: run_code in DOMAIN_TOOL_MAP
-- `pacca/models/task_scope.py`: `run_code` added to `DOMAIN_TOOL_MAP["coding"]`.
-
-## New fields in PACCAConfig
+## New config fields (PACCAConfig)
 - `tool_timeout_seconds: int = 60`
 - `require_auth: bool = False`
-- `allowed_ws_origins: list[str] = []` — **must default to empty (allow all)** for Replit compatibility
+- `allowed_ws_origins: list[str] = []`
 - `api_rate_limit_per_minute: int = 120`
 - `ws_command_rate_limit_per_minute: int = 20`
 
-## Test suite (tests/)
-- 44 tests across 7 modules, all passing.
-- `PlanValidator(resolver, tool_registry)` requires two positional args — use `MagicMock()` in tests.
-- Email redaction marker is `[REDACTED:email]` (not `[EMAIL]`).
-- `pytest` + `pytest-asyncio` must be installed manually (`pip install pytest pytest-asyncio`) — not in requirements.txt yet; added to `pyproject.toml` dev extras.
-
-## New files
-- `pyproject.toml` — build system, dev extras, pytest config, ruff/mypy settings
-- `.env.example` — all env vars with comments
-- `SECURITY.md` — vulnerability reporting, security model table, deployment checklist
-- `PRIVACY.md` — data collected locally, what's sent to LLM providers, rights
+## Docs added
+- `CHANGELOG.md`, `CONFIGURATION.md`, `ARCHITECTURE.md`, `TESTING.md`, `API.md`, `SECURITY.md`, `PRIVACY.md`, `.env.example`
