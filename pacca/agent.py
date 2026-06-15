@@ -397,16 +397,24 @@ class PACCAAgent:
                     })
                     # Fall through to normal pipeline
             else:
+                key_hint = ""
+                if self.llm_client:
+                    err = self.llm_client.key_error()
+                    if err:
+                        key_hint = f"\n\n**Current issue:** {err}"
                 yield AgentEvent("advisory", {
                     "task_id": task_id,
                     "question": raw_cmd,
                     "response": (
-                        "**Advisory mode requires an API key.**\n\n"
+                        "**Advisory mode requires a working API key.**\n\n"
                         "To enable full AI advisory responses:\n"
                         "1. Go to Replit Secrets (🔒 in the left sidebar)\n"
-                        "2. Add `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `GEMINI_API_KEY`\n"
-                        "3. Restart the app\n\n"
-                        "In demo mode, only computer-control actions (file, git, system, browser) work with the heuristic planner."
+                        "2. Add `ANTHROPIC_API_KEY` (recommended), or a valid `GEMINI_API_KEY` "
+                        "(must start with `AIza`) or `OPENAI_API_KEY`\n"
+                        "3. Restart the app"
+                        + key_hint + "\n\n"
+                        "In demo mode, only computer-control actions (file, git, system, browser) "
+                        "work with the heuristic planner."
                     ),
                     "provider": "offline",
                     "model": "demo",

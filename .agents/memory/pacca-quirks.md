@@ -36,3 +36,13 @@ CumulativePlanRiskEvaluator defaults: `risk_proceed_threshold=30`, `risk_confirm
 ## Status endpoint exposes llm_error for UI
 
 `/api/status` now returns `llm_error: str | None`. When the key is misconfigured, the terminal banner and Settings panel display the specific fix (e.g. "must start with 'AIza', get key at aistudio.google.com") rather than a generic "no API key" message.
+
+## DOMAIN_TOOL_MAP and DOMAIN_KEYWORD_PATTERNS must stay in sync
+
+`task_scope.py` has both `DOMAIN_TOOL_MAP` (grants allowed tools per domain) and `DOMAIN_KEYWORD_PATTERNS` (detects domain from command text). Both must be updated together when adding new tool domains. The original code was missing: advanced browser tools (click, type, fill_form, etc.), vision/coding/research domains entirely. PlanValidator rejects any tool not in `scope.allowed_tools`, so missing domain entries silently block LLM-planned steps.
+
+**How to apply:** Whenever a new tool is added, add it to `DOMAIN_TOOL_MAP` AND add a detection pattern to `DOMAIN_KEYWORD_PATTERNS`.
+
+## HeuristicPlanner system-keyword fallback in _plan_file
+
+When domain detection misclassifies a system command as "file" (e.g. "check system resources" before "resources" was added to the pattern), `_plan_file` falls through to `list_directory`. Added explicit `_SYS_KW` check at the top of `_plan_file` and a `_plan_llm_required` method for vision/coding/research domains that returns the real domain tool (not `list_directory`) so PlanValidator passes and the tool surfaces a clear "API key required" error.

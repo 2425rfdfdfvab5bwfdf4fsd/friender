@@ -36,6 +36,10 @@ async def _vision_call(image_path: str, question: str) -> str:
     if _llm_client is None:
         raise RuntimeError("LLM client not configured — cannot perform vision analysis")
 
+    if not _llm_client.is_available():
+        err = _llm_client.key_error() or "LLM not available"
+        raise RuntimeError(f"Vision analysis requires a working API key. {err}")
+
     b64, media_type = _encode_image(image_path)
     provider = _llm_client.provider
     api_key = _llm_client.api_key

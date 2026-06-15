@@ -30,6 +30,9 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     "browser": frozenset({
         "browser_open_url", "browser_web_search", "browser_extract_page_text",
         "browser_download_file", "browser_tab_management",
+        "browser_click", "browser_type_text", "browser_fill_form",
+        "browser_screenshot", "browser_wait_for_element", "browser_scroll",
+        "browser_go_back", "browser_get_page_source", "browser_get_structured_data",
     }),
     "document": frozenset({
         "create_docx", "read_docx", "create_xlsx", "read_xlsx",
@@ -39,6 +42,16 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     }),
     "messaging": frozenset({
         "send_whatsapp_message",
+    }),
+    "vision": frozenset({
+        "analyze_image", "capture_and_analyze",
+    }),
+    "coding": frozenset({
+        "generate_code", "explain_code", "refactor_code", "write_tests",
+        "analyze_code_quality",
+    }),
+    "research": frozenset({
+        "research_topic", "summarize_url",
     }),
 }
 
@@ -57,13 +70,16 @@ INTENT_VERB_PATTERNS: list[tuple[re.Pattern, str]] = [
 ]
 
 DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
-    (re.compile(r'\b(http|https|url|web|browser|website|page|google|search online)\b', re.I), "browser"),
+    (re.compile(r'\b(http|https|url|web|browser|website|page|google|search online|click|navigate|fill form|screenshot)\b', re.I), "browser"),
     (re.compile(r'\b(git|commit|diff|stage|repo|repository|branch)\b', re.I), "git"),
     (re.compile(r'\b(docx|xlsx|word|excel|spreadsheet|document)\b', re.I), "document"),
     (re.compile(r'\b(app|application|program|launch|quit|close)\b', re.I), "app"),
-    (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|uptime)\b', re.I), "system"),
+    (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|uptime|resources|hardware|performance|sysmon|stats)\b', re.I), "system"),
     (re.compile(r'\b(file|folder|directory|path|\.pdf|\.txt|\.py|\.js|\.zip)\b', re.I), "file"),
     (re.compile(r'\b(whatsapp|send message|notify|notification|text message)\b', re.I), "messaging"),
+    (re.compile(r'\b(image|photo|picture|screenshot|vision|analyze image|describe image|capture)\b', re.I), "vision"),
+    (re.compile(r'\b(generate code|write code|code for|explain code|refactor|unit test|code quality|programming)\b', re.I), "coding"),
+    (re.compile(r'\b(research|investigate|summarize url|summarize website|web research|find info about)\b', re.I), "research"),
 ]
 
 
@@ -77,7 +93,7 @@ class TaskScope:
     raw_command: str
     redacted_command: str
     intent_verb: str
-    intent_domain: Literal["file", "app", "system", "browser", "document", "git", "messaging", "mixed"]
+    intent_domain: Literal["file", "app", "system", "browser", "document", "git", "messaging", "vision", "coding", "research", "mixed"]
     allowed_tools: frozenset
     allowed_path_prefixes: tuple
     allowed_url_patterns: tuple | None

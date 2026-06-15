@@ -52,7 +52,10 @@ def set_llm_client(client) -> None:
 
 def _require_llm():
     if _llm_client is None or not _llm_client.is_available():
-        raise RuntimeError("LLM client not available — set an API key in Settings")
+        hint = _llm_client.key_error() if _llm_client else "No LLM client configured."
+        raise RuntimeError(
+            f"Research tools require a working LLM API key. {hint or 'Add one in Replit Secrets (🔒).'}"
+        )
     return _llm_client
 
 

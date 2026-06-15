@@ -80,8 +80,39 @@ class HeuristicPlanner:
             return self._plan_document(low, cmd)
         if domain == "messaging":
             return self._plan_messaging(low, cmd)
-        # "file", "mixed", or unknown — use file planner
+        if domain in ("vision", "coding", "research"):
+            # These require LLM; heuristic mode produces a clear no-op notice
+            return self._plan_llm_required(domain, cmd)
+        # "file", "mixed", or unknown — use file planner with system keyword override
         return self._plan_file(low, cmd)
+
+    def _plan_llm_required(self, domain: str, cmd: str) -> list[dict]:
+        """Return the real domain tool — it will fail fast with a clear API-key error."""
+        quotes = QUOTE_RE.findall(cmd)
+        paths = _extract_paths(cmd)
+        if domain == "vision":
+            # capture_and_analyze needs no image path; it uses the active browser page
+            return [{"tool": "capture_and_analyze",
+                     "args": {"question": cmd[:200]},
+                     "description": f"Analyze: {cmd[:60]}"}]
+        if domain == "coding":
+            lang = "python"
+            for w in ("javascript", "typescript", "go", "rust", "java", "sql", "bash"):
+                if w in cmd.lower():
+                    lang = w
+                    break
+            out = paths[0] if paths else None
+            return [{"tool": "generate_code",
+                     "args": {"description": cmd, "language": lang,
+                               **({"output_path": out} if out else {})},
+                     "description": f"Generate {lang} code: {cmd[:50]}"}]
+        if domain == "research":
+            topic = quotes[0] if quotes else cmd[:120]
+            return [{"tool": "research_topic",
+                     "args": {"topic": topic, "depth": 2},
+                     "description": f"Research: {topic[:60]}"}]
+        return [{"tool": "list_directory", "args": {"path": _cwd()},
+                 "description": "List current directory"}]
 
     def _plan_system(self, low: str) -> list[dict]:
         include_procs = "process" in low or "top" in low or "running" in low
@@ -182,6 +213,14 @@ class HeuristicPlanner:
                  "description": "Read document"}]
 
     def _plan_file(self, low: str, cmd: str) -> list[dict]:
+        # Safety net: detect system-monitor intent even when domain was misclassified
+        _SYS_KW = ("cpu", "ram", "memory usage", "disk usage", "uptime",
+                   "system resources", "system stats", "resource usage",
+                   "performance", "hardware", "system info", "sysmon",
+                   "system status", "process list")
+        if any(kw in low for kw in _SYS_KW):
+            return self._plan_system(low)
+
         paths = _extract_paths(cmd)
         patterns = _extract_patterns(cmd)
         quotes = QUOTE_RE.findall(cmd)
