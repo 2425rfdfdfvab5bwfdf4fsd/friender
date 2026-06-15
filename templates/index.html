@@ -10,16 +10,16 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
 <style>
 :root {
-  --bg:#07090f; --surface:#0f1520; --surface2:#141c28; --surface3:#192030;
-  --border:#1e2a3d; --border2:#162030;
-  --accent:#58a6ff; --accent2:#3fb950; --warn:#f0a500; --danger:#f85149;
-  --muted:#4a5a72; --text:#e0ecf8; --text2:#a8bcd0;
-  --bblue:#79c0ff;
-  --btn-fg:#07090f;
-  --confirm-bg:rgba(20,12,0,.88); --confirm-danger-bg:rgba(20,0,0,.88);
+  --bg:#0c0a14; --surface:#120f1e; --surface2:#1a1630; --surface3:#22183c;
+  --border:#2e2048; --border2:#1e1638;
+  --accent:#a78bfa; --accent2:#34d399; --warn:#f0a500; --danger:#f85149;
+  --muted:#5c4e7a; --text:#ede9f6; --text2:#b8a8d0;
+  --bblue:#c4b5fd;
+  --btn-fg:#0c0a14;
+  --confirm-bg:rgba(20,10,30,.88); --confirm-danger-bg:rgba(20,0,0,.88);
   /* RGB triplets for rgba() tints — update in html.light too */
-  --accent-rgb:88,166,255; --accent2-rgb:63,185,80;
-  --warn-rgb:240,165,0; --danger-rgb:248,81,73; --muted-rgb:74,90,114;
+  --accent-rgb:167,139,250; --accent2-rgb:52,211,153;
+  --warn-rgb:240,165,0; --danger-rgb:248,81,73; --muted-rgb:92,78,122;
   --sidebar-w:320px; --hdr-h:54px; --quickbar-h:42px; --mobile-nav-h:56px;
   --radius:8px; --radius-sm:6px; --radius-lg:14px;
   --shadow:0 12px 40px rgba(0,0,0,.7);
@@ -79,7 +79,7 @@ body{
 #logo{display:flex;align-items:center;gap:9px;text-decoration:none;cursor:default;user-select:none;flex-shrink:0}
 #logo-wordmark{
   font-size:16px;font-weight:800;
-  background:linear-gradient(135deg,var(--accent) 0%,#79c0ff 100%);
+  background:linear-gradient(135deg,var(--accent) 0%,#c4b5fd 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
   letter-spacing:2px;
 }
@@ -282,7 +282,7 @@ body{
 #tts-btn.on{color:var(--accent2);border-color:rgba(var(--accent2-rgb),.5);background:rgba(var(--accent2-rgb),.08)}
 #send-btn{
   font-size:12px;padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;
-  background:linear-gradient(135deg,var(--accent) 0%,#79c0ff 100%);
+  background:linear-gradient(135deg,var(--accent) 0%,#c4b5fd 100%);
   border:none;color:var(--btn-fg);font-weight:800;font-family:inherit;
   transition:opacity .18s,transform .12s,box-shadow .18s;
   white-space:nowrap;letter-spacing:.4px;flex-shrink:0;
@@ -1234,13 +1234,13 @@ function toast(msg, type='info', dur=3500) {
 function initTerm() {
   S.term = new Terminal({
     theme:{
-      background:'#0d1117',foreground:'#e6edf3',cursor:'#58a6ff',
-      selectionBackground:'rgba(88,166,255,.25)',
-      black:'#0d1117',red:'#f85149',green:'#3fb950',yellow:'#e3b341',
-      blue:'#58a6ff',magenta:'#bc8cff',cyan:'#39c5cf',white:'#e6edf3',
-      brightBlack:'#484f58',brightRed:'#ff7b72',brightGreen:'#56d364',
-      brightYellow:'#e3b341',brightBlue:'#79c0ff',
-      brightMagenta:'#d2a8ff',brightCyan:'#56d4dd',brightWhite:'#f0f6fc',
+      background:'#0c0a14',foreground:'#ede9f6',cursor:'#a78bfa',
+      selectionBackground:'rgba(167,139,250,.25)',
+      black:'#0c0a14',red:'#f85149',green:'#34d399',yellow:'#e3b341',
+      blue:'#a78bfa',magenta:'#e879f9',cyan:'#67e8f9',white:'#ede9f6',
+      brightBlack:'#5c4e7a',brightRed:'#ff7b72',brightGreen:'#6ee7b7',
+      brightYellow:'#fde68a',brightBlue:'#c4b5fd',
+      brightMagenta:'#f0abfc',brightCyan:'#a5f3fc',brightWhite:'#f5f3ff',
     },
     fontFamily:"'Cascadia Code','Fira Code','Courier New',monospace",
     fontSize:13, lineHeight:1.45, cursorBlink:true, cursorStyle:'bar',
@@ -2734,13 +2734,13 @@ async function testWA(){
 
 // ── Light / Dark theme toggle ─────────────────────────────────────────────────
 const XTERM_DARK = {
-  background:'#0d1117',foreground:'#e6edf3',cursor:'#58a6ff',
-  selectionBackground:'rgba(88,166,255,.25)',
-  black:'#0d1117',red:'#f85149',green:'#3fb950',yellow:'#e3b341',
-  blue:'#58a6ff',magenta:'#bc8cff',cyan:'#39c5cf',white:'#e6edf3',
-  brightBlack:'#484f58',brightRed:'#ff7b72',brightGreen:'#56d364',
-  brightYellow:'#e3b341',brightBlue:'#79c0ff',
-  brightMagenta:'#d2a8ff',brightCyan:'#56d4dd',brightWhite:'#f0f6fc',
+  background:'#0c0a14',foreground:'#ede9f6',cursor:'#a78bfa',
+  selectionBackground:'rgba(167,139,250,.25)',
+  black:'#0c0a14',red:'#f85149',green:'#34d399',yellow:'#e3b341',
+  blue:'#a78bfa',magenta:'#e879f9',cyan:'#67e8f9',white:'#ede9f6',
+  brightBlack:'#5c4e7a',brightRed:'#ff7b72',brightGreen:'#6ee7b7',
+  brightYellow:'#fde68a',brightBlue:'#c4b5fd',
+  brightMagenta:'#f0abfc',brightCyan:'#a5f3fc',brightWhite:'#f5f3ff',
 };
 const XTERM_LIGHT = {
   background:'#f0f4f8',foreground:'#1c2433',cursor:'#1a6bbf',
