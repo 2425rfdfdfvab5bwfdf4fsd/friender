@@ -10,127 +10,145 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
 <style>
 :root {
-  --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --surface3:#21262d;
-  --border:#30363d; --border2:#21262d;
-  --accent:#58a6ff; --accent2:#3fb950; --warn:#e3b341; --danger:#f85149;
-  --muted:#8b949e; --text:#e6edf3; --text2:#c9d1d9;
-  --sidebar-w:340px; --hdr-h:48px; --quickbar-h:42px;
-  --radius:6px; --radius-sm:4px;
-  --shadow:0 4px 16px rgba(0,0,0,.4);
-  --glow-accent:0 0 12px rgba(88,166,255,.2);
+  --bg:#0a0e14; --surface:#111720; --surface2:#171e28; --surface3:#1d2535;
+  --border:#242d3d; --border2:#1a2030;
+  --accent:#4d9de0; --accent2:#2ecc71; --warn:#f0a500; --danger:#e05252;
+  --muted:#5a6a82; --text:#d8e4f0; --text2:#b0bfcc;
+  --sidebar-w:340px; --hdr-h:52px; --quickbar-h:40px;
+  --radius:8px; --radius-sm:5px; --radius-lg:12px;
+  --shadow:0 8px 32px rgba(0,0,0,.55);
+  --glow-accent:0 0 16px rgba(77,157,224,.18);
+  --font:'Cascadia Code','Fira Code','Consolas',monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Cascadia Code','Fira Code','Consolas',monospace;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh;display:flex;flex-direction:column;overflow:hidden}
 
 /* ── Toasts ─────────────────────────────────────────────────────────────── */
-#toast-container{position:fixed;top:60px;right:16px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
-.toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:12px;max-width:320px;pointer-events:auto;animation:toastIn .25s ease;display:flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
-.toast.ok{border-color:var(--accent2);color:var(--accent2)}
-.toast.warn{border-color:var(--warn);color:var(--warn)}
-.toast.err{border-color:var(--danger);color:var(--danger)}
-.toast.info{border-color:var(--accent);color:var(--accent)}
-@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
-@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(20px)}}
+#toast-container{position:fixed;top:64px;right:16px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;font-size:11.5px;max-width:320px;pointer-events:auto;animation:toastIn .25s cubic-bezier(.22,.68,0,1.2);display:flex;align-items:center;gap:8px;box-shadow:var(--shadow)}
+.toast.ok{border-color:rgba(46,204,113,.5);color:var(--accent2)}
+.toast.warn{border-color:rgba(240,165,0,.5);color:var(--warn)}
+.toast.err{border-color:rgba(224,82,82,.5);color:var(--danger)}
+.toast.info{border-color:rgba(77,157,224,.5);color:var(--accent)}
+@keyframes toastIn{from{opacity:0;transform:translateX(12px) scale(.96)}to{opacity:1;transform:translateX(0) scale(1)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(12px)}}
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
-#header{display:flex;align-items:center;gap:8px;padding:0 14px;height:var(--hdr-h);background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20}
-#logo{font-size:14px;font-weight:700;color:var(--accent);letter-spacing:.5px;white-space:nowrap;cursor:default;user-select:none}
-#logo-sub{color:var(--muted);font-weight:400;font-size:10px;margin-left:6px}
-#status-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .4s;cursor:default}
-#status-dot.ok{background:var(--accent2);box-shadow:0 0 6px rgba(63,185,80,.5)}
-#status-dot.warn{background:var(--warn)}
-#provider-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 8px;color:var(--muted);white-space:nowrap;cursor:default}
-#provider-badge.live{color:var(--accent);border-color:rgba(88,166,255,.4);background:rgba(88,166,255,.08)}
+#header{display:flex;align-items:center;gap:10px;padding:0 16px;height:var(--hdr-h);background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20}
+#logo{display:flex;align-items:center;gap:8px;text-decoration:none;cursor:default;user-select:none;flex-shrink:0}
+#logo-wordmark{font-size:15px;font-weight:800;color:var(--accent);letter-spacing:1.5px}
+#logo-sub{color:var(--muted);font-weight:400;font-size:10px;letter-spacing:.3px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;white-space:nowrap}
+#status-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .4s,box-shadow .4s;cursor:default}
+#status-dot.ok{background:var(--accent2);box-shadow:0 0 7px rgba(46,204,113,.6)}
+#status-dot.warn{background:var(--warn);box-shadow:0 0 7px rgba(240,165,0,.5)}
+#provider-badge{font-size:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px 9px;color:var(--muted);white-space:nowrap;cursor:default;letter-spacing:.3px}
+#provider-badge.live{color:var(--accent);border-color:rgba(77,157,224,.35);background:rgba(77,157,224,.07)}
 
 /* Live system stats strip */
-#sys-stats{display:flex;align-items:center;gap:12px;margin-left:6px}
-.stat-chip{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);cursor:default;user-select:none}
-.stat-chip .stat-label{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.6px}
-.stat-bar-wrap{width:36px;height:5px;background:var(--border);border-radius:2px;overflow:hidden}
-.stat-bar{height:5px;border-radius:2px;transition:width .6s ease,background .4s}
-.stat-val{font-size:10px;min-width:26px;text-align:right}
+#sys-stats{display:flex;align-items:center;gap:14px;margin-left:4px}
+.stat-chip{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);cursor:default;user-select:none}
+.stat-chip .stat-label{color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.8px}
+.stat-bar-wrap{width:38px;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.stat-bar{height:4px;border-radius:2px;transition:width .7s ease,background .4s}
+.stat-val{font-size:10px;min-width:28px;text-align:right;font-weight:600}
 .stat-val.ok{color:var(--accent2)}
 .stat-val.warn{color:var(--warn)}
 .stat-val.crit{color:var(--danger)}
 
 .spacer{flex:1}
-.hdr-btn{font:11px/1 monospace;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s,background .15s;white-space:nowrap}
-.hdr-btn:hover{color:var(--text);border-color:var(--accent);background:rgba(88,166,255,.07)}
-.hdr-btn.active{color:var(--accent);border-color:rgba(88,166,255,.5)}
-#btn-fullscreen{padding:4px 8px}
+
+/* Header button group */
+.hdr-group{display:flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:2px}
+.hdr-btn{font:11px/1 monospace;background:transparent;border:none;color:var(--muted);padding:4px 9px;border-radius:5px;cursor:pointer;transition:color .15s,background .15s;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.hdr-btn:hover{color:var(--text);background:rgba(77,157,224,.1)}
+.hdr-btn.active{color:var(--accent);background:rgba(77,157,224,.12)}
+.hdr-btn-solo{font:11px/1 monospace;background:var(--surface2);border:1px solid var(--border);color:var(--muted);padding:4px 9px;border-radius:var(--radius-sm);cursor:pointer;transition:color .15s,border-color .15s,background .15s;white-space:nowrap}
+.hdr-btn-solo:hover{color:var(--text);border-color:var(--accent);background:rgba(77,157,224,.07)}
+#mem-counter,#wf-counter{font-size:10px;color:var(--muted);white-space:nowrap;cursor:default;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm)}
 
 /* ── Quick-action bar ───────────────────────────────────────────────────── */
-#quickbar{display:flex;align-items:center;gap:6px;padding:0 14px;height:var(--quickbar-h);background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+#quickbar{display:flex;align-items:center;gap:4px;padding:0 16px;height:var(--quickbar-h);background:var(--surface2);border-bottom:1px solid var(--border2);flex-shrink:0;overflow-x:auto;scrollbar-width:none;position:relative}
 #quickbar::-webkit-scrollbar{display:none}
-#quickbar-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;flex-shrink:0}
-.qa-btn{font:11px/1 monospace;background:var(--surface);border:1px solid var(--border);color:var(--text2);padding:5px 11px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;display:flex;align-items:center;gap:5px}
-.qa-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.07)}
-.qa-btn .qa-icon{font-size:12px}
-.qa-sep{width:1px;height:18px;background:var(--border);flex-shrink:0;margin:0 2px}
+#quickbar::after{content:'';position:absolute;right:0;top:0;bottom:0;width:32px;background:linear-gradient(to right,transparent,var(--surface2));pointer-events:none}
+#quickbar-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;white-space:nowrap;flex-shrink:0;margin-right:4px}
+.qa-btn{font:11px/1 monospace;background:transparent;border:1px solid transparent;color:var(--text2);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;display:flex;align-items:center;gap:4px}
+.qa-btn:hover{border-color:var(--border);color:var(--accent);background:rgba(77,157,224,.07)}
+.qa-btn .qa-icon{font-size:11px}
+.qa-sep{width:1px;height:16px;background:var(--border);flex-shrink:0;margin:0 4px;opacity:.6}
 
 /* ── Layout ─────────────────────────────────────────────────────────────── */
 #main{display:flex;flex:1;overflow:hidden}
 
 /* ── Terminal area ──────────────────────────────────────────────────────── */
-#terminal-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-width:0}
-#xterm-container{flex:1;padding:4px 2px;overflow:hidden}
-.xterm-viewport::-webkit-scrollbar{width:6px}
+#terminal-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;min-width:0;background:var(--bg)}
+#xterm-container{flex:1;padding:6px 4px 2px;overflow:hidden}
+.xterm-viewport::-webkit-scrollbar{width:5px}
 .xterm-viewport::-webkit-scrollbar-track{background:transparent}
 .xterm-viewport::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
 /* ── Autocomplete dropdown ──────────────────────────────────────────────── */
-#autocomplete{position:absolute;bottom:calc(var(--quickbar-h) + 48px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-bottom:none;max-height:180px;overflow-y:auto;z-index:50;display:none;box-shadow:0 -4px 16px rgba(0,0,0,.4)}
+#autocomplete{position:absolute;bottom:calc(var(--quickbar-h) + 52px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-bottom:none;max-height:180px;overflow-y:auto;z-index:50;display:none;box-shadow:0 -8px 24px rgba(0,0,0,.5)}
 #autocomplete.show{display:block}
-.ac-item{padding:7px 14px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--text2);border-bottom:1px solid var(--border2)}
-.ac-item:hover,.ac-item.selected{background:rgba(88,166,255,.1);color:var(--text)}
+.ac-item{padding:7px 16px;font-size:12px;cursor:pointer;display:flex;align-items:center;gap:10px;color:var(--text2);border-bottom:1px solid var(--border2)}
+.ac-item:hover,.ac-item.selected{background:rgba(77,157,224,.09);color:var(--text)}
 .ac-item .ac-icon{font-size:11px;color:var(--muted);width:14px;text-align:center;flex-shrink:0}
 .ac-item .ac-label{flex:1}
-.ac-item .ac-hint{font-size:10px;color:var(--muted)}
+.ac-item .ac-hint{font-size:10px;color:var(--muted);padding:1px 6px;background:var(--surface2);border-radius:3px}
 
 /* ── Progress ───────────────────────────────────────────────────────────── */
-#progress-wrap{padding:0 14px 6px;flex-shrink:0;display:none}
+#progress-wrap{padding:0 16px 6px;flex-shrink:0;display:none}
 #progress-wrap.show{display:block}
-#progress-track{background:var(--border);border-radius:2px;height:3px}
-#progress-fill{height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s ease;width:0}
-#progress-label{font-size:9px;color:var(--muted);margin-top:3px;display:flex;justify-content:space-between}
+#progress-track{background:var(--border);border-radius:2px;height:2px}
+#progress-fill{height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;transition:width .4s ease;width:0}
+#progress-label{font-size:9px;color:var(--muted);margin-top:4px;display:flex;justify-content:space-between;letter-spacing:.3px}
 
 /* ── Confirm bar ────────────────────────────────────────────────────────── */
-#confirm-bar{display:none;align-items:center;gap:10px;padding:10px 14px;background:#1a1000;border-top:2px solid var(--warn);flex-shrink:0}
+#confirm-bar{display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(26,16,0,.8);border-top:2px solid var(--warn);flex-shrink:0;backdrop-filter:blur(2px)}
 #confirm-bar.show{display:flex}
-#confirm-bar.danger{background:#1a0000;border-color:var(--danger)}
+#confirm-bar.danger{background:rgba(26,0,0,.8);border-color:var(--danger)}
 #confirm-msg{flex:1;font-size:12px;color:var(--warn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #confirm-bar.danger #confirm-msg{color:var(--danger)}
-#confirm-input{width:120px;background:var(--surface2);border:1px solid var(--warn);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-family:inherit;font-size:12px;outline:none}
+#confirm-input{width:120px;background:var(--surface2);border:1px solid var(--warn);color:var(--text);padding:5px 9px;border-radius:var(--radius-sm);font-family:inherit;font-size:12px;outline:none}
 #confirm-bar.danger #confirm-input{border-color:var(--danger)}
-.conf-btn{padding:5px 14px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;white-space:nowrap}
-#confirm-yes{background:var(--accent2);color:#0d1117}
+.conf-btn{padding:5px 16px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;white-space:nowrap;transition:opacity .15s}
+.conf-btn:hover{opacity:.85}
+#confirm-yes{background:var(--accent2);color:#0a0e14}
 #confirm-no{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
 
 /* ── Input bar ──────────────────────────────────────────────────────────── */
-#input-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
-#prompt{color:var(--accent);font-size:13px;white-space:nowrap;user-select:none}
+#input-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0}
+#input-field-wrap{flex:1;display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;transition:border-color .2s,box-shadow .2s}
+#input-field-wrap:focus-within{border-color:rgba(77,157,224,.5);box-shadow:0 0 0 3px rgba(77,157,224,.07)}
+#prompt{color:var(--accent);font-size:13px;white-space:nowrap;user-select:none;opacity:.8}
 #cmd-wrap{flex:1;position:relative}
-#cmd-input{width:100%;background:transparent;border:none;outline:none;color:var(--text);font:13px/1.4 'Cascadia Code','Fira Code','Consolas',monospace;caret-color:var(--accent)}
+#cmd-input{width:100%;background:transparent;border:none;outline:none;color:var(--text);font:13px/1.4 var(--font);caret-color:var(--accent)}
 #cmd-input::placeholder{color:var(--muted)}
 #char-count{position:absolute;right:4px;top:50%;transform:translateY(-50%);font-size:9px;color:var(--muted);display:none}
-#dryrun-toggle{font-size:10px;padding:4px 9px;border-radius:var(--radius-sm);cursor:pointer;background:transparent;border:1px solid var(--border);color:var(--muted);white-space:nowrap;transition:all .15s}
-#dryrun-toggle.on{background:rgba(63,185,80,.1);border-color:var(--accent2);color:var(--accent2)}
-#send-btn{font-size:12px;padding:6px 16px;border-radius:var(--radius-sm);cursor:pointer;background:var(--accent);border:none;color:#0d1117;font-weight:700;font-family:inherit;transition:opacity .15s,transform .1s;white-space:nowrap}
-#send-btn:hover{opacity:.9;transform:scale(1.02)}
-#send-btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+#dryrun-toggle{font-size:10px;padding:4px 9px;border-radius:var(--radius-sm);cursor:pointer;background:transparent;border:1px solid var(--border);color:var(--muted);white-space:nowrap;transition:all .15s;flex-shrink:0}
+#dryrun-toggle.on{background:rgba(46,204,113,.1);border-color:var(--accent2);color:var(--accent2)}
+#mic-btn{font-size:14px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);padding:5px 9px;cursor:pointer;color:var(--muted);transition:all .2s;line-height:1;flex-shrink:0}
+#mic-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(77,157,224,.07)}
+#mic-btn.listening{border-color:var(--danger);color:var(--danger);background:rgba(224,82,82,.1);animation:pulse 1s ease infinite}
+#tts-btn{font-size:11px;padding:5px 9px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--muted);transition:all .2s;flex-shrink:0}
+#tts-btn.on{color:var(--accent2);border-color:var(--accent2);background:rgba(46,204,113,.08)}
+#send-btn{font-size:12px;padding:7px 18px;border-radius:var(--radius-sm);cursor:pointer;background:var(--accent);border:none;color:#0a0e14;font-weight:800;font-family:inherit;transition:opacity .15s,transform .1s,box-shadow .15s;white-space:nowrap;letter-spacing:.3px;flex-shrink:0}
+#send-btn:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 4px 12px rgba(77,157,224,.35)}
+#send-btn:disabled{opacity:.3;cursor:not-allowed;transform:none;box-shadow:none}
 #send-btn.running{background:var(--danger)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 #sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s ease;overflow:hidden}
 #sidebar.collapsed{width:0}
-#panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0}
-.ptab{flex:1;padding:9px 2px;font-size:10px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:color .15s,border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ptab.active{color:var(--accent);border-color:var(--accent)}
-.ptab:hover{color:var(--text)}
-.panel{display:none;flex:1;overflow-y:auto;padding:12px}
+#panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);padding:4px 4px 0;gap:2px;overflow-x:auto;scrollbar-width:none}
+#panel-tabs::-webkit-scrollbar{display:none}
+.ptab{flex:1;padding:6px 4px 7px;font-size:10px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:color .15s,background .15s,border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:36px}
+.ptab.active{color:var(--accent);border-color:var(--accent);background:var(--surface)}
+.ptab:hover:not(.active){color:var(--text2);background:rgba(255,255,255,.03)}
+.panel{display:none;flex:1;overflow-y:auto;padding:14px}
 .panel.active{display:block}
-.panel::-webkit-scrollbar{width:5px}
-.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
 /* ── System monitor panel ───────────────────────────────────────────────── */
 .sysmon-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
@@ -380,8 +398,10 @@ select.setting-input option{background:var(--surface2)}
 /* ── Fullscreen ─────────────────────────────────────────────────────────── */
 body.fullscreen #sidebar{display:none}
 body.fullscreen #quickbar{display:none}
-body.fullscreen #header .hdr-btn:not(#btn-fullscreen):not(#btn-toggle){display:none}
+body.fullscreen #header .hdr-group{display:none}
+body.fullscreen #header .hdr-btn-solo:not(#btn-fullscreen):not(#btn-toggle){display:none}
 body.fullscreen #sys-stats{display:none}
+body.fullscreen #mem-counter,body.fullscreen #wf-counter{display:none}
 
 /* ── Advisory overlay ───────────────────────────────────────────────────── */
 #advisory-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:flex-start;justify-content:center;z-index:80;backdrop-filter:blur(3px);padding:16px;overflow-y:auto}
@@ -422,16 +442,20 @@ body.fullscreen #sys-stats{display:none}
 
 /* ── Light mode ─────────────────────────────────────────────────────────── */
 html.light {
-  --bg:#f6f8fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e8eaed;
-  --border:#d0d7de; --border2:#e4e8ec;
-  --accent:#0969da; --accent2:#1a7f37; --warn:#9a6700; --danger:#cf222e;
-  --muted:#656d76; --text:#1f2328; --text2:#24292f;
-  --shadow:0 4px 16px rgba(0,0,0,.15);
-  --glow-accent:0 0 12px rgba(9,105,218,.15);
+  --bg:#f3f5f8; --surface:#ffffff; --surface2:#eef1f5; --surface3:#e5e9ef;
+  --border:#d1d8e0; --border2:#e0e6ee;
+  --accent:#1a6bbf; --accent2:#1a8f3f; --warn:#9a6700; --danger:#c0392b;
+  --muted:#6b7a8d; --text:#1c2433; --text2:#374151;
+  --shadow:0 4px 20px rgba(0,0,0,.12);
+  --glow-accent:0 0 12px rgba(26,107,191,.12);
 }
 html.light body{color:var(--text)}
+html.light #header{background:var(--surface);border-color:var(--border)}
+html.light #quickbar{background:var(--surface2)}
 html.light .xterm-viewport::-webkit-scrollbar-thumb{background:var(--border)}
 html.light #advisory-body code{color:#b44000}
+html.light .hdr-group{background:var(--surface2)}
+html.light #input-field-wrap{background:var(--surface2)}
 
 /* ── Command Palette ─────────────────────────────────────────────────────── */
 #palette-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;z-index:200;backdrop-filter:blur(4px);padding-top:80px}
@@ -515,7 +539,10 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
 
 <!-- Header -->
 <div id="header">
-  <div id="logo">PACCA<span id="logo-sub">AI Agent v7.0</span></div>
+  <div id="logo">
+    <span id="logo-wordmark">PACCA</span>
+    <span id="logo-sub">AI Agent v7.0</span>
+  </div>
   <div id="status-dot" title="Connecting…"></div>
   <div id="provider-badge">offline</div>
 
@@ -539,46 +566,46 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
   </div>
 
   <div class="spacer"></div>
-  <span id="mem-counter" style="font-size:9px;color:var(--muted);white-space:nowrap;cursor:default" title="Memories stored">🧠 —</span>
-  <span id="wf-counter" style="font-size:9px;color:var(--muted);white-space:nowrap;cursor:default;margin-left:4px" title="Saved workflows">⚙ —</span>
-  <button class="hdr-btn" onclick="switchPanel('sysmon')">📊</button>
-  <button class="hdr-btn" onclick="switchPanel('tools')">🔧 Tools</button>
-  <button class="hdr-btn" onclick="switchPanel('memory')">🧠 Memory</button>
-  <button class="hdr-btn" onclick="switchPanel('workflows')">⚙ Workflows</button>
-  <button class="hdr-btn" onclick="switchPanel('history')">📋</button>
-  <button class="hdr-btn" onclick="switchPanel('settings')">⚙</button>
-  <button class="hdr-btn" onclick="openPalette()" title="Command palette (Ctrl+K)">⌨ <span style="font-size:9px;opacity:.7">Ctrl+K</span></button>
-  <button class="hdr-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
-  <button class="hdr-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle full screen">⛶</button>
-  <button class="hdr-btn" id="btn-toggle" onclick="toggleSidebar()">◀</button>
+
+  <span id="mem-counter" title="Memories stored">🧠 —</span>
+  <span id="wf-counter" title="Saved workflows" style="margin-left:4px">⚙ —</span>
+
+  <!-- Panel nav group -->
+  <div class="hdr-group">
+    <button class="hdr-btn" onclick="switchPanel('sysmon')" title="System Monitor">📊</button>
+    <button class="hdr-btn" onclick="switchPanel('tools')" title="Tools">🔧 Tools</button>
+    <button class="hdr-btn" onclick="switchPanel('memory')" title="Memory">🧠 Memory</button>
+    <button class="hdr-btn" onclick="switchPanel('workflows')" title="Workflows">⚙ Workflows</button>
+    <button class="hdr-btn" onclick="switchPanel('insights')" title="Insights">📈 Insights</button>
+    <button class="hdr-btn" onclick="switchPanel('reports')" title="Reports">📄 Reports</button>
+    <button class="hdr-btn" onclick="switchPanel('audit')" title="Audit Log">🔍 Audit</button>
+  </div>
+
+  <!-- Utility buttons -->
+  <button class="hdr-btn-solo" onclick="openPalette()" title="Command palette (Ctrl+K)">⌨ Ctrl+K</button>
+  <button class="hdr-btn-solo" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
+  <button class="hdr-btn-solo" id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle full screen">⛶</button>
+  <button class="hdr-btn-solo" id="btn-toggle" onclick="toggleSidebar()" title="Toggle sidebar">◀</button>
 </div>
 
 <!-- Quick-action bar -->
 <div id="quickbar">
-  <span id="quickbar-label">Quick:</span>
   <button class="qa-btn" onclick="qa('show system cpu and memory usage')"><span class="qa-icon">📊</span>System</button>
   <button class="qa-btn" onclick="qa('list files in current directory')"><span class="qa-icon">📁</span>Files</button>
   <button class="qa-btn" onclick="qa('git status in current directory')"><span class="qa-icon">🌿</span>Git</button>
-  <button class="qa-btn" onclick="qa('search the web for latest AI news')"><span class="qa-icon">🌐</span>Web</button>
+  <button class="qa-btn" onclick="qa('search the web for latest AI news')"><span class="qa-icon">🌐</span>Web Search</button>
+  <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="qa('generate_code: write a Python FastAPI health-check endpoint')"><span class="qa-icon">💻</span>Generate Code</button>
+  <button class="qa-btn" onclick="qa('research_topic: large language models and their impact on software engineering')"><span class="qa-icon">🔬</span>Research</button>
+  <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot and then analyze the screenshot to describe what articles are on the front page')" title="Browser + Vision"><span class="qa-icon">👁</span>Vision</button>
+  <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Autonomous goal"><span class="qa-icon">🎯</span>Goal: AI Tools</button>
+  <button class="qa-btn" onclick="qa('check git status then add all changed files then commit with message \"auto update\"')" title="Multi-step git goal"><span class="qa-icon">🌿</span>Goal: Git Commit</button>
+  <div class="qa-sep"></div>
   <button class="qa-btn" onclick="qa('memory')"><span class="qa-icon">🧠</span>Memory</button>
-  <button class="qa-btn" onclick="qa('workflows')"><span class="qa-icon">⚙</span>Workflows</button>
-  <div class="qa-sep"></div>
-  <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot and then analyze the screenshot to describe what articles are on the front page')" title="Vision demo"><span class="qa-icon">👁</span>Vision: Analyze HN</button>
-  <button class="qa-btn" onclick="qa('generate_code: write a Python FastAPI health-check endpoint')"><span class="qa-icon">💻</span>Code: Generate</button>
-  <button class="qa-btn" onclick="qa('research_topic: large language models and their impact on software engineering')"><span class="qa-icon">🔬</span>Research: LLMs</button>
-  <div class="qa-sep"></div>
-  <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Goal mode"><span class="qa-icon">🎯</span>Goal: AI Tools</button>
-  <button class="qa-btn" onclick="qa('research the latest trends in machine learning and create a summary report at ~/ml-trends.md')" title="Research goal"><span class="qa-icon">🔬</span>Goal: ML Research</button>
-  <button class="qa-btn" onclick="qa('check git status then add all changed files then commit with message \"auto update\"')" title="Git goal"><span class="qa-icon">🌿</span>Goal: Git Commit</button>
-  <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot')"><span class="qa-icon">📸</span>Screenshot HN</button>
-  <div class="qa-sep"></div>
-  <button class="qa-btn" onclick="switchPanel('insights')" title="View Insights panel"><span class="qa-icon">📈</span>Insights</button>
-  <button class="qa-btn" onclick="switchPanel('reports')" title="View saved research reports"><span class="qa-icon">📄</span>Reports</button>
   <button class="qa-btn" onclick="qa('memory weekly summary')"><span class="qa-icon">📅</span>Weekly</button>
-  <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">🧠</span>Advisor</button>
+  <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">💬</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
-  <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
-  <button class="qa-btn" onclick="openPalette()" title="Command palette"><span class="qa-icon">⌨</span>Ctrl+K</button>
 </div>
 
 <!-- Report full-view overlay -->
@@ -659,10 +686,12 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
     </div>
 
     <div id="input-bar">
-      <span id="prompt">pacca ›</span>
-      <div id="cmd-wrap">
-        <input id="cmd-input" placeholder="Describe what you want to do… (try 'help' or 🎙 for voice)" autocomplete="off" spellcheck="false">
-        <span id="char-count"></span>
+      <div id="input-field-wrap">
+        <span id="prompt">pacca ›</span>
+        <div id="cmd-wrap">
+          <input id="cmd-input" placeholder="Describe what you want to do… (try 'help' or 🎙 for voice)" autocomplete="off" spellcheck="false">
+          <span id="char-count"></span>
+        </div>
       </div>
       <button id="mic-btn" onclick="toggleMic()" title="Push-to-talk (Ctrl+M)">🎙</button>
       <button id="tts-btn" onclick="toggleTTS()" title="Text-to-speech output">🔊</button>
@@ -674,15 +703,15 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="panel-tabs">
-      <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon">📊</div>
-      <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools">Tools</div>
-      <div class="ptab" onclick="switchPanel('memory')" id="tab-memory">🧠</div>
-      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows">⚙</div>
-      <div class="ptab" onclick="switchPanel('reports')" id="tab-reports">📄</div>
-      <div class="ptab" onclick="switchPanel('history')" id="tab-history">📋</div>
-      <div class="ptab" onclick="switchPanel('audit')" id="tab-audit">Audit</div>
-      <div class="ptab" onclick="switchPanel('insights')" id="tab-insights">📈</div>
-      <div class="ptab" onclick="switchPanel('settings')" id="tab-settings">⚙</div>
+      <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon" title="System Monitor">📊</div>
+      <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools" title="Tools">🔧 Tools</div>
+      <div class="ptab" onclick="switchPanel('memory')" id="tab-memory" title="Memory">🧠</div>
+      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows" title="Workflows">⚙</div>
+      <div class="ptab" onclick="switchPanel('reports')" id="tab-reports" title="Reports">📄</div>
+      <div class="ptab" onclick="switchPanel('history')" id="tab-history" title="History">📋</div>
+      <div class="ptab" onclick="switchPanel('audit')" id="tab-audit" title="Audit Log">🔍 Audit</div>
+      <div class="ptab" onclick="switchPanel('insights')" id="tab-insights" title="Insights">📈</div>
+      <div class="ptab" onclick="switchPanel('settings')" id="tab-settings" title="Settings">⚙ Settings</div>
     </div>
     <div class="panel" id="panel-sysmon"><div style="color:var(--muted);font-size:11px">Loading system info…</div></div>
     <div class="panel active" id="panel-tools"><div style="color:var(--muted);font-size:11px">Loading tools…</div></div>
