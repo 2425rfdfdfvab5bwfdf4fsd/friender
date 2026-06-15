@@ -1,6 +1,8 @@
 """PACCA Persistent Memory System — SQLite-backed episodic, preference, project, workflow, and skill memory.
 
-Gap #2: Improved semantic search — IDF-weighted TF-IDF with bigrams replaces Counter-only cosine.
+Gap #2: Neural vector memory — VectorIndex (OpenAI text-embedding-3-small + numpy cosine ANN)
+         replaces keyword TF-IDF as the primary semantic search backend when OPENAI_API_KEY is set.
+         IDF-weighted TF-IDF with bigrams is retained as a zero-config fallback.
 Gap #10: Implicit preference learning — background pattern detection from episodic history.
 Gap #12: SkillLibrary — save successful goal traces as named reusable procedures.
 """
@@ -14,6 +16,8 @@ import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
+
+from pacca.memory.vector_index import VectorIndex
 
 PACCA_DIR = Path.home() / ".pacca"
 MEMORY_DB = PACCA_DIR / "memory.db"
@@ -68,10 +72,21 @@ class MemoryManager:
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
         self._prefs: dict = self._load_prefs()
-        # Gap #2: IDF cache — recomputed lazily
+        # Gap #2 (TF-IDF fallback): IDF cache — recomputed lazily
         self._idf_cache: dict[str, float] = {}
         self._idf_doc_count: int = 0
         self._idf_dirty: bool = True
+        # Gap #2 (neural): VectorIndex — uses OpenAI embeddings when key available
+        self._vec: VectorIndex = VectorIndex(self._conn)
+
+    def set_embedding_provider(self, openai_client: Any) -> None:
+        """Wire an openai.OpenAI client so semantic_search uses neural embeddings.
+
+        Call this once from agent.py after LLMClient is initialised:
+            if llm_client.openai_client:
+                memory.set_embedding_provider(llm_client.openai_client)
+        """
+        self._vec.set_openai_client(openai_client)
 
     def _init_schema(self) -> None:
         cur = self._conn.cursor()
@@ -385,6 +400,8 @@ class MemoryManager:
         )
         self._conn.commit()
         self._idf_dirty = True
+        # Gap #2 (neural): also embed into vector index (no-op when provider not set)
+        self._vec.upsert(content[:1000], source="episodic", tags=tags)
 
     def store_knowledge(self, content: str, source: str = "user",
                         tags: list[str] | None = None) -> None:
@@ -395,6 +412,8 @@ class MemoryManager:
         )
         self._conn.commit()
         self._idf_dirty = True
+        # Gap #2 (neural): also embed into vector index (no-op when provider not set)
+        self._vec.upsert(content[:1000], source=source, tags=tags)
 
     def _compute_idf(self) -> None:
         """Compute IDF scores across all semantic memory documents.
@@ -431,11 +450,29 @@ class MemoryManager:
 
     def semantic_search(self, query: str, top_k: int = 5,
                         min_score: float = 0.05) -> list[dict]:
-        """IDF-weighted semantic search over all stored knowledge.
+        """Semantic search over stored knowledge.
 
-        Gap #2: Uses bigrams + IDF weighting for significantly better recall
-        than the original plain TF-IDF cosine similarity.
+        Gap #2 (neural path): When an embedding provider is available (OPENAI_API_KEY
+        set and wired via set_embedding_provider()), delegates to VectorIndex which
+        uses OpenAI text-embedding-3-small + numpy cosine ANN.  This correctly
+        matches semantically similar queries even when surface-level keywords differ.
+
+        Gap #2 (TF-IDF fallback): When no provider is available, falls back to
+        IDF-weighted TF-IDF with bigrams — the zero-config baseline.
+
+        Returns list of {content, source, tags, score, created_at, search_mode} dicts.
         """
+        # ── Neural path ───────────────────────────────────────────────────────
+        if self._vec.is_available():
+            vec_min = max(0.25, min_score)   # cosine scores are higher than TF-IDF scores
+            results = self._vec.search(query, top_k=top_k, min_score=vec_min)
+            for r in results:
+                r["search_mode"] = "vector"
+            if results:
+                return results
+            # If vector returns nothing (empty index), fall through to TF-IDF
+
+        # ── TF-IDF fallback ───────────────────────────────────────────────────
         if self._idf_dirty:
             self._compute_idf()
 
@@ -456,6 +493,7 @@ class MemoryManager:
                         "tags": json.loads(r["tags"]),
                         "score": round(score, 4),
                         "created_at": r["created_at"],
+                        "search_mode": "tfidf",
                     })
             except Exception:
                 continue
@@ -576,6 +614,9 @@ class MemoryManager:
             "SELECT COUNT(*) FROM skills"
         ).fetchone()[0]
 
+        vec_count = self._vec.count()
+        vec_provider = self._vec.provider_name()
+
         return {
             "total_tasks": total,
             "success_rate": success_rate,
@@ -586,6 +627,17 @@ class MemoryManager:
             "semantic_memory_count": sem_count,
             "workflow_runs": wf_count,
             "skill_count": skill_count,
+            "vector_embedding_count": vec_count,
+            "vector_provider": vec_provider,
+            "search_mode": "vector" if self._vec.is_available() else "tfidf",
+        }
+
+    def vector_index_stats(self) -> dict:
+        """Return stats about the neural vector index."""
+        return {
+            "count": self._vec.count(),
+            "provider": self._vec.provider_name(),
+            "available": self._vec.is_available(),
         }
 
     # ── Reports Storage ──────────────────────────────────────────────────────

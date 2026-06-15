@@ -587,6 +587,16 @@ async def get_memory_stats():
                 "domains": [], "daily_activity": [], "recent_commands": []}
 
 
+@app.get("/api/memory/vector")
+async def get_vector_stats():
+    """Return neural vector index stats (Gap #2)."""
+    agent = get_agent()
+    try:
+        return agent.memory.vector_index_stats()
+    except Exception as e:
+        return {"error": str(e), "count": 0, "available": False, "provider": "none"}
+
+
 @app.get("/api/memory/weekly")
 async def get_weekly_summary(days: int = 7):
     """Return a summary of activity for the last N days."""

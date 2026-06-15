@@ -2604,6 +2604,10 @@ async function loadInsights() {
           <div class="insight-stat-card"><div class="insight-stat-val ${rate>=80?'green':rate>=50?'yellow':''}">${rate}%</div><div class="insight-stat-lbl">Success Rate</div></div>
           <div class="insight-stat-card"><div class="insight-stat-val" style="color:var(--muted)">${avg}</div><div class="insight-stat-lbl">Avg Steps</div></div>
           <div class="insight-stat-card"><div class="insight-stat-val" style="color:var(--accent2)">${d.semantic_memory_count||0}</div><div class="insight-stat-lbl">Memories</div></div>
+          <div class="insight-stat-card"><div class="insight-stat-val" style="color:var(--accent)">${d.vector_embedding_count||0}</div><div class="insight-stat-lbl">Vectors</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;text-align:right">
+          Search: <span style="color:${(d.search_mode||'tfidf')==='vector'?'var(--accent)':'var(--muted)'};font-weight:600">${(d.search_mode||'tfidf')==='vector'?'⚡ Neural ('+esc(d.vector_provider||'')+')':'🔡 TF-IDF'}</span>
         </div>
       </div>
       ${daily.length?`<div class="insights-section"><div class="insights-section-title">14-Day Activity</div><div class="daily-chart">${chartBars}</div></div>`:''}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import secrets
 import time
 import uuid
@@ -217,6 +218,16 @@ class PACCAAgent:
             code_tools.set_llm_client(llm_client)
             research_tools.set_llm_client(llm_client)
             browser_tools.set_llm_client(llm_client)  # Gap #4: vision-click fallback
+
+        # Gap #2 (neural vector memory): wire OpenAI sync client into VectorIndex
+        # Uses OPENAI_API_KEY directly — independent of the main LLM provider choice.
+        _openai_key = os.environ.get("OPENAI_API_KEY", "")
+        if _openai_key:
+            try:
+                import openai as _openai
+                self.memory.set_embedding_provider(_openai.OpenAI(api_key=_openai_key))
+            except Exception:
+                pass  # openai not installed or key invalid — VectorIndex stays on TF-IDF
 
         # Wire memory manager into research tools so reports are auto-persisted
         research_tools.set_memory_manager(self.memory)
