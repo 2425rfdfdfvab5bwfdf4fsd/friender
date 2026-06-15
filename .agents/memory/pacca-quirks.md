@@ -24,3 +24,15 @@ Registry comment originally said "25 v1.0 tools". zip_files was added as the 26t
 ## Settings UI threshold actual defaults
 
 CumulativePlanRiskEvaluator defaults: `risk_proceed_threshold=30`, `risk_confirm_threshold=100`. Settings panel labels must reflect these (not 100/200 or other incorrect values).
+
+## Gemini key format detection — don't attempt calls for OAuth keys
+
+`GEMINI_API_KEY` set to an OAuth2 bearer token (starts with "AQ." etc.) will always 401. `is_available()` now returns False immediately for any Gemini key that doesn't start with "AIza". The `_is_auth_error()` helper also short-circuits all retry loops on 401/auth errors — no wasted 3-retry delays.
+
+**Why:** Replit's injected GEMINI_API_KEY was an OAuth token, not an AI Studio key, causing 3+ seconds of retries on every command before falling back to heuristic mode.
+
+**How to apply:** `is_available()` is the gate — check it before any LLM call. `key_error()` returns a user-readable explanation for the UI.
+
+## Status endpoint exposes llm_error for UI
+
+`/api/status` now returns `llm_error: str | None`. When the key is misconfigured, the terminal banner and Settings panel display the specific fix (e.g. "must start with 'AIza', get key at aistudio.google.com") rather than a generic "no API key" message.

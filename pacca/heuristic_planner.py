@@ -187,7 +187,29 @@ class HeuristicPlanner:
         quotes = QUOTE_RE.findall(cmd)
 
         if "list" in low or "ls" in low or "show" in low or "what" in low:
-            target = paths[0] if paths else _cwd()
+            # Resolve well-known directory aliases even when no explicit path is given
+            if paths:
+                target = paths[0]
+            elif any(w in low for w in ("home", "~", "home folder", "home directory")):
+                target = _home()
+            elif any(w in low for w in ("download", "downloads")):
+                target = os.path.join(_home(), "Downloads")
+            elif any(w in low for w in ("desktop",)):
+                target = os.path.join(_home(), "Desktop")
+            elif any(w in low for w in ("document", "documents")):
+                target = os.path.join(_home(), "Documents")
+            elif any(w in low for w in ("picture", "pictures", "photo", "photos")):
+                target = os.path.join(_home(), "Pictures")
+            elif any(w in low for w in ("music",)):
+                target = os.path.join(_home(), "Music")
+            elif any(w in low for w in ("video", "videos", "movies")):
+                target = os.path.join(_home(), "Videos")
+            elif any(w in low for w in ("tmp", "temp", "/tmp")):
+                target = "/tmp"
+            elif any(w in low for w in ("current", "here", "this", "working")):
+                target = _cwd()
+            else:
+                target = _cwd()
             return [{"tool": "list_directory",
                      "args": {"path": target, "show_hidden": "hidden" in low or "-a" in low},
                      "description": f"List {target}"}]

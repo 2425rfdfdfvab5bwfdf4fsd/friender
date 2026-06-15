@@ -920,8 +920,12 @@ function onWelcome(d) {
   if (d.llm_available) {
     pr('  '+C.bgreen+'✓ LLM Connected'+C.rst+'  '+C.gray+d.provider+' / '+C.white+d.model+C.rst);
   } else {
-    pr('  '+C.yellow+'⚠  No API key — running in heuristic demo mode'+C.rst);
-    pr('  '+C.gray+'Add ANTHROPIC_API_KEY or OPENAI_API_KEY in Replit Secrets'+C.rst);
+    pr('  '+C.yellow+'⚠  LLM offline — running in heuristic demo mode'+C.rst);
+    if (d.llm_error) {
+      d.llm_error.split('\n').forEach(line=>pr('  '+C.gray+line+C.rst));
+    } else {
+      pr('  '+C.gray+'Add ANTHROPIC_API_KEY or a valid GEMINI_API_KEY in Replit Secrets (🔒)'+C.rst);
+    }
   }
   pr('  '+C.gray+'Memory: '+C.cyan+(d.memory_count||0)+' tasks'+C.gray+'  Workflows: '+C.cyan+(d.workflow_count||0)+C.rst);
   pr('');
@@ -2093,7 +2097,7 @@ function renderSettings(d){
     <div class="api-notice ${ok?'ok':'warn'}">
 ${ok
   ? `✓ AI connected — ${esc(d.provider)} / ${esc(d.model)}`
-  : `⚠ No API key — heuristic demo mode.\n\nTo enable full AI:\n• Go to Replit Secrets (🔒 in the left sidebar)\n• Add ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY\n• Restart the app`}
+  : `⚠ LLM offline — heuristic demo mode\n\n${esc(d.llm_error||'Add a valid API key in Replit Secrets (🔒 sidebar) then restart.')}`}
     </div>
     ${cb.state==='open'?`<div class="api-notice warn">⚡ Circuit breaker OPEN — ${cb.failure_count} failures. Resets in ${Math.round(cb.reset_in||0)}s</div>`:''}
     <div class="setting-group">

@@ -237,12 +237,15 @@ async def status():
         circuit = agent.llm_client.circuit_status()
     mem_count = agent.memory.task_count()
     wf_count = len(_workflow_manager.list_workflows()) if _workflow_manager else 0
+    llm_available = agent.llm_client.is_available() if agent.llm_client else False
+    llm_error = agent.llm_client.key_error() if agent.llm_client else "No LLM client"
     return {
         "version": "7.0.0",
         "provider": cfg.provider,
         "model": cfg.model,
         "offline_mode": cfg.offline_mode,
-        "llm_available": agent.llm_client.is_available() if agent.llm_client else False,
+        "llm_available": llm_available,
+        "llm_error": llm_error,
         "onboarding_complete": is_onboarding_complete(),
         "tool_count": len(TOOL_REGISTRY),
         "circuit_breaker": circuit,

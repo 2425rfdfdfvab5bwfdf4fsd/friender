@@ -85,6 +85,20 @@ User's redacted command: {redacted_command}
 Respond with ONLY the JSON array. Nothing else."""
 
 
+def _is_auth_error(exc: Exception) -> bool:
+    """Return True if this exception is a permanent credential/auth failure."""
+    name = type(exc).__name__.lower()
+    msg = str(exc).lower()
+    return (
+        "401" in str(exc)
+        or "authenticationerror" in name
+        or "authentication" in msg
+        or "unauthenticated" in msg
+        or "invalid_api_key" in msg
+        or "access_token_type_unsupported" in msg
+    )
+
+
 class CircuitBreaker:
     """Prevents repeated calls to a failing provider."""
     CLOSED = "closed"
@@ -155,7 +169,30 @@ class LLMClient:
     def is_available(self) -> bool:
         if self.provider == "ollama":
             return not self._circuit_breaker.is_tripped()
-        return bool(self.api_key) and not self._circuit_breaker.is_tripped()
+        if not self.api_key:
+            return False
+        # Gemini API keys from AI Studio must start with "AIza"; anything else
+        # (OAuth tokens, service-account fragments, etc.) will always 401.
+        if self.provider == "gemini" and not self.api_key.startswith("AIza"):
+            return False
+        return not self._circuit_breaker.is_tripped()
+
+    def key_error(self) -> str | None:
+        """Return a human-readable explanation if the key is known to be invalid."""
+        if self.provider == "gemini" and self.api_key and not self.api_key.startswith("AIza"):
+            return (
+                "Invalid GEMINI_API_KEY — must start with 'AIza'. "
+                "Get a proper key at https://aistudio.google.com/apikey"
+            )
+        if not self.api_key:
+            return (
+                "No API key configured. Add ANTHROPIC_API_KEY or GEMINI_API_KEY "
+                "in Replit Secrets (🔒 sidebar)."
+            )
+        if self._circuit_breaker.is_tripped():
+            s = self._circuit_breaker.status()
+            return f"Circuit breaker open — {s['failure_count']} failures. Resets in {s['reset_in']:.0f}s."
+        return None
 
     def circuit_status(self) -> dict:
         return self._circuit_breaker.status()
@@ -197,6 +234,9 @@ class LLMClient:
             except Exception as e:
                 last_error = e
                 self._circuit_breaker.record_failure()
+                # Auth / credential errors are permanent — no point retrying
+                if _is_auth_error(e):
+                    break
                 if attempt < retries - 1:
                     await asyncio.sleep(delay)
                     delay = min(delay * 2, 30)
@@ -222,6 +262,11 @@ class LLMClient:
             return result
         except Exception as e:
             self._circuit_breaker.record_failure()
+            if _is_auth_error(e):
+                raise RuntimeError(
+                    f"Advisor unavailable — invalid API key for '{self.provider}'. "
+                    "Add a valid key in Replit Secrets (🔒)."
+                ) from e
             raise RuntimeError(f"Advisor call failed: {e}") from e
 
     async def complete_text(self, prompt: str, max_tokens: int = 1000) -> str:
