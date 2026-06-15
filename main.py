@@ -251,6 +251,7 @@ async def status():
         "circuit_breaker": circuit,
         "risk_confirm_threshold": cfg.risk_confirm_threshold,
         "risk_proceed_threshold": cfg.risk_proceed_threshold,
+        "max_file_egress_bytes": cfg.max_file_egress_bytes,
         "whatsapp_configured": _wa_configured(),
         "whatsapp_allowed_count": len(_wa_allowed_numbers()),
         "memory_task_count": mem_count,

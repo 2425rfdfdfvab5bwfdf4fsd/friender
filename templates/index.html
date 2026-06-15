@@ -2085,14 +2085,28 @@ function renderAudit(entries){
 }
 
 // ── Settings panel ────────────────────────────────────────────────────────────
+const _PROVIDER_DEFAULTS={anthropic:'claude-opus-4-5',openai:'gpt-4o',gemini:'gemini-2.0-flash'};
 let _statusCache={};
+
 async function loadSettings(){
-  try{ const r=await fetch('/api/status'); _statusCache=await r.json(); renderSettings(_statusCache); }catch(_){}
+  const p=document.getElementById('panel-settings');
+  p.innerHTML='<div style="color:var(--muted);font-size:11px">Loading…</div>';
+  try{
+    const r=await fetch('/api/status');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    _statusCache=await r.json();
+    renderSettings(_statusCache);
+  }catch(e){
+    p.innerHTML=`<div class="api-notice warn">⚠ Failed to load settings: ${esc(e.message)}</div>`+
+      `<button class="save-btn sec" onclick="loadSettings()" style="margin-top:8px">↻ Retry</button>`;
+  }
 }
+
 function renderSettings(d){
   const p=document.getElementById('panel-settings');
   const ok=d.llm_available;
   const cb=d.circuit_breaker||{};
+  const egress=d.max_file_egress_bytes!=null?d.max_file_egress_bytes:32768;
   p.innerHTML=`
     <div class="api-notice ${ok?'ok':'warn'}">
 ${ok
@@ -2102,7 +2116,7 @@ ${ok
     ${cb.state==='open'?`<div class="api-notice warn">⚡ Circuit breaker OPEN — ${cb.failure_count} failures. Resets in ${Math.round(cb.reset_in||0)}s</div>`:''}
     <div class="setting-group">
       <div class="setting-label">Provider</div>
-      <select class="setting-input" id="s-prov">
+      <select class="setting-input" id="s-prov" onchange="onProviderChange(this.value)">
         <option value="anthropic" ${d.provider==='anthropic'?'selected':''}>Anthropic (Claude)</option>
         <option value="openai" ${d.provider==='openai'?'selected':''}>OpenAI (GPT-4)</option>
         <option value="gemini" ${d.provider==='gemini'?'selected':''}>Google (Gemini)</option>
@@ -2110,17 +2124,21 @@ ${ok
     </div>
     <div class="setting-group">
       <div class="setting-label">Model</div>
-      <input class="setting-input" id="s-model" value="${esc(d.model||'')}">
+      <input class="setting-input" id="s-model" value="${esc(d.model||'')}" placeholder="e.g. claude-opus-4-5">
     </div>
     <div class="setting-group">
-      <div class="setting-label">Risk confirm threshold (0–300)</div>
-      <input class="setting-input" id="s-confirm" type="number" value="${d.risk_confirm_threshold||100}">
+      <div class="setting-label">Risk confirm threshold — require confirmation above this score (0–300)</div>
+      <input class="setting-input" id="s-confirm" type="number" min="0" max="300" value="${d.risk_confirm_threshold!=null?d.risk_confirm_threshold:100}">
     </div>
     <div class="setting-group">
-      <div class="setting-label">Risk proceed threshold (0–100)</div>
-      <input class="setting-input" id="s-proceed" type="number" value="${d.risk_proceed_threshold||30}">
+      <div class="setting-label">Risk proceed threshold — auto-proceed below this score (0–300)</div>
+      <input class="setting-input" id="s-proceed" type="number" min="0" max="300" value="${d.risk_proceed_threshold!=null?d.risk_proceed_threshold:30}">
     </div>
-    <button class="save-btn" onclick="saveSettings()">💾 Save &amp; Restart Agent</button>
+    <div class="setting-group">
+      <div class="setting-label">Max file read size (bytes, 1 KB – 10 MB)</div>
+      <input class="setting-input" id="s-egress" type="number" min="1024" max="10485760" step="1024" value="${egress}">
+    </div>
+    <button class="save-btn" id="save-settings-btn" onclick="saveSettings()">💾 Save &amp; Restart Agent</button>
     <hr class="setting-sep">
     <div class="setting-group">
       <div class="setting-label">Audit log</div>
@@ -2128,29 +2146,90 @@ ${ok
     </div>
     <div class="setting-group">
       <div class="setting-label">Version / Tools</div>
-      <div class="setting-value">PACCA ${esc(d.version||'5.2.0')} • ${(d.tool_count||0)} tools loaded</div>
+      <div class="setting-value">PACCA ${esc(d.version||'7.0.0')} • ${(d.tool_count||0)} tools loaded</div>
     </div>
-    <button class="save-btn sec" onclick="undoLast()">↩ Undo Last Action</button>
+    <button class="save-btn sec" id="undo-btn" onclick="undoLast()">↩ Undo Last Action</button>
+    <div id="undo-history-list" style="margin-top:6px"></div>
     <hr class="setting-sep">
     ${renderWASection(d)}`;
+  loadUndoHistory();
+}
+
+function onProviderChange(prov){
+  const el=document.getElementById('s-model');
+  if(el&&_PROVIDER_DEFAULTS[prov]) el.value=_PROVIDER_DEFAULTS[prov];
+}
+
+async function loadUndoHistory(){
+  try{
+    const r=await fetch('/api/undo-history');
+    if(!r.ok) return;
+    const d=await r.json();
+    const sec=document.getElementById('undo-history-list');
+    if(!sec) return;
+    const items=(d.history||[]).filter(x=>!x.expired).slice(0,5);
+    if(!items.length){
+      sec.innerHTML='<div style="font-size:10px;color:var(--muted);padding:2px 4px">No reversible actions this session.</div>';
+      return;
+    }
+    sec.innerHTML='<div class="setting-label" style="margin-bottom:4px">Reversible actions</div>'+
+      items.map(x=>`<div style="font-size:10px;color:var(--muted);padding:3px 6px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:3px;border:1px solid var(--border)"><span style="color:var(--text)">${esc(x.tool)}</span> — ${esc((x.description||'').substring(0,60))}</div>`).join('');
+  }catch(_){}
 }
 
 async function saveSettings(){
+  const provEl=document.getElementById('s-prov');
+  const modelEl=document.getElementById('s-model');
+  const confirmEl=document.getElementById('s-confirm');
+  const proceedEl=document.getElementById('s-proceed');
+  const egressEl=document.getElementById('s-egress');
+  if(!provEl||!modelEl||!confirmEl||!proceedEl) return;
+  const confirm_t=parseFloat(confirmEl.value);
+  const proceed_t=parseFloat(proceedEl.value);
+  if(isNaN(confirm_t)||isNaN(proceed_t)){ toast('Risk thresholds must be numbers','err'); return; }
+  if(proceed_t<0||confirm_t<0){ toast('Thresholds must be ≥ 0','err'); return; }
+  if(proceed_t>=confirm_t){ toast('Proceed threshold must be less than Confirm threshold','err'); return; }
   const body={
-    provider:document.getElementById('s-prov').value,
-    model:document.getElementById('s-model').value,
-    risk_confirm_threshold:parseFloat(document.getElementById('s-confirm').value),
-    risk_proceed_threshold:parseFloat(document.getElementById('s-proceed').value),
+    provider:provEl.value,
+    model:modelEl.value.trim()||_PROVIDER_DEFAULTS[provEl.value]||'',
+    risk_confirm_threshold:confirm_t,
+    risk_proceed_threshold:proceed_t,
   };
+  if(egressEl){
+    const eg=parseInt(egressEl.value,10);
+    if(!isNaN(eg)&&eg>=1024) body.max_file_egress_bytes=eg;
+  }
+  const btn=document.getElementById('save-settings-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Saving…'; }
   try{
-    await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!r.ok){
+      const err=await r.json().catch(()=>({detail:'HTTP '+r.status}));
+      throw new Error(err.detail||'HTTP '+r.status);
+    }
+    const result=await r.json();
     toast('Settings saved — agent restarted','ok');
-    setTimeout(loadSettings,500);
-  }catch(e){ toast('Failed to save: '+e.message,'err'); }
+    badge((result.config.provider||body.provider)+' / '+(result.config.model||body.model),'');
+    setTimeout(loadSettings,600);
+  }catch(e){
+    toast('Failed to save: '+e.message,'err');
+    if(btn){ btn.disabled=false; btn.textContent='💾 Save & Restart Agent'; }
+  }
 }
 
 async function undoLast(){
-  try{ const r=await fetch('/api/undo',{method:'POST'}); const d=await r.json(); route('undo_result',d); }catch(_){}
+  const btn=document.getElementById('undo-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Undoing…'; }
+  try{
+    const r=await fetch('/api/undo',{method:'POST'});
+    const d=await r.json();
+    route('undo_result',d);
+    if(!d.error) loadUndoHistory();
+  }catch(e){
+    toast('Undo failed: '+e.message,'err');
+  }finally{
+    if(btn){ btn.disabled=false; btn.textContent='↩ Undo Last Action'; }
+  }
 }
 
 function renderWASection(d){
