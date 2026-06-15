@@ -133,12 +133,20 @@ def parse_workflow_from_command(command: str, steps_hint: list[dict] | None = No
     """Parse a natural language workflow definition into a Workflow object."""
     lower = command.lower()
 
-    save_match = re.search(
-        r'(?:save|name|call)\s+(?:this\s+)?(?:as\s+)?["\']?([a-zA-Z0-9_ ]+?)["\']?\s*(?:workflow)?(?:\s|$)',
+    # Prefer explicit "called <name>" / "named <name>" pattern first
+    called_match = re.search(
+        r'(?:called|named)\s+["\']?([a-zA-Z0-9_][a-zA-Z0-9_ -]*?)["\']?\s*(?:--|every|at\s+\d|on\s+\w|\Z)',
         lower
     )
-    name = save_match.group(1).strip() if save_match else f"workflow_{int(time.time())}"
-    name = re.sub(r'[^a-zA-Z0-9_]', '_', name).strip('_')
+    if called_match:
+        name = called_match.group(1).strip()
+    else:
+        save_match = re.search(
+            r'(?:save|name|call)\s+(?:this\s+)?(?:as\s+)?["\']?([a-zA-Z0-9_ ]+?)["\']?\s*(?:workflow)?(?:\s|$)',
+            lower
+        )
+        name = save_match.group(1).strip() if save_match else f"workflow_{int(time.time())}"
+    name = re.sub(r'[^a-zA-Z0-9_]', '_', name).strip('_') or f"workflow_{int(time.time())}"
 
     trigger = parse_trigger_from_text(command)
 

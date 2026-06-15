@@ -306,6 +306,8 @@ class PACCAAgent:
             "what have i been working on",
             "what did i work on",
             "show my work this week",
+            "show weekly summary",
+            "show weekly",
             "weekly summary",
             "this week",
             "recent activity",

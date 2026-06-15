@@ -37,6 +37,20 @@ CumulativePlanRiskEvaluator defaults: `risk_proceed_threshold=30`, `risk_confirm
 
 `/api/status` now returns `llm_error: str | None`. When the key is misconfigured, the terminal banner and Settings panel display the specific fix (e.g. "must start with 'AIza', get key at aistudio.google.com") rather than a generic "no API key" message.
 
+## initTerm() must be called before connectWS() in index.html
+
+`S.term` is `null` until `initTerm()` runs. `pr()` silently drops output when `S.term` is null, so the entire PACCA boot banner, status messages, and all command output disappeared. Fix: call `initTerm()` before `connectWS()` at the bottom of `<script>`. This was the root cause of the "blank terminal" issue.
+
+**Why:** `connectWS()` is called at page load; the server immediately sends a `welcome` event; `onWelcome()` fires and calls `pr()` many times before `initTerm()` could run. Without `S.term`, every `pr()` was a no-op.
+
+## Workflow name parser must check "called <name>" before generic save regex
+
+`parse_workflow_from_command` had a regex that matched `save … a [workflow]` for "save this as a workflow called daily_check", capturing "a" as the name. Fixed by checking `(?:called|named)\s+<name>` first (most specific), falling back to the old regex only if not found.
+
+## Weekly-summary triggers must include "show weekly" prefix
+
+`_weekly_triggers` in `agent.py` did not include "show weekly summary" or "show weekly", so those natural phrasings fell through to the heuristic planner and routed to `list_directory`. Added both "show weekly summary" and "show weekly" to the trigger tuple.
+
 ## DOMAIN_TOOL_MAP and DOMAIN_KEYWORD_PATTERNS must stay in sync
 
 `task_scope.py` has both `DOMAIN_TOOL_MAP` (grants allowed tools per domain) and `DOMAIN_KEYWORD_PATTERNS` (detects domain from command text). Both must be updated together when adding new tool domains. The original code was missing: advanced browser tools (click, type, fill_form, etc.), vision/coding/research domains entirely. PlanValidator rejects any tool not in `scope.allowed_tools`, so missing domain entries silently block LLM-planned steps.
