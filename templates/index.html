@@ -263,6 +263,40 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .conf-no-btn{background:var(--surface3);color:var(--muted);border:1px solid var(--border);padding:7px 14px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;font-family:var(--font)}
 .conf-yes-btn:hover{opacity:.88}.conf-no-btn:hover{color:var(--text)}
 
+/* T008: Execution trace button */
+.exec-trace-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--text2);font-size:10px;cursor:pointer;padding:2px 8px;border-radius:var(--radius-sm);transition:all .15s;font-family:var(--font)}
+.exec-trace-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(var(--accent-rgb),.08)}
+
+/* T008: Trace modal overlay */
+.trace-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1200;display:flex;align-items:center;justify-content:center;animation:fadeIn .15s ease}
+.trace-modal{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);width:min(680px,96vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.trace-modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:700;color:var(--text);flex-shrink:0}
+.trace-modal-close{background:transparent;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:2px 6px;border-radius:var(--radius-sm)}
+.trace-modal-close:hover{color:var(--danger)}
+.trace-modal-body{overflow-y:auto;flex:1;padding:8px 0}
+.trace-entries{display:flex;flex-direction:column;gap:0}
+.trace-entry{display:flex;align-items:flex-start;gap:8px;padding:8px 16px;border-bottom:1px solid var(--border2);font-size:11px}
+.trace-entry:last-child{border-bottom:none}
+.trace-entry.trace-err{background:rgba(var(--danger-rgb),.06)}
+.trace-icon{font-size:13px;flex-shrink:0;width:20px;text-align:center}
+.trace-type{font-weight:700;color:var(--accent);min-width:90px;flex-shrink:0;font-size:10.5px}
+.trace-dt{font-size:10px;color:var(--muted);min-width:55px;flex-shrink:0}
+.trace-data{color:var(--text2);font-size:10.5px;flex:1;word-break:break-all;font-family:var(--font)}
+
+/* T007: Interactive plan editor */
+.plan-editor{margin:8px 0;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden}
+.plan-editor-header{display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(var(--accent-rgb),.05);border-bottom:1px solid var(--border);font-size:10.5px;color:var(--text2)}
+.plan-editor-all-btn{margin-left:auto;background:transparent;border:1px solid var(--border);color:var(--muted);font-size:10px;cursor:pointer;padding:2px 7px;border-radius:var(--radius-sm)}
+.plan-editor-all-btn:first-of-type{margin-left:auto}
+.plan-editor-all-btn:last-of-type{margin-left:0}
+.plan-step-list{max-height:200px;overflow-y:auto}
+.plan-step-row{display:flex;align-items:baseline;gap:8px;padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border2);transition:background .1s}
+.plan-step-row:last-child{border-bottom:none}
+.plan-step-row:hover{background:rgba(var(--accent-rgb),.05)}
+.plan-step-row input[type=checkbox]{flex-shrink:0;cursor:pointer;accent-color:var(--accent)}
+.plan-step-tool{font-size:10.5px;font-weight:700;color:var(--accent);min-width:100px;flex-shrink:0}
+.plan-step-desc{font-size:10.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
 /* ── Goal Progress Bar (floating) ────────────────────────────────────────── */
 #goal-bar{display:none;padding:8px 16px;background:var(--surface2);border-top:1px solid rgba(var(--accent-rgb),.2);flex-shrink:0}
 #goal-bar.show{display:flex;align-items:center;gap:12px}
@@ -1022,6 +1056,10 @@ const S = {
   briefShown: false, sysMonInterval: null,
   PAL: { open: false, items: [], idx: -1 },
   voice: { active: false, recognition: null },
+  // T007: interactive plan editor
+  currentPlanSteps: [], currentPlanTaskId: null,
+  // T008: trace
+  traceTaskId: null,
 };
 
 // ── Utilities ────────────────────────────────────────────────────────────────
@@ -1098,9 +1136,12 @@ function dispatch(type, data) {
     case 'subtask_start': onSubtaskStart(data); break;
     case 'subtask_complete': onSubtaskComplete(data); break;
     case 'subtask_failed': onSubtaskFailed(data); break;
+    case 'subtask_reflected': onSubtaskReflected(data); break;
     case 'goal_complete': onGoalComplete(data); break;
     case 'goal_error': onGoalError(data); break;
     case 'goal_cancelled': onGoalCancelled(data); break;
+    case 'goal_rollback': onGoalRollback(data); break;
+    case 'skill_saved': onSkillSaved(data); break;
     case 'memory_data': onMemoryData(data); break;
     case 'status_info': onStatusInfo(data); break;
     case 'help': onHelp(data); break;
@@ -1231,6 +1272,7 @@ function finalizeExecBubble(bubble, stepsOk, stepsTotal, hasText) {
   const b = bubble.querySelector('.msg-body');
   b.querySelector('.msg-thinking').style.display = 'none';
   const ec = b.querySelector('.msg-exec-card');
+  const taskId = bubble.dataset.task || '';
   if (ec.style.display !== 'none') {
     // fold steps on completion
     const stepsDiv = ec.querySelector('.exec-steps');
@@ -1239,6 +1281,16 @@ function finalizeExecBubble(bubble, stepsOk, stepsTotal, hasText) {
     if (toggle) toggle.classList.add('collapsed');
     const hdr = ec.querySelector('.exec-header .exec-icon');
     if (hdr) hdr.textContent = '✓';
+    // T008: add trace button to exec card header
+    const execHdr = ec.querySelector('.exec-header');
+    if (execHdr && taskId && !execHdr.querySelector('.exec-trace-btn')) {
+      const traceBtn = document.createElement('button');
+      traceBtn.className = 'exec-trace-btn';
+      traceBtn.title = 'Show execution trace';
+      traceBtn.textContent = '🔍 Trace';
+      traceBtn.onclick = (e) => { e.stopPropagation(); showTraceModal(taskId); };
+      execHdr.appendChild(traceBtn);
+    }
   }
   if (!hasText) {
     const mt = b.querySelector('.msg-text');
@@ -1254,6 +1306,62 @@ function finalizeExecBubble(bubble, stepsOk, stepsTotal, hasText) {
   scrollToBottom();
 }
 
+// T008: Trace modal
+async function showTraceModal(taskId) {
+  S.traceTaskId = taskId;
+  let modal = document.getElementById('trace-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'trace-modal';
+    modal.className = 'trace-modal-overlay';
+    modal.innerHTML = `
+      <div class="trace-modal">
+        <div class="trace-modal-hdr">
+          <span>🔍 Execution Trace</span>
+          <button class="trace-modal-close" onclick="document.getElementById('trace-modal').remove()">✕</button>
+        </div>
+        <div class="trace-modal-body" id="trace-modal-body">
+          <div style="color:var(--text2);padding:16px">Loading trace…</div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  }
+  const body = document.getElementById('trace-modal-body');
+  try {
+    const r = await fetch(`/api/trace/${encodeURIComponent(taskId)}`);
+    const data = await r.json();
+    const entries = data.entries || [];
+    if (!entries.length) {
+      body.innerHTML = '<div style="color:var(--text2);padding:16px">No trace entries found.</div>';
+      return;
+    }
+    let html = '<div class="trace-entries">';
+    let startTs = entries[0].ts || 0;
+    entries.forEach((e, i) => {
+      const dt = e.ts ? ((e.ts - startTs) * 1000).toFixed(0) + 'ms' : '';
+      const typeLabel = {
+        command: '💬', plan: '📋', step_start: '▶',
+        step_complete: '✓', step_error: '✕', completed: '🏁',
+        subtask_complete: '✓', subtask_failed: '✗', error: '❌',
+        subtask_reflected: '🔄', goal_start: '🎯', goal_complete: '🏆',
+      }[e.type] || '•';
+      const isCrit = e.type === 'step_error' || e.type === 'error';
+      const snippet = JSON.stringify(e.data || {}).slice(0, 120);
+      html += `<div class="trace-entry ${isCrit ? 'trace-err' : ''}">
+        <span class="trace-icon">${typeLabel}</span>
+        <span class="trace-type">${esc(e.type)}</span>
+        <span class="trace-dt">${dt ? '+' + dt : ''}</span>
+        <div class="trace-data">${esc(snippet)}${snippet.length>=120?'…':''}</div>
+      </div>`;
+    });
+    html += '</div>';
+    body.innerHTML = html;
+  } catch (err) {
+    body.innerHTML = `<div style="color:#e55;padding:16px">Failed to load trace: ${esc(String(err))}</div>`;
+  }
+}
+
 function showConfirmInBubble(bubble, data) {
   if (!bubble) return;
   const b = bubble.querySelector('.msg-body');
@@ -1261,16 +1369,49 @@ function showConfirmInBubble(bubble, data) {
   const mt = b.querySelector('.msg-text');
   mt.style.display = 'block';
   const msg = (data.message||'').replace(/^Confirmation required.*?:\s*/i,'');
+  const isPlanRisk = data.type === 'plan_risk';
+  const confId = data.confirmation_id || 'x';
+  const taskId = data.task_id || '';
+
+  // T007: Show step checkboxes for plan-level risk confirmation
+  let planEditorHtml = '';
+  if (isPlanRisk && S.currentPlanSteps.length > 0) {
+    const stepRows = S.currentPlanSteps.map((s, i) => {
+      const sid = esc(s.step_id || `step-${i}`);
+      const riskCls = s.risk_level === 'critical' ? 'color:#e55' : s.risk_level === 'high' ? 'color:#e99' : 'color:var(--text2)';
+      return `<label class="plan-step-row">
+        <input type="checkbox" class="plan-step-chk" data-step-id="${sid}" checked>
+        <span class="plan-step-tool">${esc(s.tool||'')}</span>
+        <span class="plan-step-desc" style="${riskCls}">${esc(s.description||'')}</span>
+      </label>`;
+    }).join('');
+    planEditorHtml = `<div class="plan-editor">
+      <div class="plan-editor-header">
+        <span>📋 Deselect any steps to skip them:</span>
+        <button class="plan-editor-all-btn" onclick="toggleAllPlanSteps('${confId}', true)">All</button>
+        <button class="plan-editor-all-btn" onclick="toggleAllPlanSteps('${confId}', false)">None</button>
+      </div>
+      <div class="plan-step-list" id="plan-editor-${confId}">${stepRows}</div>
+    </div>`;
+  }
+
   mt.innerHTML = `
     <div class="msg-confirm">
       <div class="msg-confirm-text">⚠️ ${esc(msg)}</div>
+      ${planEditorHtml}
       <div class="msg-confirm-row">
-        <input class="msg-confirm-input" id="conf-input-${data.confirmation_id||'x'}" placeholder="Type YES to confirm…">
-        <button class="conf-yes-btn" onclick="sendConfirmFromBubble('${esc(data.task_id)}','${esc(data.confirmation_id)}',true)">YES</button>
-        <button class="conf-no-btn" onclick="sendConfirmFromBubble('${esc(data.task_id)}','${esc(data.confirmation_id)}',false)">NO</button>
+        <input class="msg-confirm-input" id="conf-input-${confId}" placeholder="Type YES to confirm…">
+        <button class="conf-yes-btn" onclick="sendConfirmFromBubble('${esc(taskId)}','${confId}',true)">YES</button>
+        <button class="conf-no-btn" onclick="sendConfirmFromBubble('${esc(taskId)}','${confId}',false)">NO</button>
       </div>
     </div>`;
   scrollToBottom();
+}
+
+function toggleAllPlanSteps(confId, checked) {
+  const list = document.getElementById(`plan-editor-${confId}`);
+  if (!list) return;
+  list.querySelectorAll('.plan-step-chk').forEach(cb => { cb.checked = checked; });
 }
 
 function addSystemMsg(html) {
@@ -1307,6 +1448,9 @@ function onThinking(d) {
 function onPlan(d) {
   if (!S.activeBubble) return;
   const steps = d.steps || [];
+  // T007: store plan steps so the confirmation UI can show checkboxes
+  S.currentPlanSteps = steps;
+  S.currentPlanTaskId = d.task_id;
   showExecCard(S.activeBubble, `${steps.length}-step plan`, steps, d.risk_score);
 }
 
@@ -1531,6 +1675,42 @@ function onGoalCancelled(d) {
   S.activeGoalBubble = null; S.activeBubble = null;
 }
 
+// T003: Self-reflection notification (supervisor retrying after failure)
+function onSubtaskReflected(d) {
+  const gid = d.goal_id || 'g';
+  const i = (d.step || 1) - 1;
+  const dot = document.getElementById(`gst-${i}-${gid}`);
+  if (dot) { dot.className = 'goal-subtask-dot running'; dot.title = '🔄 Reflecting…'; }
+  const lbl = document.getElementById(`gp-label-${gid}`);
+  if (lbl) lbl.textContent = `🔄 Reflecting on step ${d.step||'?'}: ${(d.reflection||'').slice(0,60)}`;
+  toast('🔄 Retrying after reflection…', 'info', 3000);
+}
+
+// T009: Goal rollback notification
+function onGoalRollback(d) {
+  toast('↩ Goal rolled back — files restored to pre-goal state', 'warn', 5000);
+  const gid = d.goal_id || 'g';
+  const lbl = document.getElementById(`gp-label-${gid}`);
+  if (lbl) lbl.textContent = `↩ Rolled back: ${d.reason || ''}`;
+}
+
+// T012: Skill saved notification
+function onSkillSaved(d) {
+  toast(`💾 Skill saved: "${d.name || 'Unnamed'}"`, 'ok', 4000);
+  const skillBtn = document.createElement('button');
+  skillBtn.className = 'ctx-chip';
+  skillBtn.innerHTML = `💾 View skill: ${esc((d.name||'').slice(0,20))}`;
+  skillBtn.onclick = () => loadSkillsPanel();
+  if (S.activeGoalBubble) {
+    const mb = S.activeGoalBubble.querySelector('.msg-body');
+    if (mb) mb.appendChild(skillBtn);
+  }
+}
+
+function loadSkillsPanel() {
+  toast('Skills panel — see /api/skills', 'info', 2500);
+}
+
 function cancelGoal() {
   if (S.taskId) wsSend({type:'cancel', data:{task_id:S.taskId}});
   document.getElementById('goal-bar').classList.remove('show');
@@ -1576,10 +1756,25 @@ function sendCommand() {
 function sendConfirmFromBubble(taskId, confId, yes) {
   const input = document.getElementById(`conf-input-${confId}`);
   const val = yes ? (input ? (input.value.trim() || 'YES') : 'YES') : 'NO';
-  wsSend({type:'confirm', data:{task_id:taskId, confirmation_id:confId, response:val}});
+
+  // T007: collect deselected step IDs from plan editor checkboxes
+  let skipSteps = [];
+  if (yes && confId === 'plan_risk') {
+    const list = document.getElementById(`plan-editor-${confId}`);
+    if (list) {
+      list.querySelectorAll('.plan-step-chk').forEach(cb => {
+        if (!cb.checked) skipSteps.push(cb.dataset.stepId);
+      });
+    }
+  }
+
+  wsSend({type:'confirm', data:{task_id:taskId, confirmation_id:confId, response:val, skip_steps:skipSteps}});
   // Update confirm UI
-  const confirm = document.querySelector('.msg-confirm');
-  if (confirm) confirm.innerHTML = `<div class="msg-confirm-text">${yes ? '✅ Confirmed — proceeding…' : '🚫 Cancelled.'}</div>`;
+  const confirmEl = document.querySelector('.msg-confirm');
+  if (confirmEl) {
+    const skippedMsg = skipSteps.length > 0 ? ` (${skipSteps.length} step${skipSteps.length>1?'s':''} skipped)` : '';
+    confirmEl.innerHTML = `<div class="msg-confirm-text">${yes ? `✅ Confirmed — proceeding…${skippedMsg}` : '🚫 Cancelled.'}</div>`;
+  }
 }
 
 // Terminal mode send

@@ -1,0 +1,95 @@
+PACCA v7.0 — Gap Analysis Research Report
+Research Date: June 15, 2026
+Depth: Standard (5 parallel research streams + codebase audit)
+Sources Consulted: 20+ (codebase analysis + web research across 5 domains)
+
+Executive Summary
+PACCA v7.0 is a technically sophisticated, security-first AI computer-control agent with a strong foundation: cryptographic capability grants, TOCTOU-safe file resolution, layered LLM planning, and a solid multi-domain tool registry. However, when benchmarked against the 2025 state of the art in AI agents (Claude Computer Use, Devin, OpenInterpreter, LangGraph), six critical gaps emerge that meaningfully limit its power, reliability, and user trust.
+
+The most urgent gap is the absence of a code/process sandbox — PACCA can generate and save code but runs it in the host user's process space, which is a direct violation of OWASP LLM Top 10 (2025). The second most impactful gap is the memory system: the current TF-IDF/cosine similarity retrieval over flat SQLite records cannot deliver the semantic recall that makes agents feel genuinely "persistent" across sessions. The remaining gaps span vision-grounded browser control, self-reflective plan correction, audit immutability, and a missing interactive plan editor in the UI.
+
+The good news: PACCA's security primitives (capability grants, TaskScope freezing, SafeResourceResolver) are already state-of-the-art and close the two most commonly exploited attack classes — prompt injection and TOCTOU. The gaps identified below are additive improvements, not architectural reworks.
+
+Background
+PACCA operates as a FastAPI + WebSocket server with a terminal-style web UI. Its pipeline flows: User Command → TaskScope Derivation → LocalTextRedactor → LLM Planner → PlanValidator → RiskEvaluator → PolicyEngine (CapabilityGrant) → RuntimeStepValidator → Tool Execution → AuditLogger. The tool registry covers 38+ tools across file, browser, git, system, document, research, and coding domains. The memory system is SQLite-backed with episodic, semantic, preference, and workflow layers. The security architecture is notably strong, with single-use HMAC-signed grants and deterministic path-token resolution — but several gaps exist downstream of these controls.
+
+Key Findings
+Gap 1 — No Sandboxed Code Execution Environment (Critical)
+This is the single highest-risk gap in the entire project. PACCA's pacca/tools/code_tools.py can generate Python/shell code and save it to disk, but all execution happens in the host user's OS process with no hardware-level or container-level boundary. The OWASP LLM Top 10 (2025) identifies this pattern — "Insecure Output Handling" (LLM02) — as the primary attack surface for AI agents: a malicious or misguided plan can execute arbitrary commands that persist beyond the task's lifetime.
+
+In contrast, tools like OpenInterpreter use Docker-based ephemeral containers, E2B provides WASM sandboxes for code execution, and Devin runs every task inside an isolated VM. PACCA's current approach relies entirely on path allowlisting and user-level permissions, which is insufficient when the code being executed can itself open network sockets, read environment variables (including AWS_SECRET_ACCESS_KEY, ANTHROPIC_API_KEY, etc.), or spawn child processes that outlive the agent's session.
+
+What to build: An ephemeral subprocess sandbox — minimally, a subprocess.run() with env={} (clean environment), cwd=/tmp/pacca_sandbox/, and a timeout/kill switch. More robustly, a Docker-socket integration or a nsjail/bubblewrap-based process jail for any tool that executes code. The run_code tool should never inherit the agent's full environment.
+
+Gap 2 — Memory Is Keyword-Based, Not Semantically Indexed (High Priority)
+PACCA's MemoryManager (in pacca/memory/memory_manager.py) uses a manually implemented TF-IDF cosine similarity over Counter objects — essentially a keyword bag-of-words approach from 2010-era information retrieval. This means if a user ran a task "analyze my Python project dependencies" three weeks ago and now types "check what packages my repo uses," PACCA will likely not retrieve the earlier task because the keywords don't overlap sufficiently.
+
+The 2025 standard for agent memory is vector embeddings (via text-embedding-3-small from OpenAI, or a local model like nomic-embed-text) stored in a lightweight vector store (ChromaDB, LanceDB, or even sqlite-vec). These produce dense semantic representations that correctly match conceptually similar queries even when the surface-level words differ. Additionally, PACCA's memory context is capped at a flat 5 recent tasks + 5 semantic matches + 10 preferences injected into every LLM call — there is no memory compression or hierarchical summarization, meaning long-running sessions can either lose old context or bloat the prompt.
+
+There are two additional sub-gaps here: first, PACCA has no procedural memory — when a multi-step goal succeeds, that execution trace is not offered back as a reusable "skill"; it simply sits in episodic history. Second, preference learning is purely explicit ("remember that..."), with no implicit pattern detection from behavior (e.g., noticing that the user always picks markdown output and adjusting the default silently).
+
+What to build: Replace the TF-IDF search with sqlite-vec (zero new services required, pure Python, SQLite extension) for embedding storage and ANN retrieval. Add a MemoryCompressor that summarizes sessions older than 7 days into a paragraph. Add a SkillLibrary that offers to save successful multi-step goal traces as named, replayable procedures.
+
+Gap 3 — Browser Automation Is DOM-Only; No Vision-Grounded Control (High Priority)
+PACCA's BrowserController (in pacca/tools/browser_tools.py) is entirely DOM/CSS-selector based. When a selector is present and stable, this works well. But modern web applications increasingly use canvas-rendered UIs, shadow DOM, React portals, and dynamic class names — all of which break CSS selector-based interaction silently. There is no fallback.
+
+The 2025 industry standard is visual grounding: taking a screenshot, sending it to a multimodal LLM, asking it to identify the (x, y) coordinates of the target element, and then issuing a coordinate-based click via Playwright's page.mouse.click(x, y). Claude's Computer Use API does exactly this; GPT-4o vision can too. PACCA has a vision_tools.py that can take screenshots and describe them, but this capability is completely disconnected from the browser action loop — the agent has no way to say "I see a red button at (450, 320), click it."
+
+A secondary gap is anti-bot reliability. PACCA uses a custom User-Agent string (PACCA/7.0) and no stealth plugins, making it trivially detectable and blockable by Cloudflare, DataDome, or PerimeterX. Modern automation workflows require playwright-stealth, randomized delays, and human-like cursor paths for any serious web research use case.
+
+A third gap, noted by the security research stream, is visual PII redaction: PACCA's LocalTextRedactor operates on text strings before LLM calls, but screenshots sent to vision APIs currently undergo no redaction — a password dialog, credit card form, or sensitive document visible on screen would be sent raw to the cloud LLM.
+
+What to build: Wire vision_tools.py into the browser action loop as a fallback: when a browser_click fails due to selector mismatch, automatically take a screenshot, ask the LLM for coordinates, and retry with page.mouse.click(). Add playwright-stealth (pip package playwright-stealth) with randomized typing delays. Add a redact_image() function that blurs bounding boxes containing text patterns before any screenshot leaves the local machine.
+
+Gap 4 — No Self-Reflection or Error-Driven Plan Revision (Medium-High Priority)
+When a step fails in PACCA's GoalSupervisor (in pacca/supervisor.py), the agent retries up to 2 times with the same plan. It does not "think" about what went wrong or attempt a different strategy. This means a plan that encounters a consistent obstacle — a page that requires login, a file that doesn't exist yet, an API that returns a 403 — will simply retry twice and fail, reporting back to the user with the raw error.
+
+The 2025 pattern, pioneered by ReAct (Reason + Act) and Reflexion, is a self-critique loop: after a step error, the agent is prompted with its previous reasoning, the tool output (including the error), and asked to (a) explain why it failed and (b) propose a revised approach. This dramatically improves success rates on complex multi-step goals without requiring human intervention for every hiccup.
+
+PACCA's architecture already has the primitives to do this — AgentEvent streams, TaskStateMachine, and an LLM client that supports multi-turn calls. The gap is purely the absence of a "reflect and revise" prompt template and a revised GoalSupervisor loop that feeds failure context back into the planner before retrying.
+
+What to build: Add a ReflectionPrompt to llm_client.py that, upon step failure, asks the model: "Your previous plan step failed with error X. What went wrong and what should the revised approach be?" Route this into GoalSupervisor's retry loop as a plan-patch before re-attempting. Cap at 3 reflection attempts to prevent infinite loops.
+
+Gap 5 — Audit Logs Are Not Tamper-Proof; No Environment Variable Scrubbing (Medium Priority)
+PACCA's AuditLogger (in pacca/models/audit_log.py) writes ~/.pacca/audit.log with 0600 permissions and redacts file paths and secrets from the text content. This is solid baseline protection. However, the log file is a plain append-only text file — there is no cryptographic chaining between entries (like a hash-linked list), and it is stored locally. A compromised agent process running under the same user could trivially delete or modify the log, erasing evidence of its own actions.
+
+The second sub-gap is environment variable exposure: while SafeResourceResolver blocks access to credential files (.ssh/, .aws/, etc.), the agent's process inherits the full OS environment and there is no explicit scrubbing of environment variables before LLM calls or tool execution. If a tool error message or stack trace leaks os.environ, it could expose ANTHROPIC_API_KEY, DATABASE_URL, or any other secret in the shell environment.
+
+What to build: Add HMAC chaining to AuditLogger — each entry includes prev_hash = hmac(prev_entry_content), making any modification to earlier entries detectable. Add a clean_env context manager in code_tools.py and any shell-execution tool that strips all sensitive environment variables before spawning subprocesses. Maintain a SCRUB_ENV_KEYS blocklist matching patterns like *_KEY, *_TOKEN, *_SECRET, *_PASSWORD.
+
+Gap 6 — No Interactive Plan Editor; Undo Coverage Is Shallow (Medium Priority)
+PACCA's UI supports "dry-run" mode which displays the proposed plan before execution. However, the plan is read-only — the user can see it but cannot prune, reorder, or edit steps before hitting "Run." In practice, this means if the agent plans 5 steps but step 3 looks risky, the user's only options are "run all 5" or "cancel" — there is no "run steps 1, 2, 4, 5 and skip 3."
+
+The undo system (pacca/undo_manager.py) covers create_file, create_folder, and move_file, but marks git commits, web downloads, browser actions, document creation, and system operations as non-reversible. This is architecturally correct (some operations genuinely can't be undone), but there is an entire class of actions — file writes, folder creations during a complex goal — where a "checkpoint and rollback" approach could restore the filesystem state even if individual undo lambdas are missing. There is also no redo functionality at all.
+
+A related gap from the observability research stream: there is no visual trace view (like LangSmith or Arize Phoenix) where a developer or power user can inspect the exact prompt, context, and raw LLM output for any step in a failed goal. Currently, failure diagnosis requires reading the raw audit log, which is not human-friendly.
+
+What to build: Add step-level checkboxes to the msg-exec-card plan preview in templates/index.html, allowing users to deselect steps before execution. Add a /api/trace/{task_id} endpoint that returns the full reasoning trace (prompt sent, LLM response, tool call, result) for each step in JSON, and a collapsible "Trace" panel in the UI. For undo, integrate a lightweight snapshot mechanism: before any multi-step goal starts, serialize the list of paths-to-be-modified and store pre-execution checksums, enabling a "rollback goal" operation even for non-individually-reversible steps.
+
+Analysis
+The six gaps form two clusters. The first cluster — sandbox, self-reflection, and visual browser control — represents PACCA's ceiling on capability. Without a sandbox, PACCA cannot safely run generated code and will rightly be perceived as risky by security-conscious users. Without self-reflection, complex multi-step goals fail more than they should, eroding trust. Without visual browser control, PACCA breaks on the most modern web apps, limiting its usefulness for research and automation.
+
+The second cluster — semantic memory, audit hardening, and interactive plan editing — represents PACCA's ceiling on trust and continuity. Users who interact with PACCA daily will notice that it doesn't remember semantically similar tasks, that they can't safely inspect what it's about to do in detail, and that recovery from mistakes is limited. These gaps don't prevent PACCA from working — they prevent users from relying on it.
+
+The security model's core (prompt injection via TaskScope freezing, TOCTOU via SafeResourceResolver, tool breakout via capability grants) is genuinely state-of-the-art and already closes the most commonly exploited attack classes. The remaining security gaps (no sandbox, plain-text audit, env var leakage) are additive hardening, not architectural reworks — which is an important distinction. PACCA can be significantly hardened without touching its core security pipeline.
+
+Limitations
+This research is based on static codebase analysis and public web research as of June 2026. Some gaps may already have partial implementations in branches or files not examined. The "best practice" benchmarks are drawn from OpenInterpreter, Devin, LangGraph, and Anthropic's Computer Use documentation — all of which serve somewhat different use cases and audiences than PACCA's local-first, security-native model. Recommendations are scoped to what is implementable within PACCA's existing Python/FastAPI/WebSocket architecture without requiring a full rewrite.
+
+Prioritized Recommendations
+Here is the implementation priority order, balancing impact, feasibility, and risk:
+
+#	Gap	Priority	Effort	Impact
+1	Sandboxed code execution (clean_env + subprocess jail)	🔴 Critical	Low-Medium	Security + Trust
+2	Vector memory (replace TF-IDF with sqlite-vec embeddings)	🔴 High	Medium	Recall quality
+3	Self-reflection loop in GoalSupervisor on step failure	🟠 High	Medium	Goal success rate
+4	Vision-grounded browser fallback (coord-click from screenshot)	🟠 High	Medium	Browser reliability
+5	Visual PII redaction before screenshot → cloud LLM	🟠 High	Low	Security + Privacy
+6	HMAC-chained audit log + env var scrubbing	🟡 Medium	Low	Audit integrity
+7	Interactive plan editor (step checkboxes before execution)	🟡 Medium	Low	UX + User control
+8	Trace/debugger panel (/api/trace/{task_id} + UI)	🟡 Medium	Medium	DX + Debugging
+9	Goal-level rollback (pre-goal filesystem snapshot)	🟡 Medium	Medium	Undo coverage
+10	Implicit preference learning (background pattern detection)	🟢 Nice-to-have	High	Personalization
+11	playwright-stealth + randomized browser behavior	🟢 Nice-to-have	Low	Web scraping
+12	SkillLibrary (save successful traces as named procedures)	🟢 Nice-to-have	High	Power user UX
+The three highest-ROI improvements to tackle first are #1 (sandbox), #2 (vector memory), and #3 (self-reflection) — together they would meaningfully close the gap between PACCA and tools like OpenInterpreter and Devin on the dimensions users care most about: safety, persistence, and resilience. All three are implementable within the existing Python codebase without any new infrastructure services.

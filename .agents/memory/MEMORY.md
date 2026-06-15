@@ -1,6 +1,6 @@
 - [PACCA architecture](pacca-architecture.md) — full PRD v7.0 implementation; FastAPI+WebSocket terminal UI; 38+ tools; security pipeline in pacca/ package
-- [PACCA known quirks](pacca-quirks.md) — git_add secret-reset bypass; PlanValidator list-path gaps; settings UI threshold values
+- [PACCA known quirks](pacca-quirks.md) — git_add secret-reset bypass; PlanValidator list-path gaps; T007 skip_steps must use confId "plan_risk"; run_code needs both TOOL_DISPATCH + registry entry
 - [PACCA advisory mode](pacca-advisory.md) — expert advisor persona added; AdvisoryIntentDetector in pacca/advisor.py routes questions to LLM; advisory overlay in UI renders markdown via marked.js
 - [PACCA v7.0 upgrades](pacca-v7-upgrades.md) — LLM goal decomposition in supervisor.py; /api/memory/stats endpoint; Insights panel (📈 tab); GoalSupervisor.set_llm_client() wired in agent.py
-- [PACCA v7.1 memory features](pacca-v71-memory.md) — Reports panel (📄 tab), weekly summary overlay, NL preference detection, memory context injected into every LLM plan call
+- [PACCA v7.1 memory features](pacca-v71-memory.md) — Reports panel, weekly overlay, NL prefs, IDF search, skill library, trace store (T001-T012 all complete)
 - [PACCA playwright nix setup](pacca-playwright-nix.md) — nix provides playwright-browsers-1.55.0-with-cjk (chromium-1187); pip playwright 1.49.1 needs executable_path override to use it

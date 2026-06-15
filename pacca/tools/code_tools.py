@@ -1,5 +1,11 @@
-"""Coding Agent tools — AI-powered code generation, explanation, refactoring, and testing."""
+"""Coding Agent tools — AI-powered code generation, explanation, refactoring, testing.
+
+Gap #1: run_code tool uses pacca.security.sandbox for sandboxed execution with
+         clean environment (all *_KEY/*_TOKEN/*_SECRET vars stripped).
+Gap #6: subprocess env scrubbing applied through sandbox.make_clean_env().
+"""
 from __future__ import annotations
+import asyncio
 from pathlib import Path
 
 _llm_client = None
@@ -51,8 +57,9 @@ def set_llm_client(client) -> None:
 import re as _re
 _FENCE_RE = _re.compile(r'^```[^\n]*\n(.*?)(?:\n```\s*)?$', _re.DOTALL)
 
+
 def _strip_code_fences(text: str) -> str:
-    """Remove outer markdown code fences safely, preserving interior backticks."""
+    """Remove outer markdown code fences, preserving interior backticks."""
     text = text.strip()
     m = _FENCE_RE.match(text)
     if m:
@@ -84,6 +91,52 @@ def _read_source(file_path: str) -> tuple[str, str]:
     }
     lang = ext_map.get(p.suffix.lower(), "code")
     return content, lang
+
+
+async def run_code(code: str, language: str = "python",
+                   timeout: float = 30.0, dry_run: bool = False) -> dict:
+    """Execute code in a sandboxed subprocess with a clean environment.
+
+    Gap #1: Uses pacca.security.sandbox.run_sandboxed() which:
+    - Strips ALL *_KEY, *_TOKEN, *_SECRET, *_PASSWORD, AWS_*, ANTHROPIC_*, etc.
+    - Runs in an isolated /tmp/pacca_sandbox/<uuid>/ directory (auto-cleaned)
+    - Hard kills the process after `timeout` seconds
+
+    Supports: python, javascript, bash, ruby.
+    """
+    if dry_run:
+        return {
+            "dry_run": True,
+            "language": language,
+            "code_preview": code[:100],
+            "timeout": timeout,
+        }
+
+    from pacca.security.sandbox import run_sandboxed
+
+    # Run in thread pool since subprocess.run blocks the event loop
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None,
+        lambda: run_sandboxed(code=code, language=language, timeout=timeout),
+    )
+
+    # Format user-friendly output
+    output = result.get("stdout", "").strip()
+    stderr = result.get("stderr", "").strip()
+    rc = result.get("returncode", -1)
+
+    return {
+        "language": language,
+        "returncode": rc,
+        "output": output[:8192] if output else None,
+        "stderr": stderr[:2048] if stderr else None,
+        "timed_out": result.get("timed_out", False),
+        "elapsed_s": result.get("elapsed"),
+        "env_vars_stripped": result.get("env_vars_stripped", 0),
+        "success": rc == 0 and not result.get("timed_out"),
+        "sandbox": True,
+    }
 
 
 async def generate_code(description: str, language: str = "python",

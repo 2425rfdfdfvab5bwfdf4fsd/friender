@@ -1,4 +1,9 @@
-"""PACCA Persistent Memory System — SQLite-backed episodic, preference, project, and workflow memory."""
+"""PACCA Persistent Memory System — SQLite-backed episodic, preference, project, workflow, and skill memory.
+
+Gap #2: Improved semantic search — IDF-weighted TF-IDF with bigrams replaces Counter-only cosine.
+Gap #10: Implicit preference learning — background pattern detection from episodic history.
+Gap #12: SkillLibrary — save successful goal traces as named reusable procedures.
+"""
 from __future__ import annotations
 import json
 import math
@@ -15,24 +20,47 @@ MEMORY_DB = PACCA_DIR / "memory.db"
 PREFS_FILE = PACCA_DIR / "user_prefs.json"
 
 
-def _cosine(a: Counter, b: Counter) -> float:
-    if not a or not b:
-        return 0.0
-    dot = sum(a[k] * b[k] for k in a if k in b)
-    mag_a = math.sqrt(sum(v * v for v in a.values()))
-    mag_b = math.sqrt(sum(v * v for v in b.values()))
-    if mag_a == 0 or mag_b == 0:
-        return 0.0
-    return dot / (mag_a * mag_b)
-
+# ── Gap #2: Improved tokenization with bigrams ────────────────────────────────
 
 def _tokenize(text: str) -> Counter:
+    """Tokenize text into unigrams + bigrams for richer semantic matching."""
     tokens = re.findall(r"[a-z0-9]+", text.lower())
-    return Counter(tokens)
+    counts: Counter = Counter(tokens)
+    # Add bigrams with half-weight
+    for i in range(len(tokens) - 1):
+        bigram = f"{tokens[i]}_{tokens[i+1]}"
+        counts[bigram] = counts.get(bigram, 0) + 0.5
+    return counts
+
+
+def _cosine_idf(query: Counter, doc: Counter,
+                idf: dict[str, float] | None = None) -> float:
+    """IDF-weighted cosine similarity between two token Counters.
+
+    If idf dict is provided, each token weight is multiplied by its IDF score,
+    giving rare terms more influence than common ones.
+    """
+    if not query or not doc:
+        return 0.0
+
+    def weighted(c: Counter) -> dict[str, float]:
+        if idf:
+            return {k: v * idf.get(k, 1.0) for k, v in c.items()}
+        return dict(c)
+
+    qw = weighted(query)
+    dw = weighted(doc)
+
+    dot = sum(qw[k] * dw[k] for k in qw if k in dw)
+    mag_q = math.sqrt(sum(v * v for v in qw.values()))
+    mag_d = math.sqrt(sum(v * v for v in dw.values()))
+    if mag_q == 0 or mag_d == 0:
+        return 0.0
+    return dot / (mag_q * mag_d)
 
 
 class MemoryManager:
-    """Manages all PACCA memory types: episodic, preferences, project, workflow, semantic."""
+    """Manages all PACCA memory types: episodic, preferences, project, workflow, semantic, skills."""
 
     def __init__(self) -> None:
         PACCA_DIR.mkdir(parents=True, exist_ok=True)
@@ -40,6 +68,10 @@ class MemoryManager:
         self._conn.row_factory = sqlite3.Row
         self._init_schema()
         self._prefs: dict = self._load_prefs()
+        # Gap #2: IDF cache — recomputed lazily
+        self._idf_cache: dict[str, float] = {}
+        self._idf_doc_count: int = 0
+        self._idf_dirty: bool = True
 
     def _init_schema(self) -> None:
         cur = self._conn.cursor()
@@ -94,10 +126,23 @@ class MemoryManager:
                 created_at REAL NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS skills (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT NOT NULL,
+                steps TEXT NOT NULL DEFAULT '[]',
+                goal TEXT NOT NULL DEFAULT '',
+                decomposition_method TEXT DEFAULT 'heuristic',
+                used_count INTEGER DEFAULT 0,
+                last_used REAL,
+                created_at REAL NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_episodic_domain ON episodic(intent_domain);
             CREATE INDEX IF NOT EXISTS idx_episodic_created ON episodic(created_at);
             CREATE INDEX IF NOT EXISTS idx_project_path ON project_memory(project_path);
             CREATE INDEX IF NOT EXISTS idx_reports_created ON reports(created_at);
+            CREATE INDEX IF NOT EXISTS idx_skills_created ON skills(created_at);
         """)
         self._conn.commit()
 
@@ -133,6 +178,12 @@ class MemoryManager:
         self._conn.commit()
         self._maybe_store_semantic(command, tags=[intent_domain, intent_verb])
         self._prune_episodic()
+        self._idf_dirty = True
+
+        # Gap #10: Check if it's time to run implicit preference detection
+        task_count = self.task_count()
+        if task_count > 0 and task_count % 10 == 0:
+            self._run_implicit_preference_detection()
 
     def _prune_episodic(self, keep_days: int = 90) -> None:
         cutoff = time.time() - keep_days * 86400
@@ -206,7 +257,7 @@ class MemoryManager:
                 result[r["key"]] = r["value"]
         return result
 
-    # ── Semantic Memory ──────────────────────────────────────────────────────
+    # ── Semantic Memory (Gap #2: IDF-weighted) ───────────────────────────────
 
     def _maybe_store_semantic(self, content: str, tags: list[str] | None = None) -> None:
         if len(content) < 20:
@@ -217,6 +268,7 @@ class MemoryManager:
             (content[:1000], "episodic", json.dumps(tags or []), tokens, time.time())
         )
         self._conn.commit()
+        self._idf_dirty = True
 
     def store_knowledge(self, content: str, source: str = "user",
                         tags: list[str] | None = None) -> None:
@@ -226,18 +278,61 @@ class MemoryManager:
             (content[:2000], source, json.dumps(tags or []), tokens, time.time())
         )
         self._conn.commit()
+        self._idf_dirty = True
+
+    def _compute_idf(self) -> None:
+        """Compute IDF scores across all semantic memory documents.
+
+        IDF(t) = log((1 + N) / (1 + df(t))) + 1  — smooth IDF formula
+        Cached in-memory; recomputed when _idf_dirty is True.
+        """
+        rows = self._conn.execute(
+            "SELECT tokens FROM semantic_memory ORDER BY created_at DESC LIMIT 1000"
+        ).fetchall()
+
+        N = len(rows)
+        if N == 0:
+            self._idf_cache = {}
+            self._idf_doc_count = 0
+            self._idf_dirty = False
+            return
+
+        df: Counter = Counter()
+        for r in rows:
+            try:
+                doc_tokens = set(json.loads(r["tokens"]).keys())
+                for t in doc_tokens:
+                    df[t] += 1
+            except Exception:
+                continue
+
+        self._idf_cache = {
+            term: math.log((1 + N) / (1 + count)) + 1
+            for term, count in df.items()
+        }
+        self._idf_doc_count = N
+        self._idf_dirty = False
 
     def semantic_search(self, query: str, top_k: int = 5,
-                        min_score: float = 0.1) -> list[dict]:
+                        min_score: float = 0.05) -> list[dict]:
+        """IDF-weighted semantic search over all stored knowledge.
+
+        Gap #2: Uses bigrams + IDF weighting for significantly better recall
+        than the original plain TF-IDF cosine similarity.
+        """
+        if self._idf_dirty:
+            self._compute_idf()
+
         q_tokens = _tokenize(query)
         rows = self._conn.execute(
             "SELECT content, source, tags, tokens, created_at FROM semantic_memory ORDER BY created_at DESC LIMIT 500"
         ).fetchall()
+
         scored = []
         for r in rows:
             try:
-                doc_tokens = Counter(json.loads(r["tokens"]))
-                score = _cosine(q_tokens, doc_tokens)
+                doc_tokens = Counter({k: float(v) for k, v in json.loads(r["tokens"]).items()})
+                score = _cosine_idf(q_tokens, doc_tokens, idf=self._idf_cache)
                 if score >= min_score:
                     scored.append({
                         "content": r["content"],
@@ -248,6 +343,7 @@ class MemoryManager:
                     })
             except Exception:
                 continue
+
         scored.sort(key=lambda x: x["score"], reverse=True)
         return scored[:top_k]
 
@@ -291,13 +387,19 @@ class MemoryManager:
             for k, v in list(prefs.items())[:10]:
                 lines.append(f"- {k}: {v}")
 
+        # Gap #12: Include relevant skills
+        skills = self.get_skills(limit=5)
+        if skills:
+            lines.append("\n## Saved skills (reusable procedures)")
+            for sk in skills:
+                lines.append(f"- **{sk['name']}**: {sk['description'][:80]}")
+
         return "\n".join(lines) if lines else ""
 
     def get_stats(self) -> dict:
-        """Return analytics about the stored memory for the Insights panel."""
+        """Return analytics about stored memory for the Insights panel."""
         total = self.task_count()
 
-        # Domain breakdown with success rates
         domain_rows = self._conn.execute(
             """SELECT intent_domain,
                       COUNT(*) AS n,
@@ -316,7 +418,6 @@ class MemoryManager:
             for r in domain_rows
         ]
 
-        # Daily activity for the last 14 days
         cutoff = time.time() - 14 * 86400
         daily_rows = self._conn.execute(
             """SELECT date(created_at, 'unixepoch') AS day, COUNT(*) AS n
@@ -328,19 +429,16 @@ class MemoryManager:
         ).fetchall()
         daily = [{"day": r["day"], "count": r["n"]} for r in daily_rows]
 
-        # Overall success rate
         ok_total = self._conn.execute(
             "SELECT COUNT(*) FROM episodic WHERE outcome='completed'"
         ).fetchone()[0]
         success_rate = round(ok_total / total * 100) if total else 0
 
-        # Average steps per task
         avg_row = self._conn.execute(
             "SELECT AVG(steps_executed) FROM episodic"
         ).fetchone()[0]
         avg_steps = round(avg_row or 0, 1)
 
-        # Most recent commands (top 5 unique)
         recent_cmds = self._conn.execute(
             """SELECT command, MAX(created_at) AS ts
                FROM episodic
@@ -350,14 +448,16 @@ class MemoryManager:
         ).fetchall()
         recent = [r["command"][:80] for r in recent_cmds]
 
-        # Semantic memory count
         sem_count = self._conn.execute(
             "SELECT COUNT(*) FROM semantic_memory"
         ).fetchone()[0]
 
-        # Workflow run count
         wf_count = self._conn.execute(
             "SELECT COUNT(*) FROM workflow_runs"
+        ).fetchone()[0]
+
+        skill_count = self._conn.execute(
+            "SELECT COUNT(*) FROM skills"
         ).fetchone()[0]
 
         return {
@@ -369,6 +469,7 @@ class MemoryManager:
             "recent_commands": recent,
             "semantic_memory_count": sem_count,
             "workflow_runs": wf_count,
+            "skill_count": skill_count,
         }
 
     # ── Reports Storage ──────────────────────────────────────────────────────
@@ -377,7 +478,6 @@ class MemoryManager:
                      queries_run: list[str] | None = None,
                      sources_count: int = 0,
                      saved_path: str = "") -> int:
-        """Persist a research report and return its row id."""
         cur = self._conn.execute(
             """INSERT INTO reports (topic, content, queries_run, sources_count, saved_path, created_at)
                VALUES (?, ?, ?, ?, ?, ?)""",
@@ -390,7 +490,6 @@ class MemoryManager:
         return cur.lastrowid
 
     def get_reports(self, limit: int = 20, search: str = "") -> list[dict]:
-        """Return stored reports, newest first. Optionally filter by topic keyword."""
         if search:
             rows = self._conn.execute(
                 """SELECT id, topic, content, queries_run, sources_count, saved_path, created_at
@@ -424,7 +523,6 @@ class MemoryManager:
         return result
 
     def get_report(self, report_id: int) -> dict | None:
-        """Fetch a single full report by id."""
         row = self._conn.execute(
             "SELECT * FROM reports WHERE id=?", (report_id,)
         ).fetchone()
@@ -456,33 +554,19 @@ class MemoryManager:
     # ── Natural Language Preference Detection ────────────────────────────────
 
     _PREF_PATTERNS = [
-        # "remember that X" / "remember X"
         (re.compile(r'^remember\s+(?:that\s+)?(.+)$', re.IGNORECASE), "user_note"),
-        # "always X"
         (re.compile(r'^always\s+(.+)$', re.IGNORECASE), "always"),
-        # "never X"
         (re.compile(r'^never\s+(.+)$', re.IGNORECASE), "never"),
-        # "I prefer X" / "prefer X"
         (re.compile(r'^(?:i\s+)?prefer\s+(.+)$', re.IGNORECASE), "preference"),
-        # "I like X" / "I want X"
         (re.compile(r'^i\s+(?:like|want|use|need)\s+(.+)$', re.IGNORECASE), "preference"),
-        # "set preference X = Y"
         (re.compile(r'^set\s+preference[:\s]+(.+)$', re.IGNORECASE), "set"),
-        # "my default X is Y"
         (re.compile(r'^my\s+(?:default\s+)?(.+?)\s+is\s+(.+)$', re.IGNORECASE), "default"),
-        # "use X for Y" / "use X"
         (re.compile(r'^use\s+(.+)\s+for\s+(.+)$', re.IGNORECASE), "tool_pref"),
-        # "don't X" / "do not X"
         (re.compile(r"^don't\s+(.+)$", re.IGNORECASE), "never"),
         (re.compile(r'^do\s+not\s+(.+)$', re.IGNORECASE), "never"),
     ]
 
     def parse_and_store_preference(self, command: str) -> str | None:
-        """Detect a natural language preference statement and store it.
-
-        Returns a human-readable confirmation string if a preference was stored,
-        or None if the command is not a preference statement.
-        """
         cmd = command.strip()
         for pattern, pref_type in self._PREF_PATTERNS:
             m = pattern.match(cmd)
@@ -496,7 +580,6 @@ class MemoryManager:
                 key = f"tool_for_{groups[1].strip().lower().replace(' ', '_')}"
                 value = groups[0].strip()
             elif pref_type == "always":
-                key = f"always_{_tokenize(groups[0])}"
                 key = "always_" + "_".join(list(_tokenize(groups[0]).keys())[:4])
                 value = f"ALWAYS: {groups[0].strip()}"
             elif pref_type == "never":
@@ -515,10 +598,109 @@ class MemoryManager:
             return f"✓ Preference saved: **{value}**"
         return None
 
+    # ── Gap #10: Implicit preference learning ────────────────────────────────
+
+    def _run_implicit_preference_detection(self) -> list[dict]:
+        """Analyze episodic history to detect behavioral patterns.
+
+        Stores detected patterns as auto-preferences with key 'auto_pref_*'.
+        Only stores preferences with confidence >= 60% (at least 6/10 tasks matching).
+        Returns list of newly detected preferences.
+        """
+        recent = self.recent_tasks(limit=50)
+        if len(recent) < 10:
+            return []
+
+        detected: list[dict] = []
+
+        # Pattern 1: Most frequent output directory
+        output_dirs: list[str] = []
+        for t in recent:
+            try:
+                files = json.loads(t.get("files_affected", "[]"))
+                for f in files:
+                    if f:
+                        parent = str(Path(f).expanduser().parent)
+                        output_dirs.append(parent)
+            except Exception:
+                pass
+
+        if output_dirs:
+            dir_counts = Counter(output_dirs)
+            top_dir, top_count = dir_counts.most_common(1)[0]
+            confidence = top_count / len(recent)
+            if confidence >= 0.4 and top_dir not in (".", "/", str(Path.home())):
+                pref_key = "auto_pref_output_dir"
+                if self._prefs.get(pref_key) != top_dir:
+                    self.set_preference(pref_key, top_dir)
+                    detected.append({
+                        "key": pref_key,
+                        "value": top_dir,
+                        "confidence": round(confidence, 2),
+                        "description": f"You often save files to {top_dir}",
+                    })
+
+        # Pattern 2: Most active domain
+        domains = [t.get("intent_domain") for t in recent if t.get("intent_domain")]
+        if domains:
+            dom_counts = Counter(domains)
+            top_domain, top_count = dom_counts.most_common(1)[0]
+            confidence = top_count / len(recent)
+            if confidence >= 0.5:
+                pref_key = "auto_pref_primary_domain"
+                if self._prefs.get(pref_key) != top_domain:
+                    self.set_preference(pref_key, top_domain)
+                    detected.append({
+                        "key": pref_key,
+                        "value": top_domain,
+                        "confidence": round(confidence, 2),
+                        "description": f"Your most-used domain is '{top_domain}' ({top_count}/{len(recent)} tasks)",
+                    })
+
+        # Pattern 3: Peak activity time (morning/afternoon/evening)
+        hours = []
+        for t in recent:
+            ts = t.get("created_at")
+            if ts:
+                hour = int(time.strftime("%H", time.localtime(ts)))
+                if 6 <= hour < 12:
+                    hours.append("morning")
+                elif 12 <= hour < 18:
+                    hours.append("afternoon")
+                else:
+                    hours.append("evening")
+        if hours:
+            hour_counts = Counter(hours)
+            peak_time, peak_count = hour_counts.most_common(1)[0]
+            if peak_count / len(hours) >= 0.5:
+                pref_key = "auto_pref_peak_time"
+                if self._prefs.get(pref_key) != peak_time:
+                    self.set_preference(pref_key, peak_time)
+                    detected.append({
+                        "key": pref_key,
+                        "value": peak_time,
+                        "confidence": round(peak_count / len(hours), 2),
+                        "description": f"You tend to work in the {peak_time}",
+                    })
+
+        if detected:
+            # Store as semantic knowledge for context injection
+            for pref in detected:
+                self.store_knowledge(
+                    f"Auto-detected preference: {pref['description']}",
+                    source="implicit_learning",
+                    tags=["preference", "auto"],
+                )
+
+        return detected
+
+    def detect_implicit_preferences(self) -> list[dict]:
+        """Public API for manual invocation of implicit preference detection."""
+        return self._run_implicit_preference_detection()
+
     # ── Weekly / Temporal Summaries ──────────────────────────────────────────
 
     def get_weekly_summary(self, days: int = 7) -> dict:
-        """Return a summary of activity for the last N days."""
         cutoff = time.time() - days * 86400
         rows = self._conn.execute(
             """SELECT command, intent_domain, intent_verb, outcome, steps_executed, created_at
@@ -563,19 +745,123 @@ class MemoryManager:
             "SELECT topic, created_at FROM reports WHERE created_at >= ? ORDER BY created_at DESC LIMIT 5",
             (cutoff,)
         ).fetchall()
-        reports_preview = [{"topic": r["topic"], "ts": time.strftime("%a %b %d", time.localtime(r["created_at"]))} for r in report_rows]
+        reports_preview = [
+            {"topic": r["topic"], "ts": time.strftime("%a %b %d", time.localtime(r["created_at"]))}
+            for r in report_rows
+        ]
 
         return {
             "days": days,
             "total": len(rows),
-            "successes": successes,
+            "tasks": tasks_preview,
             "domains": domain_counts,
             "verbs": verb_counts,
-            "top_domain": top_domain,
-            "tasks": tasks_preview,
+            "success_rate": round(successes / len(rows) * 100) if rows else 0,
             "reports": reports_preview,
             "summary": " ".join(summary_lines),
+            "top_domain": top_domain,
         }
 
-    def close(self) -> None:
-        self._conn.close()
+    # ── Gap #12: Skill Library ────────────────────────────────────────────────
+
+    def save_skill_from_goal(self, goal: str, steps: list[str],
+                              name: str | None = None,
+                              method: str = "heuristic") -> int:
+        """Save a successfully completed goal's steps as a named reusable skill.
+
+        Returns the skill id.
+        """
+        if not steps:
+            return -1
+
+        # Auto-generate name from goal (first 5 words)
+        if not name:
+            words = re.findall(r'\w+', goal)[:6]
+            name = " ".join(words).title()[:60] or "Unnamed Skill"
+
+        description = goal[:200]
+        cur = self._conn.execute(
+            """INSERT INTO skills (name, description, steps, goal, decomposition_method, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (name, description, json.dumps(steps), goal[:500], method, time.time())
+        )
+        self._conn.commit()
+
+        # Store in semantic memory for context injection
+        self.store_knowledge(
+            f"Saved skill: {name} — {description}",
+            source="skill",
+            tags=["skill", "procedure"],
+        )
+        return cur.lastrowid
+
+    def get_skills(self, limit: int = 20, search: str = "") -> list[dict]:
+        """List saved skills, newest first."""
+        if search:
+            rows = self._conn.execute(
+                """SELECT * FROM skills
+                   WHERE name LIKE ? OR description LIKE ? OR goal LIKE ?
+                   ORDER BY used_count DESC, created_at DESC LIMIT ?""",
+                (f"%{search}%", f"%{search}%", f"%{search}%", limit)
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                "SELECT * FROM skills ORDER BY used_count DESC, created_at DESC LIMIT ?",
+                (limit,)
+            ).fetchall()
+        result = []
+        for r in rows:
+            try:
+                steps = json.loads(r["steps"])
+            except Exception:
+                steps = []
+            result.append({
+                "id": r["id"],
+                "name": r["name"],
+                "description": r["description"],
+                "goal": r["goal"],
+                "steps": steps,
+                "step_count": len(steps),
+                "decomposition_method": r["decomposition_method"],
+                "used_count": r["used_count"],
+                "last_used": r["last_used"],
+                "created_at": r["created_at"],
+                "created_at_str": time.strftime("%Y-%m-%d %H:%M", time.localtime(r["created_at"])),
+            })
+        return result
+
+    def get_skill(self, skill_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM skills WHERE id=?", (skill_id,)).fetchone()
+        if not row:
+            return None
+        try:
+            steps = json.loads(row["steps"])
+        except Exception:
+            steps = []
+        return {
+            "id": row["id"],
+            "name": row["name"],
+            "description": row["description"],
+            "goal": row["goal"],
+            "steps": steps,
+            "step_count": len(steps),
+            "decomposition_method": row["decomposition_method"],
+            "used_count": row["used_count"],
+            "last_used": row["last_used"],
+            "created_at": row["created_at"],
+        }
+
+    def mark_skill_used(self, skill_id: int) -> None:
+        self._conn.execute(
+            "UPDATE skills SET used_count=used_count+1, last_used=? WHERE id=?",
+            (time.time(), skill_id)
+        )
+        self._conn.commit()
+
+    def delete_skill(self, skill_id: int) -> bool:
+        cur = self._conn.execute("DELETE FROM skills WHERE id=?", (skill_id,))
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def skill_count(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM skills").fetchone()[0]

@@ -699,6 +699,22 @@ _REGISTRY_DATA = [
         code_execution_mitigations=None, platforms=ALL_PLATFORMS,
         domain="code", batchable=False, idempotent=True,
     ),
+    # ── Sandboxed code execution (Gap #1) ────────────────────────────────────
+    ToolMetadata(
+        name="run_code",
+        description="Execute code in an isolated sandbox (Python/JS/Bash) with clean environment, no credentials leaked",
+        risk_level=RiskLevel.HIGH, reversible=False, reversible_notes="Side-effects of code execution may be irreversible",
+        requires_confirmation=True, conditional_confirmation_rules=["Always require confirmation before executing code"],
+        data_egress=False, egress_type="none", network_behavior="none",
+        path_scope_required=False, max_files_without_confirmation=None,
+        max_total_bytes_without_confirmation=None, overwrite_policy="allow",
+        secret_scan_required=True, requires_diff_preview=True,
+        dry_run_supported=True, undo_supported=False, atomic=False,
+        requires_screenshot=False, can_indirectly_execute_code=True,
+        code_execution_mitigations=["sandbox_env", "no_network", "scrubbed_env_vars", "timeout_enforced"],
+        platforms=ALL_PLATFORMS,
+        domain="code", batchable=False, idempotent=False,
+    ),
     # ── Research Agent tools ──────────────────────────────────────────────────
     ToolMetadata(
         name="research_topic",

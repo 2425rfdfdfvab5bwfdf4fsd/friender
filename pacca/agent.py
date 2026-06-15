@@ -103,6 +103,8 @@ TOOL_DISPATCH: dict[str, Callable] = {
     # Research Agent tools
     "research_topic": lambda args: research_tools.research_topic(**_clean(args)),
     "summarize_url": lambda args: research_tools.summarize_url(**_clean(args)),
+    # Sandbox code execution (Gap #1)
+    "run_code": lambda args: code_tools.run_code(**_clean(args)),
 }
 
 # Tools whose results can feed the undo manager
@@ -214,6 +216,7 @@ class PACCAAgent:
             vision_tools.set_llm_client(llm_client)
             code_tools.set_llm_client(llm_client)
             research_tools.set_llm_client(llm_client)
+            browser_tools.set_llm_client(llm_client)  # Gap #4: vision-click fallback
 
         # Wire memory manager into research tools so reports are auto-persisted
         research_tools.set_memory_manager(self.memory)
@@ -234,6 +237,13 @@ class PACCAAgent:
         )
         if llm_client is not None:
             self.supervisor.set_llm_client(llm_client)
+        self.supervisor.set_memory(self.memory)  # Gap #12: skill saving after goal
+
+        # Gap #8: per-task execution trace store (task_id → list of trace entries)
+        self._trace: dict[str, list] = {}
+
+        # Gap #7: per-task skip-step sets (task_id → set of step_ids to skip)
+        self._skip_steps: dict[str, set] = {}
 
         # Confirmation gates: key = "task_id:confirmation_id" → asyncio.Queue(1)
         self._confirmation_gates: dict[str, asyncio.Queue] = {}
@@ -254,6 +264,12 @@ class PACCAAgent:
         task_id = task_id or str(uuid.uuid4())
         queue: asyncio.Queue = asyncio.Queue()
 
+        # Gap #8: Initialize trace store for this task
+        self._trace[task_id] = [{"type": "command", "data": {"command": command[:300]}, "ts": time.time()}]
+        if len(self._trace) > 50:
+            oldest_key = next(iter(self._trace))
+            self._trace.pop(oldest_key, None)
+
         async def _produce():
             try:
                 async for event in self._execute_pipeline(command, task_id):
@@ -268,10 +284,23 @@ class PACCAAgent:
 
         asyncio.create_task(_produce())
 
+        _TRACE_EVENTS = frozenset({
+            "plan", "step_start", "step_complete", "step_error",
+            "completed", "error", "goal_start", "goal_complete",
+            "subtask_complete", "subtask_failed", "subtask_reflected",
+        })
+
         while True:
             event = await queue.get()
             if event is None:
                 break
+            # Gap #8: Capture relevant events in trace
+            if event.type in _TRACE_EVENTS:
+                self._trace[task_id].append({
+                    "type": event.type,
+                    "data": event.data,
+                    "ts": event.timestamp,
+                })
             yield event
 
     async def _execute_pipeline(self, command: str,
@@ -719,6 +748,19 @@ class PACCAAgent:
             meta = TOOL_REGISTRY.get(tool_name)
             step_id = step["step_id"]
 
+            # Gap #7: honour user-deselected steps
+            if step_id in self._skip_steps.get(task_id, set()):
+                results.append({"step_id": step_id, "tool": tool_name,
+                                 "result": {"skipped": True, "reason": "Deselected by user"}})
+                yield AgentEvent("step_complete", {
+                    "task_id": task_id,
+                    "step_id": step_id,
+                    "step_number": i + 1,
+                    "tool": tool_name,
+                    "result": {"skipped": True, "reason": "Deselected by user"},
+                })
+                continue
+
             # Step-level confirmation for HIGH-risk tools
             if meta and meta.requires_confirmation:
                 yield AgentEvent("confirmation_required", {
@@ -881,12 +923,16 @@ class PACCAAgent:
         finally:
             self._confirmation_gates.pop(key, None)
 
-    def confirm(self, task_id: str, confirmation_id: str, response: str) -> bool:
+    def confirm(self, task_id: str, confirmation_id: str, response: str,
+                skip_steps: list[str] | None = None) -> bool:
         key = f"{task_id}:{confirmation_id}"
         gate = self._confirmation_gates.get(key)
         if gate is None:
             return False
         accepted = response.strip().upper() in ("YES", "Y", "OK", "ENTER", "")
+        # Gap #7: store deselected step IDs when the plan is confirmed
+        if accepted and skip_steps and confirmation_id == "plan_risk":
+            self._skip_steps[task_id] = set(skip_steps)
         try:
             gate.put_nowait(accepted)
             return True

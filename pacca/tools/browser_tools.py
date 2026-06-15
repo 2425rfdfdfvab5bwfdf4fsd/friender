@@ -1,11 +1,39 @@
-"""Browser tools — browser_open_url, browser_web_search, browser_extract_page_text,
-browser_download_file, browser_tab_management."""
+"""Browser tools — Playwright-powered automation with:
+- Gap #4: Vision-grounded coord-click fallback when CSS selector fails
+- Gap #11: Stealth mode — randomized typing delays, pre-click jitter, realistic UA rotation
+"""
 from __future__ import annotations
+import asyncio
+import json
 import os
+import random
 import re
+import time
 import urllib.parse
 from pathlib import Path
 from typing import Any
+
+
+# ── Stealth configuration ─────────────────────────────────────────────────────
+
+# Rotate through realistic user-agent strings to avoid bot detection
+_USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_4_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+]
+
+_STEALTH_MODE = True   # Enable randomized delays and UA rotation
+
+# Module-level LLM client for vision-click fallback (T004)
+_llm_client: Any = None
+
+
+def set_llm_client(client: Any) -> None:
+    global _llm_client
+    _llm_client = client
 
 
 def _find_nix_chromium() -> str | None:
@@ -18,7 +46,6 @@ def _find_nix_chromium() -> str | None:
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
 
-    # Use Python glob — much faster than spawning a subprocess
     import glob as _glob
     matches = _glob.glob(
         "/nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome"
@@ -62,8 +89,55 @@ def _check_url_safety(url: str) -> tuple[bool, str]:
     return True, ""
 
 
+# ── Vision-click fallback helpers (Gap #4) ────────────────────────────────────
+
+async def _vision_click_fallback(page: Any, description: str) -> dict:
+    """Take a screenshot, ask LLM for element coordinates, then coordinate-click.
+
+    Used when CSS/text selectors fail to locate an element.
+    """
+    if _llm_client is None or not _llm_client.is_available():
+        return {"error": "Vision fallback requires LLM client — not configured"}
+
+    PACCA_DOWNLOADS.mkdir(parents=True, exist_ok=True)
+    screenshot_path = str(PACCA_DOWNLOADS / f"vision_click_{int(time.time())}.png")
+
+    try:
+        await page.screenshot(path=screenshot_path, full_page=False)
+    except Exception as e:
+        return {"error": f"Screenshot for vision fallback failed: {e}"}
+
+    question = (
+        f"In this browser screenshot, locate the clickable element that best matches: '{description}'. "
+        "Return ONLY a JSON object with the element's center pixel coordinates, e.g.: "
+        '{"x": 320, "y": 150}. '
+        "No other text, no explanation."
+    )
+
+    try:
+        from pacca.tools.vision_tools import _vision_call
+        response = await _vision_call(screenshot_path, question)
+        m = re.search(r'\{[^}]+\}', response)
+        if m:
+            coords = json.loads(m.group())
+            x = int(float(str(coords.get("x", 0))))
+            y = int(float(str(coords.get("y", 0))))
+            if x > 0 and y > 0:
+                await page.mouse.click(x, y)
+                return {
+                    "clicked_via_vision": True,
+                    "coordinates": {"x": x, "y": y},
+                    "description": description,
+                    "url": page.url,
+                }
+        return {"error": "Vision fallback: could not parse coordinates from LLM response",
+                "raw_response": response[:200]}
+    except Exception as e:
+        return {"error": f"Vision click fallback failed: {e}"}
+
+
 class BrowserController:
-    """Thin wrapper around Playwright for isolated browser control."""
+    """Playwright browser controller with stealth and vision-click fallback."""
 
     def __init__(self, headless: bool = True):
         self.headless = headless
@@ -71,6 +145,7 @@ class BrowserController:
         self._page = None
         self._context = None
         self._playwright = None
+        self._selected_ua = random.choice(_USER_AGENTS)
 
     async def start(self) -> None:
         try:
@@ -80,6 +155,16 @@ class BrowserController:
                 launch_kwargs: dict = {"headless": self.headless}
                 if _NIX_CHROMIUM:
                     launch_kwargs["executable_path"] = _NIX_CHROMIUM
+
+                # Gap #11: stealth launch args
+                if _STEALTH_MODE:
+                    launch_kwargs["args"] = [
+                        "--disable-blink-features=AutomationControlled",
+                        "--no-first-run",
+                        "--no-default-browser-check",
+                        "--disable-default-apps",
+                    ]
+
                 self._browser = await self._playwright.chromium.launch(**launch_kwargs)
             except Exception as launch_err:
                 await self._playwright.stop()
@@ -91,12 +176,23 @@ class BrowserController:
                         "Run: python -m playwright install chromium"
                     ) from launch_err
                 raise RuntimeError(f"Browser launch failed: {msg}") from launch_err
+
+            # Gap #11: rotate user agent per session
             self._context = await self._browser.new_context(
-                user_agent="PACCA/7.0 (automated; no-credentials)",
+                user_agent=self._selected_ua,
                 java_script_enabled=True,
                 accept_downloads=True,
                 locale="en-US",
+                viewport={"width": 1280 + random.randint(-40, 40),
+                           "height": 800 + random.randint(-20, 20)},
             )
+
+            # Gap #11: hide webdriver property
+            if _STEALTH_MODE:
+                await self._context.add_init_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+                )
+
             self._page = await self._context.new_page()
         except ImportError:
             raise RuntimeError(
@@ -116,6 +212,9 @@ class BrowserController:
         if not self._page:
             return {"error": "Browser not started"}
         try:
+            # Gap #11: small random pre-navigation pause
+            if _STEALTH_MODE:
+                await asyncio.sleep(random.uniform(0.1, 0.4))
             response = await self._page.goto(url, timeout=30000,
                                               wait_until="domcontentloaded")
             title = await self._page.title()
@@ -224,25 +323,65 @@ class BrowserController:
         except Exception as e:
             return {"error": str(e)}
 
-    async def click_element(self, selector: str, timeout: int = 10000) -> dict:
+    async def click_element(self, selector: str, timeout: int = 10000,
+                             description: str | None = None) -> dict:
+        """Click an element by CSS selector.
+
+        Gap #4: If CSS selector fails, automatically falls back to vision-grounded
+        coordinate clicking — takes a screenshot, asks LLM for coordinates, clicks.
+        Gap #11: Adds a small random pre-click delay for more human-like behavior.
+        """
         if not self._page:
             return {"error": "Browser not started"}
+
+        # Gap #11: human-like pre-click pause
+        if _STEALTH_MODE:
+            await asyncio.sleep(random.uniform(0.08, 0.25))
+
         try:
             await self._page.click(selector, timeout=timeout)
             return {"clicked": selector, "url": self._page.url}
-        except Exception as e:
-            return {"error": str(e), "selector": selector}
+        except Exception as primary_err:
+            # Gap #4: Vision fallback when selector fails
+            desc = description or selector
+            vision_result = await _vision_click_fallback(self._page, desc)
+            if "error" not in vision_result:
+                vision_result["selector_failed"] = str(primary_err)[:100]
+                return vision_result
+            # Both failed — return original error enriched with fallback status
+            return {
+                "error": str(primary_err),
+                "selector": selector,
+                "vision_fallback_attempted": True,
+                "vision_fallback_error": vision_result.get("error", ""),
+            }
 
     async def type_text(self, selector: str, text: str, clear_first: bool = True,
                         timeout: int = 10000) -> dict:
+        """Type text into a field.
+
+        Gap #11: Randomized per-keystroke delay (35–80ms) for human-like typing.
+        """
         if not self._page:
             return {"error": "Browser not started"}
         try:
             await self._page.wait_for_selector(selector, timeout=timeout)
             if clear_first:
                 await self._page.fill(selector, "")
-            await self._page.type(selector, text, delay=30)
-            return {"typed": text[:50], "selector": selector}
+                # Gap #11: brief pause after clearing
+                if _STEALTH_MODE:
+                    await asyncio.sleep(random.uniform(0.05, 0.15))
+
+            # Gap #11: randomized keystroke delay
+            typing_delay = random.randint(35, 80) if _STEALTH_MODE else 30
+            await self._page.type(selector, text, delay=typing_delay)
+
+            # Gap #11: brief pause after typing
+            if _STEALTH_MODE:
+                await asyncio.sleep(random.uniform(0.1, 0.3))
+
+            return {"typed": text[:50], "selector": selector,
+                    "stealth": _STEALTH_MODE, "typing_delay_ms": typing_delay}
         except Exception as e:
             return {"error": str(e)}
 
@@ -264,6 +403,9 @@ class BrowserController:
                         await self._page.uncheck(selector)
                 else:
                     await self._page.fill(selector, value)
+                    # Gap #11: small inter-field pause
+                    if _STEALTH_MODE:
+                        await asyncio.sleep(random.uniform(0.1, 0.3))
                 results.append({"selector": selector, "ok": True})
             except Exception as e:
                 results.append({"selector": selector, "error": str(e)})
@@ -321,8 +463,7 @@ class BrowserController:
         try:
             if path is None:
                 PACCA_DOWNLOADS.mkdir(parents=True, exist_ok=True)
-                import time as _time
-                path = str(PACCA_DOWNLOADS / f"screenshot_{int(_time.time())}.png")
+                path = str(PACCA_DOWNLOADS / f"screenshot_{int(time.time())}.png")
             data = await self._page.screenshot(path=path, full_page=False)
             return {"saved": path, "url": self._page.url, "bytes": len(data)}
         except Exception as e:
@@ -359,6 +500,8 @@ class BrowserController:
             return {"error": str(e)}
 
 
+# ── Singleton controller ──────────────────────────────────────────────────────
+
 _browser_controller: BrowserController | None = None
 
 
@@ -368,6 +511,8 @@ def get_browser_controller() -> BrowserController:
         _browser_controller = BrowserController(headless=True)
     return _browser_controller
 
+
+# ── Public tool functions ─────────────────────────────────────────────────────
 
 async def browser_open_url(url: str, dry_run: bool = False) -> dict:
     safe, reason = _check_url_safety(url)
@@ -420,13 +565,15 @@ async def browser_tab_management(action: str, url: str | None = None,
     return await controller.manage_tabs(action, url)
 
 
-async def browser_click(selector: str, dry_run: bool = False) -> dict:
+async def browser_click(selector: str, description: str | None = None,
+                         dry_run: bool = False) -> dict:
+    """Click an element. If CSS selector fails, tries vision-based coordinate click."""
     if dry_run:
         return {"dry_run": True, "would_click": selector}
     controller = get_browser_controller()
     if not controller._page:
         return {"error": "No browser page open. Navigate to a URL first."}
-    return await controller.click_element(selector)
+    return await controller.click_element(selector, description=description)
 
 
 async def browser_type_text(selector: str, text: str, clear_first: bool = True,

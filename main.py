@@ -495,6 +495,86 @@ async def undo_last():
     return result
 
 
+# ── Gap #8: Execution trace endpoint ────────────────────────────────────────
+
+@app.get("/api/trace/{task_id}")
+async def get_trace(task_id: str):
+    """Return the execution trace for a task (plan + step results + timings)."""
+    agent = get_agent()
+    entries = agent._trace.get(task_id, [])
+    return {
+        "task_id": task_id,
+        "entries": entries,
+        "entry_count": len(entries),
+    }
+
+
+@app.get("/api/trace")
+async def list_traces():
+    """List all traced task IDs (most recent first)."""
+    agent = get_agent()
+    ids = list(reversed(list(agent._trace.keys())))
+    return {"task_ids": ids[:20]}
+
+
+# ── Gap #12: Skill library endpoints ────────────────────────────────────────
+
+@app.get("/api/skills")
+async def list_skills(search: str = "", limit: int = 20):
+    """List saved skills (reusable goal procedures)."""
+    agent = get_agent()
+    skills = agent.memory.get_skills(limit=limit, search=search)
+    return {"skills": skills, "count": agent.memory.skill_count()}
+
+
+@app.get("/api/skills/{skill_id}")
+async def get_skill(skill_id: int):
+    agent = get_agent()
+    skill = agent.memory.get_skill(skill_id)
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    return skill
+
+
+@app.delete("/api/skills/{skill_id}")
+async def delete_skill(skill_id: int):
+    agent = get_agent()
+    deleted = agent.memory.delete_skill(skill_id)
+    return {"status": "ok" if deleted else "not_found", "id": skill_id}
+
+
+@app.post("/api/skills/{skill_id}/use")
+async def use_skill(skill_id: int):
+    """Mark a skill as used and return its steps for re-execution."""
+    agent = get_agent()
+    skill = agent.memory.get_skill(skill_id)
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    agent.memory.mark_skill_used(skill_id)
+    return {"skill": skill, "status": "ok"}
+
+
+# ── Gap #6: Audit chain verification ────────────────────────────────────────
+
+@app.get("/api/audit/verify")
+async def verify_audit_chain():
+    """Verify the HMAC chain integrity of the audit log."""
+    from pacca.models.audit_log import AuditLogger
+    logger = AuditLogger()
+    result = logger.verify_chain()
+    return result
+
+
+# ── Gap #10: Implicit preference detection ────────────────────────────────────
+
+@app.post("/api/memory/detect-preferences")
+async def detect_implicit_prefs():
+    """Trigger implicit preference learning from episodic history."""
+    agent = get_agent()
+    detected = agent.memory.detect_implicit_preferences()
+    return {"detected": detected, "count": len(detected)}
+
+
 @app.get("/api/memory/stats")
 async def get_memory_stats():
     """Return analytics for the Insights panel."""
@@ -1090,8 +1170,11 @@ async def websocket_endpoint(ws: WebSocket):
                 task_id = data.get("task_id", "")
                 conf_id = data.get("confirmation_id", "")
                 response = data.get("response", "")
+                # Gap #7: pass user-deselected step IDs to the agent
+                skip_steps = data.get("skip_steps", [])
                 if task_id and conf_id:
-                    result = agent.confirm(task_id, conf_id, response)
+                    result = agent.confirm(task_id, conf_id, response,
+                                           skip_steps=skip_steps if skip_steps else None)
                     await put("confirm_ack", {"task_id": task_id, "accepted": result})
 
             elif msg_type == "cancel":
