@@ -141,8 +141,13 @@ class LLMClient:
         self._circuit_breaker = CircuitBreaker(failure_threshold=5, reset_timeout=30.0)
 
     def _get_api_key(self, provider: str) -> str | None:
+        if provider == "anthropic":
+            # Prefer Replit AI Integrations managed key, fall back to user-supplied key
+            return (
+                os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+                or os.environ.get("ANTHROPIC_API_KEY")
+            )
         return {
-            "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
             "openai": os.environ.get("OPENAI_API_KEY"),
             "gemini": os.environ.get("GEMINI_API_KEY"),
         }.get(provider)
@@ -236,7 +241,12 @@ class LLMClient:
 
     async def _call_anthropic(self, system: str, user: str, max_tokens: int) -> str:
         import anthropic
-        client = anthropic.AsyncAnthropic(api_key=self.api_key)
+        # Use Replit AI Integrations proxy URL when available
+        base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        client = anthropic.AsyncAnthropic(**client_kwargs)
         kwargs: dict[str, Any] = {
             "model": self.model,
             "max_tokens": max_tokens,

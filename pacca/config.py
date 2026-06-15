@@ -54,6 +54,19 @@ class PACCAConfig:
             cwd = os.getcwd()
             cfg.allowed_path_prefixes = list({home, cwd, str(PACCA_DIR)})
 
+        # Replit AI Integrations for Anthropic — takes priority over all other keys
+        if os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY"):
+            cfg.provider = "anthropic"
+            # Use a supported integration model; upgrade if the saved model is an older alias
+            _INTEGRATION_MODELS = {
+                "claude-opus-4-8", "claude-opus-4-7", "claude-opus-4-6",
+                "claude-opus-4-5", "claude-opus-4-1",
+                "claude-sonnet-4-6", "claude-sonnet-4-5", "claude-haiku-4-5",
+            }
+            if cfg.model not in _INTEGRATION_MODELS:
+                cfg.model = "claude-sonnet-4-5"
+            return cfg
+
         # Auto-switch provider to match whichever key is actually present
         key_map = {
             "anthropic": "ANTHROPIC_API_KEY",
