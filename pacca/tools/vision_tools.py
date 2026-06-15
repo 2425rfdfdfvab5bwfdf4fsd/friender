@@ -73,7 +73,7 @@ async def _vision_call(image_path: str, question: str) -> str:
                 api_key=api_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             )
-            model = "gemini-1.5-flash"
+            model = _llm_client.model
         else:
             client = _openai.AsyncOpenAI(api_key=api_key)
             model = "gpt-4o"

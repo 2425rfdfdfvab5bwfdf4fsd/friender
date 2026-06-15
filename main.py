@@ -1,4 +1,4 @@
-"""PACCA v6.0 — FastAPI web server with WebSocket terminal interface."""
+"""PACCA v7.0 — FastAPI web server with WebSocket terminal interface."""
 from __future__ import annotations
 import asyncio
 import json
@@ -238,7 +238,7 @@ async def status():
     mem_count = agent.memory.task_count()
     wf_count = len(_workflow_manager.list_workflows()) if _workflow_manager else 0
     return {
-        "version": "6.0.0",
+        "version": "7.0.0",
         "provider": cfg.provider,
         "model": cfg.model,
         "offline_mode": cfg.offline_mode,
@@ -763,10 +763,10 @@ async def websocket_endpoint(ws: WebSocket):
 
 
 HELP_TEXT = """
-PACCA v6.0 — Personal AI Computer-Control Agent
+PACCA v7.0 — Personal AI Computer-Control Agent
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-NEW IN v6.0
+FEATURES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   🧠 Persistent Memory  — PACCA remembers past tasks across sessions
   🌐 Browser Automation — click, type, screenshot, fill forms (Playwright)

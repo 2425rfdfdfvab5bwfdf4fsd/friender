@@ -3,3 +3,4 @@
 - [PACCA advisory mode](pacca-advisory.md) — expert advisor persona added; AdvisoryIntentDetector in pacca/advisor.py routes questions to LLM; advisory overlay in UI renders markdown via marked.js
 - [PACCA v7.0 upgrades](pacca-v7-upgrades.md) — LLM goal decomposition in supervisor.py; /api/memory/stats endpoint; Insights panel (📈 tab); GoalSupervisor.set_llm_client() wired in agent.py
 - [PACCA v7.1 memory features](pacca-v71-memory.md) — Reports panel (📄 tab), weekly summary overlay, NL preference detection, memory context injected into every LLM plan call
+- [PACCA playwright nix setup](pacca-playwright-nix.md) — nix provides playwright-browsers-1.55.0-with-cjk (chromium-1187); pip playwright 1.49.1 needs executable_path override to use it

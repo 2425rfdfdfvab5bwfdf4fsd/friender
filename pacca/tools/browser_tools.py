@@ -3,9 +3,37 @@ browser_download_file, browser_tab_management."""
 from __future__ import annotations
 import os
 import re
+import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import Any
+
+
+def _find_nix_chromium() -> str | None:
+    """Locate the Replit/Nix-provided Chromium binary for Playwright."""
+    candidates = [
+        "/nix/store/kcvsxrmgwp3ffz5jijyy7wn9fcsjl4hz-playwright-browsers-1.55.0-with-cjk"
+        "/chromium-1187/chrome-linux/chrome",
+    ]
+    for path in candidates:
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+
+    try:
+        result = subprocess.run(
+            ["bash", "-c",
+             "ls /nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome 2>/dev/null | head -1"],
+            capture_output=True, text=True, timeout=3,
+        )
+        path = result.stdout.strip()
+        if path and os.path.isfile(path):
+            return path
+    except Exception:
+        pass
+    return None
+
+
+_NIX_CHROMIUM = _find_nix_chromium()
 
 PACCA_DOWNLOADS = Path.home() / ".pacca" / "downloads"
 
@@ -52,9 +80,23 @@ class BrowserController:
         try:
             from playwright.async_api import async_playwright
             self._playwright = await async_playwright().start()
-            self._browser = await self._playwright.chromium.launch(headless=self.headless)
+            try:
+                launch_kwargs: dict = {"headless": self.headless}
+                if _NIX_CHROMIUM:
+                    launch_kwargs["executable_path"] = _NIX_CHROMIUM
+                self._browser = await self._playwright.chromium.launch(**launch_kwargs)
+            except Exception as launch_err:
+                await self._playwright.stop()
+                self._playwright = None
+                msg = str(launch_err)
+                if "Executable doesn't exist" in msg or "playwright install" in msg.lower():
+                    raise RuntimeError(
+                        "Chromium browser not installed. "
+                        "Run: python -m playwright install chromium"
+                    ) from launch_err
+                raise RuntimeError(f"Browser launch failed: {msg}") from launch_err
             self._context = await self._browser.new_context(
-                user_agent="PACCA/5.2 (automated; no-credentials)",
+                user_agent="PACCA/7.0 (automated; no-credentials)",
                 java_script_enabled=True,
                 accept_downloads=True,
                 locale="en-US",
@@ -62,7 +104,7 @@ class BrowserController:
             self._page = await self._context.new_page()
         except ImportError:
             raise RuntimeError(
-                "Playwright not installed. Run: playwright install chromium"
+                "Playwright not installed. Run: pip install playwright && python -m playwright install chromium"
             )
 
     async def stop(self) -> None:
