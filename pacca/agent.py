@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from typing import AsyncIterator, Callable, Any
 
 from pacca.config import PACCAConfig, get_grant_secret_key
+from pacca.personal.profile import UserProfile
 from pacca.heuristic_planner import HeuristicPlanner
 from pacca.models.audit_log import AuditLogger
 from pacca.models.provider_consent import ConsentStore
@@ -353,18 +354,45 @@ class PACCAAgent:
         )
         _is_clear_action = any(_lower.startswith(p) for p in _CLEAR_ACTION_PREFIXES)
 
-        # Get user name once for use across all branches
+        # Build rich user context — everything PACCA knows about this person
         _user_name = ""
+        _user_context_lines: list[str] = []
         try:
-            _user_prefs = self.memory.get_all_preferences()
-            _user_name = _user_prefs.get("name", "") or ""
+            _profile = UserProfile.load()
+            _user_name = _profile.name or ""
+            if _profile.name:
+                _user_context_lines.append(f"Name: {_profile.name}")
+            if _profile.role:
+                _user_context_lines.append(f"Role/Profession: {_profile.role}")
+            if _profile.company:
+                _user_context_lines.append(f"Company/Organisation: {_profile.company}")
+            if _profile.timezone:
+                _user_context_lines.append(f"Timezone: {_profile.timezone}")
+            if _profile.communication_style:
+                _user_context_lines.append(f"Preferred communication style: {_profile.communication_style}")
+            if _profile.primary_use_cases:
+                _user_context_lines.append(f"Primary use cases: {', '.join(_profile.primary_use_cases)}")
+            if _profile.current_projects:
+                _user_context_lines.append(f"Current projects: {', '.join(str(p) for p in _profile.current_projects)}")
         except Exception:
             pass
+        try:
+            _mem_prefs = self.memory.get_all_preferences()
+            if not _user_name:
+                _user_name = _mem_prefs.get("name", "") or ""
+            for _k, _v in _mem_prefs.items():
+                if _k not in ("name",) and _v:
+                    _user_context_lines.append(f"User preference — {_k}: {_v}")
+        except Exception:
+            pass
+        _user_context = "\n".join(_user_context_lines)
 
         if not dry_run and not _is_clear_action and self.llm_client is not None \
                 and self.llm_client.is_available() and not self.config.offline_mode:
             try:
-                analysis = await self.llm_client.deep_analyze(raw_cmd, user_name=_user_name)
+                analysis = await self.llm_client.deep_analyze(
+                    raw_cmd, user_name=_user_name, user_context=_user_context
+                )
                 intent = analysis.get("intent", "task")
                 response_text = analysis.get("response", "").strip()
 
