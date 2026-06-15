@@ -339,7 +339,22 @@ class PACCAAgent:
             return
 
         # ── Chitchat / conversational detection ──────────────────────────────────
-        if not dry_run and is_chitchat(raw_cmd):
+        # Guard: never intercept if the message contains action keywords — let the task pipeline handle it
+        _ACTION_KEYWORDS = (
+            "create", "make", "write", "generate", "build",
+            "delete", "remove", "trash", "move", "rename", "copy",
+            "read", "open", "show", "list", "find", "search",
+            "download", "upload", "extract", "unzip",
+            "run", "execute", "start", "launch", "close", "kill",
+            "git", "commit", "push", "pull", "diff",
+            "install", "update", "edit", "modify", "change",
+            "send", "email", "message", "whatsapp",
+            "schedule", "remind", "set", "enable", "disable",
+            "analyse", "analyze", "research", "summarize", "summarise",
+            "translate", "convert", "calculate",
+        )
+        _has_action = any(kw in _lower for kw in _ACTION_KEYWORDS)
+        if not dry_run and is_chitchat(raw_cmd) and not _has_action:
             user_name = ""
             try:
                 prefs = self.memory.get_all_preferences()
