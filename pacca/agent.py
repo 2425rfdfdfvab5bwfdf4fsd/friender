@@ -338,6 +338,42 @@ class PACCAAgent:
             })
             return
 
+        # ── Greeting / chitchat detection ────────────────────────────────────────
+        _GREETINGS = {
+            "hi", "hello", "hey", "hiya", "heya", "howdy", "yo", "sup",
+            "hi there", "hello there", "hey there", "greetings",
+            "good morning", "good afternoon", "good evening", "good night",
+            "what's up", "whats up", "wassup", "how are you", "how r u",
+            "how's it going", "hows it going", "how are u",
+            "hi pacca", "hello pacca", "hey pacca",
+        }
+        if not dry_run and _lower in _GREETINGS:
+            name = ""
+            try:
+                profile = self.memory.get_all_preferences()
+                name = profile.get("name", "") or ""
+            except Exception:
+                pass
+            greeting_name = f", {name}" if name else ""
+            yield AgentEvent("advisory", {
+                "task_id": task_id,
+                "question": raw_cmd,
+                "response": (
+                    f"👋 Hey{greeting_name}! I'm PACCA, your personal AI assistant.\n\n"
+                    "I can help you with things like:\n"
+                    "- 📁 **Files** — create, read, move, search files\n"
+                    "- 🌐 **Browser** — open URLs, search the web, extract page content\n"
+                    "- 💻 **System** — monitor CPU/RAM, list running apps\n"
+                    "- 🔀 **Git** — status, diff, add, commit\n"
+                    "- 📄 **Documents** — create/read Word and Excel files\n"
+                    "- 🤖 **Research & Code** — answer questions, analyze topics\n\n"
+                    "Just type a command or question and I'll get it done!"
+                ),
+                "provider": self.config.provider,
+                "model": self.config.model,
+            })
+            return
+
         # ── Autonomous goal execution path ─────────────────────────────────────
         if is_multi_step_goal(raw_cmd) and not dry_run:
             goal_queue: asyncio.Queue = asyncio.Queue()
