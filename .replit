@@ -34,4 +34,4 @@ externalPort = 80
 
 [nix]
 channel = "stable-25_05"
-packages = ["cargo", "gitFull", "libiconv", "libxcrypt", "libyaml", "openssl", "pkg-config", "playwright-driver", "rustc"]
+packages = ["cargo", "freetype", "gitFull", "lcms2", "libiconv", "libimagequant", "libjpeg", "libtiff", "libwebp", "libxcrypt", "libyaml", "openjpeg", "openssl", "pkg-config", "playwright-driver", "rustc", "tcl", "tk", "zlib"]
