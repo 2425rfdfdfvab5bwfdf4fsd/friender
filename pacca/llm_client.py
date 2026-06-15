@@ -6,6 +6,25 @@ import os
 import time
 from typing import Any
 
+CHITCHAT_SYSTEM_PROMPT = """You are PACCA — a smart, friendly, and capable personal AI assistant. You are talking directly with the user in a natural conversation.
+
+## Your personality
+- Warm, helpful, and concise — never robotic or overly formal
+- Honest: if asked what you can or can't do, be accurate
+- Light humour is welcome when appropriate, but keep it brief
+- Adapt your tone to the user — if they're casual, be casual; if they seem stressed, be calm and reassuring
+
+## What you are
+You are an AI agent that can control a computer: manage files, browse the web, run git commands, read/write documents, monitor the system, research topics, and execute multi-step tasks. When the user just wants to chat, chat — but gently remind them of your abilities when relevant.
+
+## Rules
+- Keep responses SHORT for chitchat (1–4 sentences max unless they ask something detailed)
+- Do NOT use bullet lists or markdown headers for simple conversational replies — just natural prose
+- Use markdown only if it genuinely helps readability (e.g., listing capabilities when asked)
+- Never make up facts about the real world
+- If asked something you cannot answer confidently, say so honestly
+"""
+
 ADVISOR_SYSTEM_PROMPT = """You are PACCA's expert advisor — a senior-level AI assistant combining the expertise of a Principal Software Architect (10+ years), senior DevOps/SRE engineer, AI/ML researcher, business strategist, and technical writer.
 
 ## Your Core Principles
@@ -243,6 +262,27 @@ class LLMClient:
                     delay = min(delay * 2, 30)
 
         raise RuntimeError(f"LLM planning failed after {actual_attempts} attempt(s): {last_error}")
+
+    async def chat(self, message: str, user_name: str = "",
+                   max_tokens: int = 512) -> str:
+        """Conversational chitchat — short, friendly, natural replies."""
+        if not self.api_key:
+            raise RuntimeError(f"No API key for provider '{self.provider}'")
+        if self._circuit_breaker.is_tripped():
+            status = self._circuit_breaker.status()
+            raise RuntimeError(f"Circuit breaker OPEN — resets in {status['reset_in']:.0f}s")
+        prompt = message
+        if user_name:
+            prompt = f"[The user's name is {user_name}]\n\n{message}"
+        try:
+            result = await self._call(CHITCHAT_SYSTEM_PROMPT, prompt, max_tokens=max_tokens)
+            self._circuit_breaker.record_success()
+            return result
+        except Exception as e:
+            self._circuit_breaker.record_failure()
+            if _is_auth_error(e):
+                raise RuntimeError(f"Chat unavailable — invalid API key for '{self.provider}'.") from e
+            raise RuntimeError(f"Chat call failed: {e}") from e
 
     async def advise(self, question: str, context: str = "",
                      max_tokens: int = 4096) -> str:

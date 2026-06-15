@@ -28,7 +28,7 @@ from pacca.security.used_grant_registry import UsedGrantRegistry
 from pacca.task_history import TaskHistory
 from pacca.tools.registry import TOOL_REGISTRY, policy_version
 from pacca.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
-from pacca.advisor import AdvisoryIntentDetector
+from pacca.advisor import AdvisoryIntentDetector, is_chitchat
 from pacca.llm_client import LLMClient
 from pacca.memory.memory_manager import MemoryManager
 from pacca.supervisor import GoalSupervisor, is_multi_step_goal
@@ -338,39 +338,69 @@ class PACCAAgent:
             })
             return
 
-        # ── Greeting / chitchat detection ────────────────────────────────────────
-        _GREETINGS = {
-            "hi", "hello", "hey", "hiya", "heya", "howdy", "yo", "sup",
-            "hi there", "hello there", "hey there", "greetings",
-            "good morning", "good afternoon", "good evening", "good night",
-            "what's up", "whats up", "wassup", "how are you", "how r u",
-            "how's it going", "hows it going", "how are u",
-            "hi pacca", "hello pacca", "hey pacca",
-        }
-        if not dry_run and _lower in _GREETINGS:
-            name = ""
+        # ── Chitchat / conversational detection ──────────────────────────────────
+        if not dry_run and is_chitchat(raw_cmd):
+            user_name = ""
             try:
-                profile = self.memory.get_all_preferences()
-                name = profile.get("name", "") or ""
+                prefs = self.memory.get_all_preferences()
+                user_name = prefs.get("name", "") or ""
             except Exception:
                 pass
-            greeting_name = f", {name}" if name else ""
-            yield AgentEvent("advisory", {
-                "task_id": task_id,
-                "question": raw_cmd,
-                "response": (
-                    f"👋 Hey{greeting_name}! I'm PACCA, your personal AI assistant.\n\n"
-                    "I can help you with things like:\n"
-                    "- 📁 **Files** — create, read, move, search files\n"
-                    "- 🌐 **Browser** — open URLs, search the web, extract page content\n"
+
+            # Route through LLM when available for truly intelligent responses
+            if (self.llm_client is not None and self.llm_client.is_available()
+                    and not self.config.offline_mode):
+                try:
+                    response = await self.llm_client.chat(raw_cmd, user_name=user_name)
+                    yield AgentEvent("advisory", {
+                        "task_id": task_id,
+                        "question": raw_cmd,
+                        "response": response,
+                        "provider": self.config.provider,
+                        "model": self.config.model,
+                    })
+                    return
+                except Exception:
+                    pass  # fall through to offline response
+
+            # Offline / fallback: smart canned response
+            greeting_name = f", {user_name}" if user_name else ""
+            _lc = _lower
+            if any(w in _lc for w in ("bye", "goodbye", "see you", "later", "cya", "farewell")):
+                offline_response = f"Goodbye{greeting_name}! Come back whenever you need me. 👋"
+            elif any(w in _lc for w in ("thanks", "thank you", "thx", "ty", "cheers")):
+                offline_response = f"Happy to help{greeting_name}! Let me know if there's anything else. 😊"
+            elif any(w in _lc for w in ("how are you", "how r u", "how are u", "how's it going", "you doing")):
+                offline_response = f"I'm doing great{greeting_name}, thanks for asking! Ready to help — just give me a task or ask me anything."
+            elif any(w in _lc for w in ("who are you", "what are you", "what is your name", "tell me about yourself")):
+                offline_response = (
+                    f"I'm PACCA{greeting_name} — your Personal AI Computer-Control Agent! "
+                    "I can manage files, browse the web, run git commands, monitor your system, "
+                    "create documents, and execute complex multi-step tasks. What can I do for you?"
+                )
+            elif any(w in _lc for w in ("what can you do", "what do you do", "your capabilities")):
+                offline_response = (
+                    f"Here's what I can do{greeting_name}:\n\n"
+                    "- 📁 **Files** — create, read, move, copy, search, unzip\n"
+                    "- 🌐 **Browser** — open URLs, search the web, extract page content, download files\n"
                     "- 💻 **System** — monitor CPU/RAM, list running apps\n"
                     "- 🔀 **Git** — status, diff, add, commit\n"
                     "- 📄 **Documents** — create/read Word and Excel files\n"
-                    "- 🤖 **Research & Code** — answer questions, analyze topics\n\n"
-                    "Just type a command or question and I'll get it done!"
-                ),
-                "provider": self.config.provider,
-                "model": self.config.model,
+                    "- 🤖 **Research & Code** — answer questions, analyze topics, write code\n"
+                    "- 🎯 **Multi-step goals** — chain complex tasks together automatically\n\n"
+                    "Just type a command and I'll get it done!"
+                )
+            else:
+                offline_response = (
+                    f"Hey{greeting_name}! I'm PACCA, your personal AI assistant. "
+                    "I'm ready to help — just tell me what you'd like to do."
+                )
+            yield AgentEvent("advisory", {
+                "task_id": task_id,
+                "question": raw_cmd,
+                "response": offline_response,
+                "provider": "offline",
+                "model": "demo",
             })
             return
 
