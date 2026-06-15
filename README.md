@@ -1,6 +1,6 @@
 # PACCA v7.2 — Personal AI Computer-Control Agent
 
-> A security-first, LLM-powered agent that executes natural-language commands to control your computer — with a layered trust architecture, persistent memory, and a web-based terminal interface.
+> A security-first, LLM-powered agent that executes natural-language commands to control your computer — with a layered trust architecture, persistent multi-tier memory, and a web-based terminal interface.
 
 ---
 
@@ -10,11 +10,24 @@
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Security Model](#security-model)
+  - [Nine-Layer Pipeline](#nine-layer-pipeline)
+  - [Risk Scoring](#risk-scoring)
+  - [Task State Machine](#task-state-machine)
+  - [Plan Validator](#plan-validator)
 - [Tool Registry](#tool-registry)
 - [Memory System](#memory-system)
+- [Intelligence & Automation](#intelligence--automation)
+  - [Heuristic Planner](#heuristic-planner)
+  - [Workflow Scheduler](#workflow-scheduler)
+  - [Morning Brief](#morning-brief)
+  - [Undo Manager](#undo-manager)
+  - [User Profiles](#user-profiles)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+  - [Starting the Server](#starting-the-server)
+  - [Example Commands](#example-commands)
+  - [API Reference](#api-reference)
 - [Project Structure](#project-structure)
 - [Interfaces](#interfaces)
 - [Audit Log](#audit-log)
@@ -23,174 +36,331 @@
 
 ## Overview
 
-PACCA is a personal agent that translates natural-language instructions into safe, audited computer-control actions. It combines a hybrid LLM + heuristic planner with a nine-layer security pipeline to ensure that every action taken on your machine is scoped, validated, and logged — before it is executed.
+PACCA is a personal AI agent that translates natural-language instructions into safe, audited computer-control actions. It combines an LLM planner with a rule-based heuristic fallback and wraps every execution in a nine-layer security pipeline — ensuring that every action on your machine is scoped, risk-scored, validated, and logged before it happens.
+
+PACCA is built for power users, developers, and researchers who want an AI assistant with real local system access but cannot compromise on transparency or safety.
 
 **Core design principles:**
 
-- **Security by default** — no action bypasses the pipeline; every tool call requires a single-use HMAC-signed capability grant
+- **Security by default** — every tool call requires a single-use HMAC-signed capability grant; nothing bypasses the pipeline
 - **Transparency** — every step is explained in plain language and recorded in a tamper-resistant audit log
-- **Resilience** — a built-in heuristic planner allows full operation without an API key
-- **Memory** — episodic, semantic, and skill-based memory lets PACCA learn and improve over time
+- **Resilience** — a fully capable heuristic planner keeps PACCA functional with no API key or internet connection
+- **Learning memory** — episodic, semantic, and skill-based memory lets PACCA learn from past tasks and improve over time
+- **Honest risk communication** — plans are scored before execution; high-risk plans require explicit user confirmation
 
 ---
 
 ## Key Features
 
-| Category | Features |
+| Category | Details |
 |---|---|
-| **Planning** | LLM goal decomposition, hybrid heuristic fallback, multi-step plan generation |
-| **Security** | 9-layer pipeline, HMAC capability grants, replay prevention, TOCTOU checks |
-| **Memory** | Episodic log, semantic TF-IDF + neural vector search (OpenAI embeddings), skill library |
-| **Interfaces** | Web terminal (xterm.js), REST/WebSocket API, WhatsApp remote control |
+| **Planning** | LLM goal decomposition (Claude / GPT), multi-step plan generation, heuristic offline fallback |
+| **Security** | 9-layer pipeline, HMAC capability grants, grant replay prevention, TOCTOU checks, URL and payment blocklists |
+| **Risk management** | Cumulative risk scoring with three action gates: auto-proceed, acknowledge, explicit yes |
+| **Memory** | SQLite-backed episodic log, TF-IDF semantic search, neural vector index (OpenAI embeddings), skill library |
+| **Interfaces** | Web terminal (xterm.js), REST + WebSocket API, WhatsApp remote control, advisory chat overlay |
 | **Tools** | 38+ tools across file, browser, git, document, system, code, research, and vision domains |
-| **Intelligence** | Morning brief, pattern detection, user profiles, undo manager, workflow scheduler |
-| **Observability** | Audit log (0600), Insights panel, memory stats endpoint, trace store |
+| **Automation** | Natural-language workflow scheduler (cron), morning brief, pattern detector, undo manager |
+| **Personalization** | User profiles (role, company, timezone, communication style, work hours) |
+| **Observability** | Tamper-resistant audit log (0600), Insights panel, memory stats API, trace store |
 
 ---
 
 ## Architecture
 
-Every command travels through the following pipeline before any action is taken:
+Every command travels through the following pipeline before any tool is invoked:
 
 ```
 User Command
     │
     ▼
-TaskScope Derivation        ← freezes the allowed tool set before reading external content
+TaskScope Derivation
+    Derives intent domain and freezes the allowed tool set
+    before any external content is read
     │
     ▼
-Local Redaction Pipeline    ← strips secrets / credentials from all text
+Local Redaction Pipeline
+    Strips API keys, tokens, and credentials from all
+    text before it reaches the LLM
     │
     ▼
-Content / Data Gateway      ← rate-limits and screens external data reads
+Content / Data Gateway
+    Rate-limits and screens all external data reads
     │
     ▼
-LLM Planner                 ← decomposes goal into ordered steps (heuristic fallback if offline)
+LLM Planner  ──(offline)──▶  Heuristic Planner
+    Decomposes the goal into an ordered sequence of
+    tool calls using Claude or GPT
     │
     ▼
-Plan Validator              ← enforces tool allowlist, path scope, URL blocklist, step count
+Plan Validator
+    Static analysis: tool allowlist, path scope,
+    URL blocklist, payment-flow blocklist, step count
     │
     ▼
-Cumulative Risk Evaluator   ← scores full plan; gates execution if risk threshold exceeded
+Cumulative Risk Evaluator
+    Scores the full plan; gates execution at three
+    thresholds (auto / acknowledge / explicit-yes)
     │
     ▼
-Policy Engine               ← applies capability grants per step
+Policy Engine  ──▶  CapabilityGrant issued per step
+    Applies per-step HMAC-signed grants; single-use only
     │
     ▼
-Runtime Step Validator      ← re-validates + TOCTOU check immediately before each step
+Runtime Step Validator
+    Re-validates arguments and performs a TOCTOU check
+    immediately before each step fires
     │
     ▼
 Tool Execution
     │
     ▼
-Audit Log                   ← tamper-resistant, privacy-safe record
+Audit Log
+    Tamper-resistant, redacted, structured JSON record
 ```
 
 ---
 
 ## Security Model
 
-PACCA implements nine independent security controls (PRD v5.2):
+### Nine-Layer Pipeline
 
-| # | Control | Purpose |
+| # | Control | What it does |
 |---|---|---|
 | 1 | **TaskScope** | Derived before any external content is read; permanently freezes the allowed tool set for the task |
-| 2 | **LocalTextRedactor** | Redacts API keys, tokens, and credentials from all text before any LLM call |
-| 3 | **SafeResourceResolver** | Sole path-resolution authority; issues `PathCapability` tokens for every resource access |
+| 2 | **LocalTextRedactor** | Redacts API keys, passwords, tokens, and credentials from all text before any LLM call |
+| 3 | **SafeResourceResolver** | Sole path-resolution authority; issues `PathCapability` tokens that every file tool must present |
 | 4 | **CapabilityGrant** | Single-use HMAC-signed grant required for every tool invocation |
-| 5 | **UsedGrantRegistry** | Tracks consumed grants; prevents replay attacks |
-| 6 | **PlanValidator** | Statically validates the full plan against the tool allowlist, path scope, and URL blocklist |
-| 7 | **CumulativePlanRiskEvaluator** | Scores the entire plan holistically; blocks execution when the risk score exceeds the configured threshold |
-| 8 | **RuntimeStepValidator** | Re-validates arguments and performs a TOCTOU check immediately before each individual step |
-| 9 | **AuditLogger** | Writes a tamper-resistant, privacy-safe record to `~/.pacca/audit.log` (mode `0600`) |
+| 5 | **UsedGrantRegistry** | Tracks every consumed grant; reusing a grant is rejected immediately |
+| 6 | **PlanValidator** | Statically validates the full plan against the tool allowlist, path scope, URL blocklist, and payment-flow blocklist |
+| 7 | **CumulativePlanRiskEvaluator** | Scores the entire plan holistically before execution begins; blocks or gates based on thresholds |
+| 8 | **RuntimeStepValidator** | Re-validates arguments and performs a time-of-check / time-of-use (TOCTOU) check immediately before each step |
+| 9 | **AuditLogger** | Writes a tamper-resistant, redacted JSON record to `~/.pacca/audit.log` at mode `0600` |
+
+---
+
+### Risk Scoring
+
+The `CumulativePlanRiskEvaluator` scores every plan before a single step runs.
+
+**Risk factors and their weights:**
+
+| Factor | Points |
+|---|---|
+| Tool risk level: CRITICAL | +50 per step |
+| Tool risk level: HIGH | +20 per step |
+| Irreversible operation (`reversible: false`) | +15 per step |
+| High-risk data egress | +10 per step |
+| Network / browser call | +5 per step |
+| Low-risk data egress | +3 per step |
+| Screenshot capture | +2 per step |
+| Any file-affecting step | +1 per step |
+
+**Execution gates:**
+
+| Score range | Action required |
+|---|---|
+| ≤ 30 | **Auto-proceed** — plan executes immediately |
+| 31 – 100 | **Acknowledge** — user must confirm before execution starts |
+| > 100 | **Explicit yes required** — user must type "Yes" to proceed |
+
+---
+
+### Task State Machine
+
+Every task moves through a well-defined lifecycle with enforced transitions:
+
+```
+PLANNED
+  ├──▶ AWAITING_CONFIRMATION  (high-risk plan)
+  │         └──▶ EXECUTING
+  ├──▶ EXECUTING
+  │         ├──▶ PAUSED ──▶ EXECUTING
+  │         ├──▶ COMPLETED   (terminal)
+  │         └──▶ FAILED      (terminal)
+  └──▶ CANCELLED             (terminal)
+```
+
+Invalid transitions are rejected; terminal states (`COMPLETED`, `FAILED`, `CANCELLED`) have no outgoing edges.
+
+---
+
+### Plan Validator
+
+Before risk scoring, the `PlanValidator` performs static analysis of the entire LLM-generated plan:
+
+1. **Structural check** — plan must be a list of dicts and must not exceed `MAX_STEPS` (30)
+2. **Tool authorization** — each tool is checked against the registry and cross-referenced with `TaskScope.allowed_tools` to prevent privilege escalation
+3. **Resource resolution** — file path arguments are passed through `SafeResourceResolver`; a `capability_token` is appended to validated args so the runtime can verify them
+4. **Network safety** — blocks:
+   - Private / local IPs: `localhost`, `127.*`, `10.*`, `192.168.*`, `172.16–31.*`, `0.0.0.0`, `file://`
+   - Payment flows: `stripe.com/pay`, `paypal.com/checkout`, `checkout.braintree`, and similar patterns
 
 ---
 
 ## Tool Registry
 
-PACCA ships with 38+ tools across eight domains:
+PACCA ships with 38+ tools organized across eight domains.
 
 ### File
+
 | Tool | Description |
 |---|---|
-| `list_directory` | List directory contents |
-| `create_folder` | Create a new directory |
+| `list_directory` | List directory contents with metadata |
+| `create_folder` | Create a directory (including nested paths) |
 | `create_file` | Create or overwrite a file |
 | `read_file` | Read file contents |
 | `move_file` | Move or rename a file |
-| `copy_file` | Copy a file |
-| `search_files` | Search files by name or content |
-| `unzip_archive` | Extract a ZIP archive |
-| `move_to_trash` | Safely trash a file (recoverable) |
+| `copy_file` | Copy a file to a new location |
+| `search_files` | Search by filename glob or content pattern |
+| `unzip_archive` | Extract a ZIP archive (bomb-protected: max 1,000 files / 500 MB / ratio 100×) |
+| `move_to_trash` | Safely trash a file (recoverable via undo) |
 
-### Browser
+### Browser (Playwright-powered)
+
 | Tool | Description |
 |---|---|
-| `browser_open_url` | Open a URL in a managed browser session |
-| `browser_web_search` | Perform a web search and return results |
-| `browser_extract_page_text` | Extract structured text from a page |
-| `browser_download_file` | Download a file from a URL |
-| `browser_tab_management` | Open, close, and switch browser tabs |
+| `browser_open_url` | Open a URL in a managed headless Chromium session |
+| `browser_web_search` | Perform a DuckDuckGo search and return structured results |
+| `browser_extract_page_text` | Extract structured text content from the current page |
+| `browser_download_file` | Download a file from a URL to the local filesystem |
+| `browser_tab_management` | Open, close, and switch between browser tabs |
 
 ### Document
+
 | Tool | Description |
 |---|---|
-| `create_docx` | Create a Word document |
-| `read_docx` | Read a Word document |
-| `create_xlsx` | Create an Excel spreadsheet |
-| `read_xlsx` | Read an Excel spreadsheet |
+| `create_docx` | Create a formatted Word (.docx) document |
+| `read_docx` | Read and return the text content of a Word document |
+| `create_xlsx` | Create an Excel (.xlsx) spreadsheet |
+| `read_xlsx` | Read and return the content of an Excel spreadsheet |
 
 ### Git
+
 | Tool | Description |
 |---|---|
 | `git_status` | Show working-tree status |
 | `git_diff` | Show uncommitted changes |
-| `git_add` | Stage files |
-| `git_commit` | Commit staged changes |
+| `git_add` | Stage one or more files |
+| `git_commit` | Commit staged changes with a message |
 
 ### App
+
 | Tool | Description |
 |---|---|
-| `open_known_app` | Launch a registered application |
+| `open_known_app` | Launch a registered application by name |
 | `close_app` | Close a running application |
-| `list_running_apps` | List all running applications |
+| `list_running_apps` | List all currently running applications |
 
 ### System
+
 | Tool | Description |
 |---|---|
-| `system_monitor` | Report CPU, RAM, and disk usage |
+| `system_monitor` | Report real-time CPU, RAM, disk usage, and top processes |
 
 ### AI / Specialized
+
 | Tool | Description |
 |---|---|
-| `run_code` | Generate and execute code in a sandbox |
-| `vision_analyze` | Analyze screenshots or active browser pages |
-| `deep_research` | Multi-step research and report generation |
+| `run_code` | Generate and execute code in an isolated sandbox |
+| `vision_analyze` | Analyze a screenshot or the active browser page |
+| `deep_research` | Multi-step topic research producing a structured report |
 
 ### Communication
+
 | Tool | Description |
 |---|---|
-| `whatsapp_send` | Send a WhatsApp message |
+| `whatsapp_send` | Send a message via WhatsApp integration |
 
 ---
 
 ## Memory System
 
-PACCA maintains three tiers of persistent memory backed by SQLite:
+PACCA maintains three tiers of persistent memory backed by SQLite at `~/.pacca/memory.db`.
 
 ### Episodic Memory
-Records every executed task and its outcome. Used to generate daily morning briefs, detect usage patterns, and populate the Insights panel.
+Records every executed task, its steps, outcomes, and duration. Powers:
+- Daily morning brief generation
+- Usage pattern detection
+- The Insights panel (📈 tab) in the web dashboard
 
 ### Semantic Memory
-Stores structured knowledge entries searchable via:
-- **TF-IDF index** — fast keyword-based retrieval (no API required)
-- **Neural vector index** — OpenAI `text-embedding-3-small` embeddings with cosine similarity; falls back to TF-IDF when `OPENAI_API_KEY` is not set
+Stores structured knowledge entries searchable by two methods:
+- **TF-IDF index** — fast keyword-based retrieval, works fully offline
+- **Neural vector index** — `text-embedding-3-small` embeddings via OpenAI API, cosine similarity ranking. Automatically falls back to TF-IDF when `OPENAI_API_KEY` is not set.
 
 ### Skill Library
-Saves successful multi-step task executions as named, reusable skills. PACCA can invoke stored skills directly, bypassing re-planning for known workflows.
+Saves successful multi-step task executions as named, reusable skills. When a future task matches a stored skill, PACCA can invoke it directly — bypassing LLM re-planning for known workflows.
 
 ### Memory Compressor
-Periodically summarizes older episodic entries to keep storage efficient and retrieval fast.
+Periodically summarizes older episodic entries into compact semantic records to keep storage efficient and retrieval fast as history grows.
+
+---
+
+## Intelligence & Automation
+
+### Heuristic Planner
+
+The built-in `HeuristicPlanner` generates multi-step plans using regex pattern matching — no API call required. It covers:
+
+| Domain | Supported operations |
+|---|---|
+| **File** | List, read, create, move, copy, delete (trash), search, zip, unzip — with alias resolution for `Home`, `Downloads`, `Desktop`, etc. |
+| **System** | CPU, memory, disk, process monitoring |
+| **App** | List, open, close applications |
+| **Git** | status, diff, add, commit |
+| **Browser** | Open URL, web search, extract page text |
+| **Document** | Read and create `.docx` / `.xlsx` files |
+| **Messaging** | Send WhatsApp messages |
+| **LLM-required** | Vision, coding, and research tasks emit an explicit "LLM required" notice rather than failing silently |
+
+### Workflow Scheduler
+
+Automate any sequence of PACCA commands on a recurring schedule using plain English:
+
+```
+> every weekday at 9am: summarise my git log and send to Slack
+> every 10 minutes: check CPU usage
+> every Monday at 8am: generate my weekly report
+```
+
+Natural-language phrases are converted to cron expressions automatically. Workflows are stored as YAML files in `~/.pacca/workflows/` and executed by an `AsyncIOScheduler`. Manage them via the `/api/workflows` endpoint or the web dashboard.
+
+### Morning Brief
+
+Every morning, PACCA generates a personalized daily digest that includes:
+
+- **Overdue tasks** and **due-today reminders** from your to-do list
+- **Open tasks** and tracked **project items**
+- **Weekly activity summary** drawn from episodic memory
+- An LLM-narrated markdown summary (under 200 words) stitching everything together
+
+Briefs are cached daily in `~/.pacca/morning_brief_cache.json` to avoid redundant generation.
+
+### Undo Manager
+
+Destructive operations (move, create, delete) register an undo record on an in-memory stack (max depth 50). Running `undo` pops the most recent record and executes its reversal callback. Supported undo factories:
+
+| Operation | Reversal |
+|---|---|
+| `move_file` | Move file back to original path |
+| `create_file` | Delete the newly created file |
+| `create_folder` | Remove the newly created folder |
+
+> The undo stack is cleared on process restart.
+
+### User Profiles
+
+PACCA personalizes its behavior based on a profile stored at `~/.pacca/profile.json` (mode `0600`):
+
+| Field | Description |
+|---|---|
+| `name` / `role` / `company` | Identity fields used in briefings and responses |
+| `communication_style` | `terse`, `balanced`, or `detailed` — controls response verbosity |
+| `timezone` / `work_start` / `work_end` / `work_days` | Used by the scheduler and morning brief |
+| `primary_use_cases` | Tags that influence tool prioritization |
+| `current_projects` / `key_contacts` | Context injected into planning prompts |
+| `avatar_color` | UI personalization in the web dashboard |
 
 ---
 
@@ -198,7 +368,7 @@ Periodically summarizes older episodic entries to keep storage efficient and ret
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10 or later
 - `pip`
 
 ### Steps
@@ -208,48 +378,66 @@ Periodically summarizes older episodic entries to keep storage efficient and ret
 git clone <repository-url>
 cd pacca
 
-# 2. Install dependencies
+# 2. Install Python dependencies
 pip install -r requirements.txt
 
-# 3. Install Playwright browsers (required for browser tools)
+# 3. Install Playwright browser (required for all browser tools)
 playwright install chromium
 
-# 4. (Optional) Set your LLM API key
+# 4. (Optional) Set an LLM API key for full planning capability
 export ANTHROPIC_API_KEY="sk-ant-..."   # Recommended — uses Claude
 # or
-export OPENAI_API_KEY="sk-..."          # Alternative — uses GPT models
+export OPENAI_API_KEY="sk-..."          # Alternative — uses GPT + enables neural vector memory
 ```
 
-> **Note:** Without an API key, PACCA runs in **demo mode** using the built-in heuristic planner. All security controls and tools remain fully active.
+> **No API key?** PACCA runs fully in **offline / demo mode** using the built-in heuristic planner. All 38+ tools, the security pipeline, memory system, and audit log remain completely functional.
 
 ---
 
 ## Configuration
 
-PACCA writes its configuration to `~/.pacca/config.json` on first run. You can edit this file directly or adjust settings through the web interface.
+PACCA writes `~/.pacca/config.json` on first run. All values can be overridden there.
 
-### Key Settings
+### Full Configuration Reference
 
 | Key | Default | Description |
 |---|---|---|
-| `llm_provider` | `anthropic` | LLM backend (`anthropic` or `openai`) |
-| `llm_model` | `claude-3-5-sonnet-20241022` | Model identifier |
-| `risk_threshold` | `0.7` | Maximum cumulative risk score before the plan is blocked |
-| `allowed_paths` | `["/home"]` | Filesystem roots the agent may operate within |
-| `audit_log_path` | `~/.pacca/audit.log` | Path for the tamper-resistant audit log |
+| `provider` | `anthropic` | LLM backend (`anthropic` or `openai`) |
+| `model` | `claude-opus-4-5` | Primary model identifier |
+| `gemini_default_model` | `gemini-2.0-flash` | Gemini model (when provider is `google`) |
+| `sanitizer_provider` | `anthropic` | Provider used for the redaction sanitizer |
+| `sanitizer_model` | `claude-haiku-4-5` | Lightweight model used for redaction checks |
+| `max_steps` | `30` | Maximum steps allowed in a single plan |
+| `max_file_egress_bytes` | `32768` | Maximum bytes that may leave the system per task |
+| `risk_proceed_threshold` | `30.0` | Risk score below which plans execute automatically |
+| `risk_confirm_threshold` | `100.0` | Risk score above which explicit "Yes" is required |
+| `allowed_path_prefixes` | `["/home"]` | Filesystem roots the agent may operate within |
+| `archive_max_files` | `1000` | Maximum files allowed inside a ZIP archive |
+| `archive_max_bytes` | `524288000` | Maximum uncompressed archive size (500 MB) |
+| `archive_max_ratio` | `100.0` | Maximum compression ratio (zip-bomb protection) |
+| `archive_allow_symlinks` | `false` | Whether to allow symlinks inside archives |
+| `archive_allow_hardlinks` | `false` | Whether to allow hardlinks inside archives |
+| `audit_log_path_mode` | `full` | Log verbosity (`full` or `summary`) |
+| `audit_log_retention_days` | `90` | Days before audit entries are rotated |
+| `audit_log_encryption_enabled` | `false` | Encrypt the audit log at rest |
+| `offline_mode` | `false` | Force heuristic planner even if an API key is set |
+| `dry_run_mode` | `false` | Plan and validate but never execute any tool |
+| `show_egress_notices` | `true` | Surface notices when data leaves the system |
+| `grant_ttl_seconds` | `300` | Seconds before an unused capability grant expires |
+| `browser_headless` | `true` | Run Playwright in headless mode |
 
 ### Environment Variables
 
-| Variable | Purpose |
+| Variable | Effect |
 |---|---|
 | `ANTHROPIC_API_KEY` | Enables Claude planning (default provider) |
-| `OPENAI_API_KEY` | Enables GPT planning and neural vector embeddings |
+| `OPENAI_API_KEY` | Enables GPT planning **and** neural vector memory embeddings |
 
 ---
 
 ## Usage
 
-### Start the server
+### Starting the Server
 
 ```bash
 python main.py
@@ -257,26 +445,60 @@ python main.py
 
 The web terminal is available at `http://localhost:8000` (or the Replit preview URL).
 
-### Example commands
+---
 
+### Example Commands
+
+**File & system operations**
 ```
 > organise my Downloads folder by file type
-> summarise the last 10 git commits and save to CHANGELOG.md
-> find all TODO comments in the src/ directory
-> research quantum computing and write a 2-page brief
-> what is using the most CPU right now?
+> find all files larger than 100MB in my home directory
+> what is using the most CPU and RAM right now?
+> zip everything in ~/projects/reports and move to ~/archive
 ```
 
-### API Endpoints
+**Git & code**
+```
+> summarise the last 10 commits and save to CHANGELOG.md
+> find all TODO comments in the src/ directory
+> write unit tests for the function in utils.py
+> commit all staged changes with a meaningful message
+```
+
+**Research & documents**
+```
+> research quantum computing advances in 2024 and write a 2-page brief
+> create an Excel report of this month's expenses from my notes
+> extract all text from the PDF at ~/docs/contract.pdf
+```
+
+**Scheduling & automation**
+```
+> every weekday at 9am run a system health check
+> remind me every Monday to review open PRs
+```
+
+**Questions (advisory mode)**
+```
+> what is the difference between chmod 644 and 755?
+> how should I structure a Python monorepo?
+```
+
+---
+
+### API Reference
 
 | Endpoint | Method | Description |
 |---|---|---|
-| `/ws` | WebSocket | Primary terminal interface |
-| `/api/history` | GET | Retrieve task execution history |
-| `/api/memory/stats` | GET | Memory system statistics |
-| `/api/workflows` | GET / POST | List or create scheduled workflows |
-| `/api/insights` | GET | Aggregated usage insights |
-| `/webhook/whatsapp` | POST | WhatsApp message ingestion |
+| `/ws` | WebSocket | Primary terminal interface — all commands go here |
+| `/api/history` | GET | Retrieve full task execution history |
+| `/api/memory/stats` | GET | Memory system statistics (entry counts, index sizes) |
+| `/api/workflows` | GET | List all scheduled workflows |
+| `/api/workflows` | POST | Create a new scheduled workflow |
+| `/api/workflows/{id}` | DELETE | Remove a scheduled workflow |
+| `/api/insights` | GET | Aggregated usage insights from episodic memory |
+| `/api/profile` | GET / PUT | Read or update the user profile |
+| `/webhook/whatsapp` | POST | WhatsApp message ingestion endpoint |
 
 ---
 
@@ -284,40 +506,63 @@ The web terminal is available at `http://localhost:8000` (or the Replit preview 
 
 ```
 pacca/
-├── main.py                    # FastAPI server, WebSocket handler, API routes
+├── main.py                       # FastAPI server, WebSocket handler, all API routes
+│
 ├── pacca/
-│   ├── agent.py               # Central orchestrator — ties all layers together
-│   ├── config.py              # Configuration loader (~/.pacca/config.json)
-│   ├── llm_client.py          # Anthropic/OpenAI client with retry and circuit breaker
-│   ├── heuristic_planner.py   # Rule-based fallback planner (no API required)
-│   ├── supervisor.py          # LLM goal decomposition and multi-goal supervision
-│   ├── advisor.py             # Expert advisor persona and intent routing
-│   ├── models/                # Core data models (TaskScope, CapabilityGrant, etc.)
-│   ├── pipeline/              # 6-stage execution pipeline
-│   │   ├── command_parser.py
-│   │   ├── plan_validator.py
-│   │   ├── risk_evaluator.py
-│   │   ├── policy_engine.py
-│   │   └── runtime_validator.py
-│   ├── security/              # Security controls
-│   │   ├── safe_resource_resolver.py
-│   │   ├── local_text_redactor.py
-│   │   ├── used_grant_registry.py
-│   │   └── grant_verifier.py
-│   ├── memory/                # Persistent memory system
-│   │   ├── memory_manager.py
-│   │   ├── vector_index.py    # Neural vector search (OpenAI embeddings + TF-IDF fallback)
-│   │   └── compressor.py
-│   ├── tools/                 # Tool implementations
+│   ├── agent.py                  # Central orchestrator — ties every layer together
+│   ├── config.py                 # Configuration dataclass + loader (~/.pacca/config.json)
+│   ├── llm_client.py             # Anthropic/OpenAI client with retry, circuit breaker, fallback
+│   ├── heuristic_planner.py      # Regex-based offline planner (no API required)
+│   ├── supervisor.py             # LLM goal decomposition and multi-goal supervision
+│   ├── advisor.py                # Expert advisor persona + intent router
+│   ├── undo_manager.py           # In-memory undo stack with reversal callbacks
+│   │
+│   ├── models/                   # Core data models
+│   │   ├── task_scope.py         # TaskScope (intent domain + frozen tool set)
+│   │   ├── capability_grant.py   # HMAC-signed single-use CapabilityGrant
+│   │   ├── resolved_resource.py  # PathCapability tokens
+│   │   └── ...
+│   │
+│   ├── pipeline/                 # 6-stage execution pipeline
+│   │   ├── command_parser.py     # Natural language → structured intent
+│   │   ├── plan_validator.py     # Static plan analysis (allowlist, paths, URLs)
+│   │   ├── risk_evaluator.py     # Cumulative risk scoring + execution gates
+│   │   ├── policy_engine.py      # CapabilityGrant issuance per step
+│   │   ├── runtime_validator.py  # Per-step re-validation + TOCTOU check
+│   │   └── task_state_machine.py # Task lifecycle enforcement
+│   │
+│   ├── security/                 # Security controls
+│   │   ├── safe_resource_resolver.py  # Sole path-resolution authority
+│   │   ├── local_text_redactor.py     # Credential / secret redactor
+│   │   ├── used_grant_registry.py     # Replay-attack prevention
+│   │   └── grant_verifier.py          # HMAC grant verification
+│   │
+│   ├── memory/                   # Persistent memory system
+│   │   ├── memory_manager.py     # Episodic + semantic memory (SQLite)
+│   │   ├── vector_index.py       # Neural vector search + TF-IDF fallback
+│   │   └── compressor.py         # Periodic episodic summarization
+│   │
+│   ├── tools/                    # Tool implementations
 │   │   ├── file.py
 │   │   ├── app.py
 │   │   ├── system.py
 │   │   ├── browser.py
 │   │   ├── document.py
 │   │   └── git.py
-│   └── intelligence/          # Pattern detection, morning brief, notifications
+│   │
+│   ├── workflows/
+│   │   └── workflow_manager.py   # NL → cron scheduler (apscheduler + YAML storage)
+│   │
+│   ├── intelligence/             # Proactive intelligence features
+│   │   ├── morning_brief.py      # Daily digest generator with LLM narrative
+│   │   ├── pattern_detector.py   # Implicit preference learning from history
+│   │   └── notifications.py      # System-level proactive alerts
+│   │
+│   └── personal/
+│       └── profile.py            # User profile (identity, prefs, work context)
+│
 └── templates/
-    └── index.html             # Web terminal UI (xterm.js + dashboard)
+    └── index.html                # Web terminal UI (xterm.js + dashboard tabs)
 ```
 
 ---
@@ -325,28 +570,37 @@ pacca/
 ## Interfaces
 
 ### Web Terminal
-A browser-based xterm.js terminal with an integrated dashboard. Tabs provide access to the Insights panel, memory reports, workflow manager, and the advisory chat overlay.
+A browser-based xterm.js terminal with a tabbed dashboard. Available panels:
+- **Terminal** — full command interface with real-time streaming output
+- **Insights (📈)** — usage charts and patterns drawn from episodic memory
+- **Memory** — browse and search semantic memory entries
+- **Workflows** — view and manage scheduled automations
+- **Advisory overlay** — type a question to switch to expert advisor mode; responses render as formatted markdown inline
 
 ### REST + WebSocket API
-All terminal interactions run over a persistent WebSocket connection. The REST API exposes history, memory statistics, and workflow management for external integrations or scripting.
+All terminal interactions run over a persistent WebSocket connection (`/ws`). The REST API exposes history, memory, profile, and workflow management — suitable for external integrations, scripts, or mobile clients.
 
 ### WhatsApp
-PACCA accepts commands via WhatsApp webhook, enabling remote computer-control from any device. Responses are streamed back as WhatsApp messages.
+PACCA accepts commands via a WhatsApp webhook (`/webhook/whatsapp`), enabling remote computer-control from any device. Responses are streamed back as WhatsApp messages in real time.
 
 ### Advisory Mode
-Type a question (rather than a command) and PACCA automatically routes it to the expert advisor persona — powered by the same LLM backend — and renders a formatted markdown response directly in the terminal.
+When PACCA detects a question rather than a command, it automatically routes the message to the expert advisor persona — powered by the same LLM backend — and renders a markdown-formatted answer directly in the terminal without touching the execution pipeline.
 
 ---
 
 ## Audit Log
 
-All agent activity is written to `~/.pacca/audit.log` with:
+All agent activity is written to `~/.pacca/audit.log` with the following guarantees:
 
-- File permissions `0600` (owner-readable only)
-- Automatic redaction of secrets and credentials
-- Tamper-evident chaining of log entries
-- Structured JSON format for downstream analysis
+| Property | Detail |
+|---|---|
+| **Permissions** | `0600` — owner-readable only |
+| **Redaction** | Secrets, tokens, and credentials are automatically stripped before any entry is written |
+| **Integrity** | Tamper-evident chaining of log entries |
+| **Format** | Structured JSON — suitable for `jq`, SIEM ingestion, or custom dashboards |
+| **Retention** | Configurable via `audit_log_retention_days` (default: 90 days) |
+| **Encryption** | Optional at-rest encryption via `audit_log_encryption_enabled` |
 
 ---
 
-*PACCA is designed for personal, local use. Review the `allowed_paths` configuration and `risk_threshold` before running on sensitive systems.*
+*PACCA is designed for personal, local use. Review `allowed_path_prefixes`, `risk_proceed_threshold`, and `risk_confirm_threshold` in your config before running on sensitive systems.*
