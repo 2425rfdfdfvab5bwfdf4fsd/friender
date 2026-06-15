@@ -1041,7 +1041,7 @@ async def websocket_endpoint(ws: WebSocket):
 
             msg_type = msg.get("type", "command")
 
-            if msg_type == "command":
+            if msg_type in ("command", "goal"):
                 command = msg.get("data", {}).get("command", "").strip()
                 if not command:
                     continue
