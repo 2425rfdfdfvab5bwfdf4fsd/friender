@@ -332,9 +332,55 @@ body.fullscreen #sys-stats{display:none}
 #advisory-thinking.show{display:block}
 .adv-spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin-bottom:10px}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Light mode ─────────────────────────────────────────────────────────── */
+html.light {
+  --bg:#f6f8fa; --surface:#ffffff; --surface2:#f0f2f5; --surface3:#e8eaed;
+  --border:#d0d7de; --border2:#e4e8ec;
+  --accent:#0969da; --accent2:#1a7f37; --warn:#9a6700; --danger:#cf222e;
+  --muted:#656d76; --text:#1f2328; --text2:#24292f;
+  --shadow:0 4px 16px rgba(0,0,0,.15);
+  --glow-accent:0 0 12px rgba(9,105,218,.15);
+}
+html.light body{color:var(--text)}
+html.light .xterm-viewport::-webkit-scrollbar-thumb{background:var(--border)}
+html.light #advisory-body code{color:#b44000}
+
+/* ── Command Palette ─────────────────────────────────────────────────────── */
+#palette-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-start;justify-content:center;z-index:200;backdrop-filter:blur(4px);padding-top:80px}
+#palette-overlay.hidden{display:none}
+#palette-panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(640px,92vw);overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+#palette-input-wrap{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+#palette-search-icon{color:var(--muted);font-size:16px;flex-shrink:0}
+#palette-input{background:transparent;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;flex:1;caret-color:var(--accent)}
+#palette-input::placeholder{color:var(--muted)}
+#palette-esc{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:2px 6px;white-space:nowrap;cursor:pointer}
+#palette-results{max-height:400px;overflow-y:auto}
+.pal-section{padding:6px 16px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid var(--border2)}
+.pal-item{padding:9px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:background .1s}
+.pal-item:hover,.pal-item.pal-active{background:rgba(88,166,255,.1)}
+html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105,218,.08)}
+.pal-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.pal-label{flex:1;font-size:12.5px;color:var(--text)}
+.pal-hint{font-size:10px;color:var(--muted);white-space:nowrap}
+.pal-kbd{font-size:10px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px}
+#palette-empty{padding:24px;text-align:center;color:var(--muted);font-size:12px}
 </style>
 </head>
 <body>
+
+<!-- Command Palette (Ctrl+K) -->
+<div id="palette-overlay" class="hidden" onclick="if(event.target===this)closePalette()">
+  <div id="palette-panel">
+    <div id="palette-input-wrap">
+      <span id="palette-search-icon">🔍</span>
+      <input id="palette-input" placeholder="Search commands, tools, history…" autocomplete="off" spellcheck="false"
+        oninput="renderPalette()" onkeydown="palKey(event)">
+      <span id="palette-esc" onclick="closePalette()">Esc</span>
+    </div>
+    <div id="palette-results"></div>
+  </div>
+</div>
 
 <!-- Toast container -->
 <div id="toast-container"></div>
@@ -414,6 +460,8 @@ body.fullscreen #sys-stats{display:none}
   <button class="hdr-btn" onclick="switchPanel('workflows')">⚙ Workflows</button>
   <button class="hdr-btn" onclick="switchPanel('history')">📋</button>
   <button class="hdr-btn" onclick="switchPanel('settings')">⚙</button>
+  <button class="hdr-btn" onclick="openPalette()" title="Command palette (Ctrl+K)">⌨ <span style="font-size:9px;opacity:.7">Ctrl+K</span></button>
+  <button class="hdr-btn" id="btn-theme" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
   <button class="hdr-btn" id="btn-fullscreen" onclick="toggleFullscreen()" title="Toggle full screen">⛶</button>
   <button class="hdr-btn" id="btn-toggle" onclick="toggleSidebar()">◀</button>
 </div>
@@ -428,12 +476,17 @@ body.fullscreen #sys-stats{display:none}
   <button class="qa-btn" onclick="qa('memory')"><span class="qa-icon">🧠</span>Memory</button>
   <button class="qa-btn" onclick="qa('workflows')"><span class="qa-icon">⚙</span>Workflows</button>
   <div class="qa-sep"></div>
-  <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Goal mode"><span class="qa-icon">🎯</span>Goal: AI Tools Report</button>
+  <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot and then analyze the screenshot to describe what articles are on the front page')" title="Vision demo"><span class="qa-icon">👁</span>Vision: Analyze HN</button>
+  <button class="qa-btn" onclick="qa('generate_code: write a Python FastAPI health-check endpoint')"><span class="qa-icon">💻</span>Code: Generate</button>
+  <button class="qa-btn" onclick="qa('research_topic: large language models and their impact on software engineering')"><span class="qa-icon">🔬</span>Research: LLMs</button>
+  <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Goal mode"><span class="qa-icon">🎯</span>Goal: AI Tools</button>
   <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot')"><span class="qa-icon">📸</span>Screenshot HN</button>
   <div class="qa-sep"></div>
   <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">🧠</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
   <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
+  <button class="qa-btn" onclick="openPalette()" title="Command palette"><span class="qa-icon">⌨</span>Ctrl+K</button>
 </div>
 
 <!-- Main layout -->
@@ -521,26 +574,51 @@ const S = {
 
 // ── Common commands for autocomplete ────────────────────────────────────────
 const SUGGESTIONS = [
+  // System & files
   {icon:'📊', label:'show system cpu and memory usage', hint:'system'},
   {icon:'📁', label:'list files in current directory', hint:'file'},
   {icon:'🔍', label:'search for files named *.py', hint:'file'},
   {icon:'📄', label:'read the file README.md', hint:'file'},
   {icon:'✏️', label:'create a file called notes.txt with content "hello"', hint:'file'},
+  // Git
   {icon:'🌿', label:'git status in current directory', hint:'git'},
+  {icon:'🌿', label:'git diff to see what changed', hint:'git'},
   {icon:'🌿', label:'git add and commit all changes with message "update"', hint:'git'},
+  // Browser
   {icon:'🌐', label:'search the web for', hint:'browser'},
   {icon:'🌐', label:'open url https://example.com', hint:'browser'},
   {icon:'📸', label:'open url https://news.ycombinator.com and take a screenshot', hint:'browser'},
   {icon:'🖱', label:'click the button with selector #submit', hint:'browser'},
   {icon:'📝', label:'fill form with name="Alice", email="alice@example.com"', hint:'browser'},
+  // Vision
+  {icon:'👁', label:'capture_and_analyze: what is shown on this browser page?', hint:'vision'},
+  {icon:'👁', label:'analyze_image: analyze the file ~/screenshot.png and describe what you see', hint:'vision'},
+  {icon:'👁', label:'open url https://news.ycombinator.com and take a screenshot and then analyze what articles are shown', hint:'vision'},
+  // Coding Agent
+  {icon:'💻', label:'generate_code: write a Python FastAPI health-check endpoint', hint:'code'},
+  {icon:'💻', label:'generate_code: write a TypeScript React hook for data fetching', hint:'code'},
+  {icon:'💻', label:'explain_code: explain the file pacca/agent.py', hint:'code'},
+  {icon:'💻', label:'refactor_code: refactor the file app.py to use async/await', hint:'code'},
+  {icon:'💻', label:'write_tests: generate pytest tests for the file pacca/tools/file_tools.py', hint:'code'},
+  {icon:'💻', label:'analyze_code_quality: review the file pacca/agent.py for issues', hint:'code'},
+  // Research Agent
+  {icon:'🔬', label:'research_topic: latest developments in large language models', hint:'research'},
+  {icon:'🔬', label:'research_topic: best practices for REST API security in 2024', hint:'research'},
+  {icon:'🔬', label:'research_topic: Python vs Go for high-throughput microservices', hint:'research'},
+  {icon:'🔬', label:'summarize_url: https://docs.python.org/3/library/asyncio.html', hint:'research'},
+  // Goals
+  {icon:'🎯', label:'research Python async patterns and create a summary document', hint:'goal'},
   {icon:'🎯', label:'search the web for top 5 AI tools and save results to ~/ai-tools-report.txt', hint:'goal'},
   {icon:'🎯', label:'check git status and then commit any changed files', hint:'goal'},
-  {icon:'🎯', label:'research Python async patterns and create a summary document', hint:'goal'},
+  {icon:'🎯', label:'generate a Python REST API with CRUD operations and write tests for it', hint:'goal'},
+  // Workflows
   {icon:'⚙', label:'save this as a workflow called daily_check every day at 9am', hint:'workflow'},
   {icon:'⚙', label:'list workflows', hint:'workflow'},
   {icon:'⚙', label:'workflows', hint:'workflow'},
+  // Memory
   {icon:'🧠', label:'memory', hint:'memory'},
   {icon:'🧠', label:'remember ', hint:'memory'},
+  // Advisor
   {icon:'🧠', label:'how do I design a rate limiter for a REST API?', hint:'advisor'},
   {icon:'🧠', label:'how do I implement JWT authentication securely?', hint:'advisor'},
   {icon:'🧠', label:'explain the difference between Docker and Kubernetes', hint:'advisor'},
@@ -548,6 +626,7 @@ const SUGGESTIONS = [
   {icon:'🧠', label:'compare Redis vs Memcached for session storage', hint:'advisor'},
   {icon:'🧠', label:'what are the OWASP top 10 vulnerabilities?', hint:'advisor'},
   {icon:'🧠', label:'ask: ', hint:'force advisor mode'},
+  // Special
   {icon:'↩', label:'undo', hint:'special'},
   {icon:'❓', label:'help', hint:'special'},
   {icon:'📋', label:'history', hint:'special'},
@@ -1949,6 +2028,157 @@ async function testWA(){
   }catch(e){ r.className='err'; r.textContent='✖ '+e.message; }
 }
 
+// ── Light / Dark theme toggle ─────────────────────────────────────────────────
+function toggleTheme(){
+  const light = document.documentElement.classList.toggle('light');
+  const btn = document.getElementById('btn-theme');
+  btn.textContent = light ? '☀️' : '🌙';
+  try { localStorage.setItem('pacca_theme', light?'light':'dark'); } catch(_){}
+}
+(function(){
+  try { if(localStorage.getItem('pacca_theme')==='light'){
+    document.documentElement.classList.add('light');
+    const btn=document.getElementById('btn-theme');
+    if(btn) btn.textContent='☀️';
+  }}catch(_){}
+})();
+
+// ── Command Palette ───────────────────────────────────────────────────────────
+const PAL = { open:false, activeIdx:-1, filtered:[] };
+
+const PAL_TOOLS = [
+  {icon:'👁',  label:'analyze_image',         hint:'vision'},
+  {icon:'👁',  label:'capture_and_analyze',    hint:'vision'},
+  {icon:'💻',  label:'generate_code',          hint:'code'},
+  {icon:'💻',  label:'explain_code',           hint:'code'},
+  {icon:'💻',  label:'refactor_code',          hint:'code'},
+  {icon:'💻',  label:'write_tests',            hint:'code'},
+  {icon:'💻',  label:'analyze_code_quality',   hint:'code'},
+  {icon:'🔬',  label:'research_topic',         hint:'research'},
+  {icon:'🔬',  label:'summarize_url',          hint:'research'},
+  {icon:'📁',  label:'list_directory',         hint:'file'},
+  {icon:'📄',  label:'read_file',              hint:'file'},
+  {icon:'✏️', label:'create_file',            hint:'file'},
+  {icon:'🌐',  label:'browser_web_search',     hint:'browser'},
+  {icon:'🌐',  label:'browser_open_url',       hint:'browser'},
+  {icon:'📸',  label:'browser_screenshot',     hint:'browser'},
+  {icon:'🌿',  label:'git_status',             hint:'git'},
+  {icon:'🌿',  label:'git_diff',               hint:'git'},
+  {icon:'📊',  label:'system_monitor',         hint:'system'},
+];
+
+function openPalette(){
+  PAL.open = true;
+  const overlay = document.getElementById('palette-overlay');
+  overlay.classList.remove('hidden');
+  const inp = document.getElementById('palette-input');
+  inp.value = '';
+  PAL.activeIdx = -1;
+  renderPalette();
+  setTimeout(()=>inp.focus(), 30);
+}
+
+function closePalette(){
+  PAL.open = false;
+  document.getElementById('palette-overlay').classList.add('hidden');
+}
+
+function renderPalette(){
+  const q = (document.getElementById('palette-input').value||'').toLowerCase().trim();
+  const res = document.getElementById('palette-results');
+
+  // Build candidate list: suggestions + tools + history
+  let candidates = [];
+  SUGGESTIONS.forEach(s => candidates.push({icon:s.icon, label:s.label, hint:s.hint, type:'cmd'}));
+  PAL_TOOLS.forEach(t => candidates.push({icon:t.icon, label:t.label, hint:t.hint, type:'tool'}));
+  // Recent history
+  S.cmdHistory.slice(-15).reverse().forEach(h => {
+    candidates.push({icon:'📋', label:h, hint:'history', type:'history'});
+  });
+
+  // Filter
+  PAL.filtered = q
+    ? candidates.filter(c => c.label.toLowerCase().includes(q) || c.hint.toLowerCase().includes(q))
+    : candidates.slice(0, 30);
+
+  if(!PAL.filtered.length){
+    res.innerHTML = `<div id="palette-empty">No results for <strong>${esc(q)}</strong> — press Enter to run as command</div>`;
+    return;
+  }
+
+  // Group by type
+  const groups = {cmd:[], tool:[], history:[]};
+  const labels  = {cmd:'Commands', tool:'Tools', history:'Recent'};
+  PAL.filtered.forEach(item => {
+    if(groups[item.type] !== undefined) groups[item.type].push(item);
+  });
+
+  let html = '';
+  let globalIdx = 0;
+  ['history','cmd','tool'].forEach(type => {
+    const grp = groups[type];
+    if(!grp.length) return;
+    html += `<div class="pal-section">${labels[type]}</div>`;
+    grp.forEach(item => {
+      const active = globalIdx === PAL.activeIdx ? ' pal-active' : '';
+      const idx = globalIdx++;
+      html += `<div class="pal-item${active}" data-idx="${idx}" onclick="palSelect(${idx})">
+        <span class="pal-icon">${item.icon}</span>
+        <span class="pal-label">${esc(item.label)}</span>
+        <span class="pal-hint">${esc(item.hint)}</span>
+      </div>`;
+    });
+  });
+  res.innerHTML = html;
+}
+
+function palKey(e){
+  const items = PAL.filtered;
+  if(e.key === 'Escape'){ e.preventDefault(); closePalette(); return; }
+  if(e.key === 'ArrowDown'){
+    e.preventDefault();
+    PAL.activeIdx = Math.min(PAL.activeIdx+1, items.length-1);
+    renderPalette();
+    const el = document.querySelector('.pal-active');
+    if(el) el.scrollIntoView({block:'nearest'});
+    return;
+  }
+  if(e.key === 'ArrowUp'){
+    e.preventDefault();
+    PAL.activeIdx = Math.max(PAL.activeIdx-1, -1);
+    renderPalette();
+    const el = document.querySelector('.pal-active');
+    if(el) el.scrollIntoView({block:'nearest'});
+    return;
+  }
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    if(PAL.activeIdx >= 0 && items[PAL.activeIdx]){
+      palRun(items[PAL.activeIdx].label);
+    } else {
+      const q = document.getElementById('palette-input').value.trim();
+      if(q) palRun(q);
+    }
+    return;
+  }
+}
+
+function palSelect(idx){
+  PAL.activeIdx = idx;
+  palRun(PAL.filtered[idx].label);
+}
+
+function palRun(cmd){
+  closePalette();
+  const inp = document.getElementById('cmd-input');
+  inp.value = cmd;
+  inp.focus();
+  // Auto-send if it's a direct command (not a prefix stub)
+  if(!cmd.endsWith(' ') && !cmd.endsWith(':') && !cmd.endsWith('"')){
+    sendCommand();
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 initTerm();
 connectWS();
@@ -1956,10 +2186,11 @@ initVoice();
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e=>{
-  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); pr(''); }
+  if((e.ctrlKey||e.metaKey)&&e.key==='k'){ e.preventDefault(); openPalette(); }
   if((e.ctrlKey||e.metaKey)&&e.key==='/'){ e.preventDefault(); document.getElementById('cmd-input').focus(); }
   if((e.ctrlKey||e.metaKey)&&e.key==='m'){ e.preventDefault(); toggleMic(); }
   if(e.key==='Escape'){
+    if(PAL.open){ closePalette(); return; }
     const ov=document.getElementById('advisory-overlay');
     if(!ov.classList.contains('hidden')){ closeAdvisory(); return; }
     if(S.fullscreen){ toggleFullscreen(); }

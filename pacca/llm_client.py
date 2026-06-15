@@ -145,6 +145,8 @@ class LLMClient:
         }.get(provider)
 
     def is_available(self) -> bool:
+        if self.provider == "ollama":
+            return not self._circuit_breaker.is_tripped()
         return bool(self.api_key) and not self._circuit_breaker.is_tripped()
 
     def circuit_status(self) -> dict:
@@ -222,6 +224,8 @@ class LLMClient:
             return await self._call_openai(system, user, max_tokens)
         elif self.provider == "gemini":
             return await self._call_gemini(system, user, max_tokens)
+        elif self.provider == "ollama":
+            return await self._call_ollama(system, user, max_tokens)
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
@@ -293,6 +297,21 @@ class LLMClient:
             except json.JSONDecodeError:
                 pass
         raise ValueError(f"LLM returned invalid plan JSON.\nRaw: {raw[:500]}")
+
+    async def _call_ollama(self, system: str, user: str, max_tokens: int) -> str:
+        import httpx
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": user})
+        async with httpx.AsyncClient(timeout=120) as client:
+            r = await client.post(
+                "http://localhost:11434/api/chat",
+                json={"model": self.model, "stream": False, "messages": messages,
+                      "options": {"num_predict": max_tokens}},
+            )
+            r.raise_for_status()
+            return r.json()["message"]["content"]
 
     def update_key(self, api_key: str) -> None:
         self.api_key = api_key

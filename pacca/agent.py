@@ -40,6 +40,9 @@ import pacca.tools.browser_tools as browser_tools
 import pacca.tools.document_tools as document_tools
 import pacca.tools.git_tools as git_tools
 import pacca.tools.whatsapp_tools as whatsapp_tools
+import pacca.tools.vision_tools as vision_tools
+import pacca.tools.code_tools as code_tools
+import pacca.tools.research_tools as research_tools
 
 
 @dataclass
@@ -87,6 +90,18 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "git_add": lambda args: git_tools.git_add(**_clean(args)),
     "git_commit": lambda args: git_tools.git_commit(**_clean(args)),
     "send_whatsapp_message": lambda args: whatsapp_tools.send_whatsapp_message(**_clean(args)),
+    # Vision tools
+    "analyze_image": lambda args: vision_tools.analyze_image(**_clean(args)),
+    "capture_and_analyze": lambda args: vision_tools.capture_and_analyze(**_clean(args)),
+    # Coding Agent tools
+    "generate_code": lambda args: code_tools.generate_code(**_clean(args)),
+    "explain_code": lambda args: code_tools.explain_code(**_clean(args)),
+    "refactor_code": lambda args: code_tools.refactor_code(**_clean(args)),
+    "write_tests": lambda args: code_tools.write_tests(**_clean(args)),
+    "analyze_code_quality": lambda args: code_tools.analyze_code_quality(**_clean(args)),
+    # Research Agent tools
+    "research_topic": lambda args: research_tools.research_topic(**_clean(args)),
+    "summarize_url": lambda args: research_tools.summarize_url(**_clean(args)),
 }
 
 # Tools whose results can feed the undo manager
@@ -192,6 +207,12 @@ class PACCAAgent:
                 api_key=None,
             )
         self.llm_client = llm_client
+
+        # Wire LLM client into AI-powered tool modules
+        if llm_client is not None:
+            vision_tools.set_llm_client(llm_client)
+            code_tools.set_llm_client(llm_client)
+            research_tools.set_llm_client(llm_client)
 
         self.gateway = ContentDataGateway(
             redactor=self.redactor,
