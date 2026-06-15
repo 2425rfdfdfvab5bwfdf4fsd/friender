@@ -491,14 +491,45 @@ The web terminal is available at `http://localhost:8000` (or the Replit preview 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/ws` | WebSocket | Primary terminal interface — all commands go here |
-| `/api/history` | GET | Retrieve full task execution history |
+| `/api/task-history` | GET | Retrieve full task execution history |
 | `/api/memory/stats` | GET | Memory system statistics (entry counts, index sizes) |
+| `/api/insights` | GET | Aggregated usage insights from episodic memory (alias for `/api/memory/stats`) |
+| `/api/memory/weekly` | GET | Weekly activity summary (`?days=N`) |
+| `/api/memory/vector` | GET | Neural vector index stats |
+| `/api/memory/search` | GET | Semantic search over memory (`?q=query&top_k=10`) |
 | `/api/workflows` | GET | List all scheduled workflows |
 | `/api/workflows` | POST | Create a new scheduled workflow |
-| `/api/workflows/{id}` | DELETE | Remove a scheduled workflow |
-| `/api/insights` | GET | Aggregated usage insights from episodic memory |
-| `/api/profile` | GET / PUT | Read or update the user profile |
-| `/webhook/whatsapp` | POST | WhatsApp message ingestion endpoint |
+| `/api/workflows/{name}` | DELETE | Remove a scheduled workflow |
+| `/api/skills` | GET | List saved skills (`?search=query`) |
+| `/api/skills/{id}` | DELETE | Delete a skill |
+| `/api/skills/{id}/use` | POST | Mark a skill as used |
+| `/api/reports` | GET | List generated reports |
+| `/api/reports/{id}` | GET | Fetch a single report |
+| `/api/reports/{id}` | DELETE | Delete a report |
+| `/api/trace` | GET | List recent execution traces |
+| `/api/trace/{task_id}` | GET | Fetch trace for a specific task |
+| `/api/audit-log` | GET | Read the audit log entries |
+| `/api/audit/verify` | GET | Verify audit log integrity |
+| `/api/undo-history` | GET | List available undo records |
+| `/api/undo` | POST | Undo the last reversible action |
+| `/api/active-goals` | GET | List currently active multi-step goals |
+| `/api/todos` | GET / POST | List or create to-do items |
+| `/api/todos/{id}/done` | POST | Mark a to-do as complete |
+| `/api/todos/{id}` | PUT / DELETE | Update or delete a to-do |
+| `/api/reminders` | GET / POST | List or create reminders |
+| `/api/reminders/due` | GET | List reminders that are currently due |
+| `/api/reminders/{id}/done` | POST | Dismiss a reminder |
+| `/api/notes` | GET / POST | List or create notes |
+| `/api/notes/{id}` | GET / PUT / DELETE | Read, update, or delete a note |
+| `/api/projects` | GET / POST | List or create projects |
+| `/api/projects/{id}` | PUT / DELETE | Update or delete a project |
+| `/api/projects/{id}/tasks` | GET | List tasks within a project |
+| `/api/profile` | GET / POST | Read or update the user profile |
+| `/api/tools` | GET | List all registered tools with metadata |
+| `/api/status` | GET | Agent status and active task count |
+| `/api/sysmon` | GET | Real-time CPU, RAM, disk, and process data |
+| `/api/disclosure` | GET | Privacy and data-disclosure notice text |
+| `/webhook/whatsapp` | GET / POST | WhatsApp webhook verification and message ingestion |
 
 ---
 

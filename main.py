@@ -587,6 +587,18 @@ async def get_memory_stats():
                 "domains": [], "daily_activity": [], "recent_commands": []}
 
 
+@app.get("/api/insights")
+async def get_insights():
+    """Insights panel data — alias for /api/memory/stats."""
+    agent = get_agent()
+    try:
+        stats = agent.memory.get_stats()
+        return stats
+    except Exception as e:
+        return {"error": str(e), "total_tasks": 0, "success_rate": 0,
+                "domains": [], "daily_activity": [], "recent_commands": []}
+
+
 @app.get("/api/memory/vector")
 async def get_vector_stats():
     """Return neural vector index stats (Gap #2)."""
