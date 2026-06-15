@@ -3,7 +3,6 @@ browser_download_file, browser_tab_management."""
 from __future__ import annotations
 import os
 import re
-import subprocess
 import urllib.parse
 from pathlib import Path
 from typing import Any
@@ -19,17 +18,14 @@ def _find_nix_chromium() -> str | None:
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
 
-    try:
-        result = subprocess.run(
-            ["bash", "-c",
-             "ls /nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome 2>/dev/null | head -1"],
-            capture_output=True, text=True, timeout=3,
-        )
-        path = result.stdout.strip()
-        if path and os.path.isfile(path):
+    # Use Python glob — much faster than spawning a subprocess
+    import glob as _glob
+    matches = _glob.glob(
+        "/nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome"
+    )
+    for path in sorted(matches, reverse=True):
+        if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
-    except Exception:
-        pass
     return None
 
 

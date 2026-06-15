@@ -171,19 +171,10 @@ class LLMClient:
             return not self._circuit_breaker.is_tripped()
         if not self.api_key:
             return False
-        # Gemini API keys from AI Studio must start with "AIza"; anything else
-        # (OAuth tokens, service-account fragments, etc.) will always 401.
-        if self.provider == "gemini" and not self.api_key.startswith("AIza"):
-            return False
         return not self._circuit_breaker.is_tripped()
 
     def key_error(self) -> str | None:
         """Return a human-readable explanation if the key is known to be invalid."""
-        if self.provider == "gemini" and self.api_key and not self.api_key.startswith("AIza"):
-            return (
-                "Invalid GEMINI_API_KEY — must start with 'AIza'. "
-                "Get a proper key at https://aistudio.google.com/apikey"
-            )
         if not self.api_key:
             return (
                 "No API key configured. Add ANTHROPIC_API_KEY or GEMINI_API_KEY "
