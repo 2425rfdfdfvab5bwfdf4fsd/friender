@@ -14,6 +14,9 @@
   --border:#1e2a3d; --border2:#162030;
   --accent:#58a6ff; --accent2:#3fb950; --warn:#f0a500; --danger:#f85149;
   --muted:#4a5a72; --text:#e0ecf8; --text2:#a8bcd0;
+  --bblue:#79c0ff;
+  --btn-fg:#07090f;
+  --confirm-bg:rgba(20,12,0,.88); --confirm-danger-bg:rgba(20,0,0,.88);
   --sidebar-w:320px; --hdr-h:54px; --quickbar-h:42px; --mobile-nav-h:56px;
   --radius:8px; --radius-sm:6px; --radius-lg:14px;
   --shadow:0 12px 40px rgba(0,0,0,.7);
@@ -212,11 +215,11 @@ body{
 /* ── Confirm bar ────────────────────────────────────────────────────────── */
 #confirm-bar{
   display:none;align-items:center;gap:10px;padding:11px 18px;
-  background:rgba(20,12,0,.85);border-top:2px solid var(--warn);
+  background:var(--confirm-bg);border-top:2px solid var(--warn);
   flex-shrink:0;backdrop-filter:blur(4px);
 }
 #confirm-bar.show{display:flex}
-#confirm-bar.danger{background:rgba(20,0,0,.85);border-color:var(--danger)}
+#confirm-bar.danger{background:var(--confirm-danger-bg);border-color:var(--danger)}
 #confirm-msg{flex:1;font-size:12px;color:var(--warn);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #confirm-bar.danger #confirm-msg{color:var(--danger)}
 #confirm-input{
@@ -227,7 +230,7 @@ body{
 #confirm-bar.danger #confirm-input{border-color:var(--danger)}
 .conf-btn{padding:6px 18px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;white-space:nowrap;transition:opacity .15s,transform .1s}
 .conf-btn:hover{opacity:.88;transform:translateY(-1px)}
-#confirm-yes{background:var(--accent2);color:#07090f}
+#confirm-yes{background:var(--accent2);color:var(--btn-fg)}
 #confirm-no{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
 
 /* ── Input bar ──────────────────────────────────────────────────────────── */
@@ -241,7 +244,7 @@ body{
 }
 #input-field-wrap{
   flex:1;display:flex;align-items:center;gap:10px;
-  background:#141c28;border:1px solid var(--border);
+  background:var(--surface2);border:1px solid var(--border);
   border-radius:var(--radius-lg);
   padding:8px 14px;
   transition:border-color .25s,box-shadow .25s;
@@ -277,7 +280,7 @@ body{
 #send-btn{
   font-size:12px;padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;
   background:linear-gradient(135deg,var(--accent) 0%,#79c0ff 100%);
-  border:none;color:#07090f;font-weight:800;font-family:inherit;
+  border:none;color:var(--btn-fg);font-weight:800;font-family:inherit;
   transition:opacity .18s,transform .12s,box-shadow .18s;
   white-space:nowrap;letter-spacing:.4px;flex-shrink:0;
   box-shadow:0 2px 12px rgba(88,166,255,.3);
@@ -416,7 +419,7 @@ body{
 .setting-input{width:100%;font-size:12px;color:var(--text);padding:6px 8px;background:var(--surface2);border-radius:var(--radius-sm);border:1px solid var(--border);font-family:inherit;outline:none;transition:border-color .15s}
 .setting-input:focus{border-color:var(--accent)}
 select.setting-input option{background:var(--surface2)}
-.save-btn{width:100%;padding:8px;border-radius:var(--radius-sm);border:none;cursor:pointer;background:var(--accent);color:#0d1117;font-weight:700;font-family:inherit;font-size:12px;margin-top:4px;transition:opacity .15s}
+.save-btn{width:100%;padding:8px;border-radius:var(--radius-sm);border:none;cursor:pointer;background:var(--accent);color:var(--btn-fg);font-weight:700;font-family:inherit;font-size:12px;margin-top:4px;transition:opacity .15s}
 .save-btn:hover{opacity:.85}
 .save-btn.sec{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
 .save-btn.sec:hover{color:var(--text);border-color:var(--accent)}
@@ -448,7 +451,7 @@ select.setting-input option{background:var(--surface2)}
 #modal-ftr{padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .modal-btn{padding:8px 20px;border-radius:var(--radius-sm);border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;transition:opacity .15s}
 .modal-btn:hover{opacity:.85}
-#btn-accept{background:var(--accent2);color:#0d1117}
+#btn-accept{background:var(--accent2);color:var(--btn-fg)}
 #btn-decline{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
 #prov-sel{padding:5px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);color:var(--text);font-family:inherit;font-size:12px}
 #prov-sel option{background:var(--surface2)}
@@ -613,7 +616,7 @@ body.fullscreen #mem-counter,body.fullscreen #wf-counter{display:none}
 #advisory-body h1,#advisory-body h2,#advisory-body h3,#advisory-body h4{color:var(--text);margin:1.1em 0 .45em;line-height:1.3}
 #advisory-body h1{font-size:1.25em;color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:.3em}
 #advisory-body h2{font-size:1.1em;color:var(--accent)}
-#advisory-body h3{font-size:1em;color:var(--bblue, #79c0ff)}
+#advisory-body h3{font-size:1em;color:var(--bblue)}
 #advisory-body p{margin:.6em 0}
 #advisory-body ul,#advisory-body ol{margin:.5em 0;padding-left:1.6em}
 #advisory-body li{margin:.25em 0}
@@ -643,6 +646,9 @@ html.light {
   --border:#ccd4e0; --border2:#dde3ec;
   --accent:#1a6bbf; --accent2:#1a8f3f; --warn:#9a6700; --danger:#c0392b;
   --muted:#6b7a8d; --text:#1c2433; --text2:#374151;
+  --bblue:#1a6bbf;
+  --btn-fg:#ffffff;
+  --confirm-bg:rgba(255,248,220,.97); --confirm-danger-bg:rgba(255,232,230,.97);
   --shadow:0 4px 24px rgba(0,0,0,.14);
   --glow-accent:0 0 14px rgba(26,107,191,.12);
 }
@@ -656,6 +662,21 @@ html.light .hdr-group{background:var(--surface2)}
 html.light #input-field-wrap{background:var(--surface3)}
 html.light #terminal-wrap{background:radial-gradient(ellipse at 30% 0%,rgba(26,107,191,.03) 0%,transparent 60%),var(--bg)}
 html.light #send-btn{background:linear-gradient(135deg,var(--accent) 0%,#2980d9 100%);color:#fff}
+html.light #confirm-bar{border-top-color:var(--warn)}
+html.light #confirm-bar.danger{border-color:var(--danger)}
+html.light #sidebar{border-left-color:var(--border)}
+html.light #input-bar{background:linear-gradient(0deg,var(--surface) 0%,rgba(255,255,255,.97) 100%);box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+html.light .sysmon-card{background:var(--surface2)}
+html.light .wf-item{background:var(--surface2)}
+html.light .rep-item{background:var(--surface2)}
+html.light .weekly-stat-card{background:var(--surface2)}
+html.light .insight-stat-card{background:var(--surface2)}
+html.light #advisory-ftr{background:var(--surface2)}
+html.light .adv-spinner{border-color:var(--border);border-top-color:var(--accent)}
+html.light #wf-new-form{background:var(--surface2)}
+html.light #wf-new-form input{background:var(--surface);color:var(--text)}
+html.light .tool-search,.mem-search,.rep-search{background:var(--surface2);color:var(--text)}
+html.light select.setting-input option{background:var(--surface)}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RESPONSIVE  +  POLISH
@@ -2706,10 +2727,32 @@ async function testWA(){
 }
 
 // ── Light / Dark theme toggle ─────────────────────────────────────────────────
+const XTERM_DARK = {
+  background:'#0d1117',foreground:'#e6edf3',cursor:'#58a6ff',
+  selectionBackground:'rgba(88,166,255,.25)',
+  black:'#0d1117',red:'#f85149',green:'#3fb950',yellow:'#e3b341',
+  blue:'#58a6ff',magenta:'#bc8cff',cyan:'#39c5cf',white:'#e6edf3',
+  brightBlack:'#484f58',brightRed:'#ff7b72',brightGreen:'#56d364',
+  brightYellow:'#e3b341',brightBlue:'#79c0ff',
+  brightMagenta:'#d2a8ff',brightCyan:'#56d4dd',brightWhite:'#f0f6fc',
+};
+const XTERM_LIGHT = {
+  background:'#f0f4f8',foreground:'#1c2433',cursor:'#1a6bbf',
+  selectionBackground:'rgba(26,107,191,.22)',
+  black:'#1c2433',red:'#c0392b',green:'#1a8f3f',yellow:'#9a6700',
+  blue:'#1a6bbf',magenta:'#8b45a3',cyan:'#0e7e8a',white:'#eef1f6',
+  brightBlack:'#6b7a8d',brightRed:'#e74c3c',brightGreen:'#27ae60',
+  brightYellow:'#d4a017',brightBlue:'#2980d9',
+  brightMagenta:'#9b59b6',brightCyan:'#16a085',brightWhite:'#f8fafb',
+};
+function applyXtermTheme(light){
+  if(S.term) S.term.options.theme = light ? XTERM_LIGHT : XTERM_DARK;
+}
 function toggleTheme(){
   const light = document.documentElement.classList.toggle('light');
   const btn = document.getElementById('btn-theme');
   btn.textContent = light ? '☀️' : '🌙';
+  applyXtermTheme(light);
   try { localStorage.setItem('pacca_theme', light?'light':'dark'); } catch(_){}
 }
 (function(){
@@ -3170,6 +3213,7 @@ if(window.innerWidth<=768){
 }
 
 initTerm();
+applyXtermTheme(document.documentElement.classList.contains('light'));
 connectWS();
 initVoice();
 
