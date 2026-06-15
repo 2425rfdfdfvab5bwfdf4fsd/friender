@@ -282,5 +282,83 @@ class MemoryManager:
 
         return "\n".join(lines) if lines else ""
 
+    def get_stats(self) -> dict:
+        """Return analytics about the stored memory for the Insights panel."""
+        total = self.task_count()
+
+        # Domain breakdown with success rates
+        domain_rows = self._conn.execute(
+            """SELECT intent_domain,
+                      COUNT(*) AS n,
+                      SUM(CASE WHEN outcome='completed' THEN 1 ELSE 0 END) AS ok
+               FROM episodic
+               GROUP BY intent_domain
+               ORDER BY n DESC"""
+        ).fetchall()
+        domains = [
+            {
+                "domain": r["intent_domain"] or "unknown",
+                "count": r["n"],
+                "success": r["ok"],
+                "success_rate": round(r["ok"] / r["n"] * 100) if r["n"] else 0,
+            }
+            for r in domain_rows
+        ]
+
+        # Daily activity for the last 14 days
+        cutoff = time.time() - 14 * 86400
+        daily_rows = self._conn.execute(
+            """SELECT date(created_at, 'unixepoch') AS day, COUNT(*) AS n
+               FROM episodic
+               WHERE created_at >= ?
+               GROUP BY day
+               ORDER BY day DESC""",
+            (cutoff,)
+        ).fetchall()
+        daily = [{"day": r["day"], "count": r["n"]} for r in daily_rows]
+
+        # Overall success rate
+        ok_total = self._conn.execute(
+            "SELECT COUNT(*) FROM episodic WHERE outcome='completed'"
+        ).fetchone()[0]
+        success_rate = round(ok_total / total * 100) if total else 0
+
+        # Average steps per task
+        avg_row = self._conn.execute(
+            "SELECT AVG(steps_executed) FROM episodic"
+        ).fetchone()[0]
+        avg_steps = round(avg_row or 0, 1)
+
+        # Most recent commands (top 5 unique)
+        recent_cmds = self._conn.execute(
+            """SELECT command, MAX(created_at) AS ts
+               FROM episodic
+               GROUP BY command
+               ORDER BY ts DESC
+               LIMIT 5"""
+        ).fetchall()
+        recent = [r["command"][:80] for r in recent_cmds]
+
+        # Semantic memory count
+        sem_count = self._conn.execute(
+            "SELECT COUNT(*) FROM semantic_memory"
+        ).fetchone()[0]
+
+        # Workflow run count
+        wf_count = self._conn.execute(
+            "SELECT COUNT(*) FROM workflow_runs"
+        ).fetchone()[0]
+
+        return {
+            "total_tasks": total,
+            "success_rate": success_rate,
+            "avg_steps": avg_steps,
+            "domains": domains,
+            "daily_activity": daily,
+            "recent_commands": recent,
+            "semantic_memory_count": sem_count,
+            "workflow_runs": wf_count,
+        }
+
     def close(self) -> None:
         self._conn.close()

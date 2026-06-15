@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PACCA v6.0 — AI Agent</title>
+<title>PACCA v7.0 — AI Agent</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
@@ -290,6 +290,40 @@ select.setting-input option{background:var(--surface2)}
 #wf-new-form input:focus{border-color:var(--accent)}
 #wf-empty{color:var(--muted);font-size:11px;text-align:center;padding:20px 0}
 
+/* ── Insights panel ─────────────────────────────────────────────────────── */
+.insights-section{margin-bottom:14px}
+.insights-section-title{font-size:9px;text-transform:uppercase;letter-spacing:.9px;color:var(--accent);padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px;font-weight:700}
+.insight-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.insight-stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;text-align:center}
+.insight-stat-val{font-size:20px;font-weight:700;line-height:1;color:var(--accent)}
+.insight-stat-val.green{color:var(--accent2)}
+.insight-stat-val.yellow{color:var(--warn)}
+.insight-stat-lbl{font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.6px}
+.domain-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--border2);font-size:10px}
+.domain-row:last-child{border-bottom:none}
+.domain-name{flex:0 0 70px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.domain-bar-wrap{flex:1;height:5px;background:var(--border);border-radius:2px;overflow:hidden}
+.domain-bar-fill{height:5px;background:var(--accent);border-radius:2px;transition:width .6s}
+.domain-count{flex:0 0 24px;text-align:right;color:var(--muted)}
+.domain-rate{flex:0 0 30px;text-align:right;font-weight:700}
+.domain-rate.high{color:var(--accent2)}
+.domain-rate.mid{color:var(--warn)}
+.domain-rate.low{color:var(--danger)}
+.daily-chart{display:flex;align-items:flex-end;gap:3px;height:40px;margin-top:4px}
+.day-bar{flex:1;background:var(--accent);border-radius:2px 2px 0 0;min-height:2px;transition:height .4s;cursor:default;position:relative}
+.day-bar:hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:2px 6px;font-size:9px;color:var(--text);white-space:nowrap;pointer-events:none;z-index:10}
+.recent-cmd-item{font-size:10px;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border2);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.recent-cmd-item:last-child{border-bottom:none}
+.recent-cmd-item:hover{color:var(--accent)}
+.insight-goal-pill{display:inline-flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:5px 11px;font-size:10px;color:var(--text2);cursor:pointer;margin:3px 0;width:100%;transition:all .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.insight-goal-pill:hover{border-color:var(--accent);color:var(--accent);background:rgba(88,166,255,.07)}
+.insight-goal-pill .pill-icon{font-size:11px;flex-shrink:0}
+.insights-refresh-btn{width:100%;padding:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:inherit;font-size:11px;border-radius:var(--radius-sm);cursor:pointer;transition:all .15s;margin-top:6px}
+.insights-refresh-btn:hover{color:var(--text);border-color:var(--accent)}
+.decomp-badge{font-size:9px;padding:2px 6px;border-radius:10px;font-weight:700}
+.decomp-llm{background:rgba(88,166,255,.15);color:var(--accent)}
+.decomp-heuristic{background:rgba(139,148,158,.1);color:var(--muted)}
+
 /* ── Fullscreen ─────────────────────────────────────────────────────────── */
 body.fullscreen #sidebar{display:none}
 body.fullscreen #quickbar{display:none}
@@ -428,7 +462,7 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
 
 <!-- Header -->
 <div id="header">
-  <div id="logo">PACCA<span id="logo-sub">AI Agent v6.0</span></div>
+  <div id="logo">PACCA<span id="logo-sub">AI Agent v7.0</span></div>
   <div id="status-dot" title="Connecting…"></div>
   <div id="provider-badge">offline</div>
 
@@ -481,8 +515,11 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
   <button class="qa-btn" onclick="qa('research_topic: large language models and their impact on software engineering')"><span class="qa-icon">🔬</span>Research: LLMs</button>
   <div class="qa-sep"></div>
   <button class="qa-btn" onclick="qa('search the web for top 5 AI coding tools and save results to ~/ai-tools-report.txt')" title="Goal mode"><span class="qa-icon">🎯</span>Goal: AI Tools</button>
+  <button class="qa-btn" onclick="qa('research the latest trends in machine learning and create a summary report at ~/ml-trends.md')" title="Research goal"><span class="qa-icon">🔬</span>Goal: ML Research</button>
+  <button class="qa-btn" onclick="qa('check git status then add all changed files then commit with message \"auto update\"')" title="Git goal"><span class="qa-icon">🌿</span>Goal: Git Commit</button>
   <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot')"><span class="qa-icon">📸</span>Screenshot HN</button>
   <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="switchPanel('insights')" title="View Insights panel"><span class="qa-icon">📈</span>Insights</button>
   <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">🧠</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
   <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
@@ -541,6 +578,7 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
       <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows">⚙ Flows</div>
       <div class="ptab" onclick="switchPanel('history')" id="tab-history">📋</div>
       <div class="ptab" onclick="switchPanel('audit')" id="tab-audit">Audit</div>
+      <div class="ptab" onclick="switchPanel('insights')" id="tab-insights">📈</div>
       <div class="ptab" onclick="switchPanel('settings')" id="tab-settings">⚙</div>
     </div>
     <div class="panel" id="panel-sysmon"><div style="color:var(--muted);font-size:11px">Loading system info…</div></div>
@@ -549,6 +587,7 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
     <div class="panel" id="panel-workflows"><div style="color:var(--muted);font-size:11px">Loading workflows…</div></div>
     <div class="panel" id="panel-history"><div style="color:var(--muted);font-size:11px">No tasks yet.</div></div>
     <div class="panel" id="panel-audit"><div style="color:var(--muted);font-size:11px">No audit entries yet.</div></div>
+    <div class="panel" id="panel-insights"><div style="color:var(--muted);font-size:11px">Loading insights…</div></div>
     <div class="panel" id="panel-settings"><div style="color:var(--muted);font-size:11px">Loading…</div></div>
   </div>
 </div>
@@ -762,7 +801,7 @@ function onWelcome(d) {
   pr(C.bold+C.bblue+'  ██╔═══╝ ██╔══██║██║      ██║      ██╔══██║'+C.rst);
   pr(C.bold+C.bblue+'  ██║     ██║  ██║╚██████╗ ╚██████╗ ██║  ██║'+C.rst);
   pr(C.bold+C.bblue+'  ╚═╝     ╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝'+C.rst);
-  pr('  '+C.gray+'Personal AI Computer-Control Agent  v6.0'+C.rst);
+  pr('  '+C.gray+'Personal AI Computer-Control Agent  v7.0'+C.rst);
   sep();
   if (d.llm_available) {
     pr('  '+C.bgreen+'✓ LLM Connected'+C.rst+'  '+C.gray+d.provider+' / '+C.white+d.model+C.rst);
@@ -772,7 +811,8 @@ function onWelcome(d) {
   }
   pr('  '+C.gray+'Memory: '+C.cyan+(d.memory_count||0)+' tasks'+C.gray+'  Workflows: '+C.cyan+(d.workflow_count||0)+C.rst);
   pr('');
-  pr('  '+C.gray+'NEW v6.0: '+C.bgreen+'🧠 Memory'+C.gray+' • '+C.bgreen+'🌐 Browser Automation'+C.gray+' • '+C.bgreen+'🎯 Goal Mode'+C.gray+' • '+C.bgreen+'🎙 Voice'+C.gray+' • '+C.bgreen+'⚙ Workflows'+C.rst);
+  const decomp = d.llm_available ? C.bblue+'🧠 LLM Goal Decomp'+C.rst : C.gray+'🎯 Goal Mode'+C.rst;
+  pr('  '+C.gray+'NEW v7.0: '+decomp+C.gray+' • '+C.bgreen+'📈 Insights'+C.gray+' • '+C.bgreen+'🌐 Browser Automation'+C.gray+' • '+C.bgreen+'🎙 Voice'+C.gray+' • '+C.bgreen+'⚙ Workflows'+C.rst);
   sep();
   pr('  '+C.gray+'Examples:'+C.rst);
   pr('  '+C.cyan+'  list files in my downloads folder'+C.rst+'           '+C.gray+'← action'+C.rst);
@@ -789,6 +829,7 @@ function onWelcome(d) {
   loadSysmon();
   loadMemory();
   loadWorkflows();
+  loadInsights();
   refreshHeaderStats();
   setInterval(refreshHeaderStats, 8000);
 }
@@ -1622,6 +1663,7 @@ function switchPanel(name){
   if(name==='sysmon') loadSysmon();
   if(name==='memory') loadMemory();
   if(name==='workflows') loadWorkflows();
+  if(name==='insights') loadInsights();
 }
 
 // ── Voice Interface (Web Speech API) ─────────────────────────────────────────
@@ -2179,8 +2221,115 @@ function palRun(cmd){
   }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-initTerm();
+// ── Insights panel ────────────────────────────────────────────────────────────
+const GOAL_TEMPLATES = [
+  {icon:'🎯', label:'Research AI tools and save a report', cmd:'search the web for best AI development tools 2026 and create a report at ~/ai-tools.md'},
+  {icon:'🌿', label:'Git: status → add → commit', cmd:'check git status then add all changed files then commit with message "auto update"'},
+  {icon:'🔬', label:'Research a topic and summarize', cmd:'research the latest developments in large language models and create a summary at ~/llm-research.md'},
+  {icon:'📁', label:'Organize downloads folder', cmd:'list files in ~/Downloads and search for files larger than 50MB in ~/Downloads'},
+  {icon:'📊', label:'System health check', cmd:'show system cpu and memory usage and list running apps'},
+  {icon:'💻', label:'Generate + test a code snippet', cmd:'generate_code: write a Python function that validates email addresses with regex'},
+  {icon:'🌐', label:'Browse and screenshot a site', cmd:'open url https://news.ycombinator.com and take a screenshot and analyze what you see'},
+  {icon:'📝', label:'Create a daily standup template', cmd:'create file ~/standup.md with a markdown daily standup template with sections for Done, Today, Blockers'},
+];
+
+async function loadInsights(){
+  const panel=document.getElementById('panel-insights');
+  try{
+    const r=await fetch('/api/memory/stats');
+    const d=await r.json();
+    if(d.error && d.total_tasks===0){
+      panel.innerHTML=`<div style="color:var(--muted);font-size:11px;padding:10px 0">
+        <div style="font-size:16px;margin-bottom:8px">📈</div>
+        <div style="margin-bottom:6px">No data yet — complete some tasks to see insights.</div>
+        <div style="margin-top:12px;font-size:10px;color:var(--accent)">Goal Templates</div>
+        <div style="margin-top:8px">${GOAL_TEMPLATES.map(t=>`<div class="insight-goal-pill" onclick="qa(${JSON.stringify(t.cmd)})"><span class="pill-icon">${t.icon}</span><span>${esc(t.label)}</span></div>`).join('')}</div>
+      </div>`;
+      return;
+    }
+    renderInsights(d);
+  }catch(e){
+    panel.innerHTML=`<div style="color:var(--muted);font-size:11px">Error loading insights: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderInsights(d){
+  const panel=document.getElementById('panel-insights');
+  const total=d.total_tasks||0;
+  const rate=d.success_rate||0;
+  const avg=d.avg_steps||0;
+  const domains=d.domains||[];
+  const daily=d.daily_activity||[];
+  const recent=d.recent_commands||[];
+
+  // Daily chart — up to 14 days
+  const maxDay=Math.max(...daily.map(x=>x.count),1);
+  const chartBars=daily.slice(0,14).reverse().map(x=>{
+    const h=Math.round(x.count/maxDay*36)+2;
+    return `<div class="day-bar" style="height:${h}px;opacity:${0.5+x.count/maxDay*.5}" data-tip="${x.day}: ${x.count}"></div>`;
+  }).join('');
+
+  // Domain breakdown
+  const maxDomain=Math.max(...domains.map(x=>x.count),1);
+  const domainRows=domains.slice(0,8).map(x=>{
+    const w=Math.round(x.count/maxDomain*100);
+    const rateCls=x.success_rate>=80?'high':x.success_rate>=50?'mid':'low';
+    return `<div class="domain-row">
+      <div class="domain-name" title="${esc(x.domain)}">${esc(x.domain)}</div>
+      <div class="domain-bar-wrap"><div class="domain-bar-fill" style="width:${w}%"></div></div>
+      <div class="domain-count">${x.count}</div>
+      <div class="domain-rate ${rateCls}">${x.success_rate}%</div>
+    </div>`;
+  }).join('');
+
+  const rateCls=rate>=80?'green':rate>=50?'yellow':'';
+  const semCount=d.semantic_memory_count||0;
+  const wfRuns=d.workflow_runs||0;
+
+  panel.innerHTML=`
+    <div class="insights-section">
+      <div class="insight-stat-row">
+        <div class="insight-stat-card">
+          <div class="insight-stat-val">${total}</div>
+          <div class="insight-stat-lbl">Total Tasks</div>
+        </div>
+        <div class="insight-stat-card">
+          <div class="insight-stat-val ${rateCls}">${rate}%</div>
+          <div class="insight-stat-lbl">Success Rate</div>
+        </div>
+        <div class="insight-stat-card">
+          <div class="insight-stat-val" style="color:var(--muted)">${avg}</div>
+          <div class="insight-stat-lbl">Avg Steps</div>
+        </div>
+        <div class="insight-stat-card">
+          <div class="insight-stat-val" style="font-size:16px;color:var(--accent2)">${semCount}</div>
+          <div class="insight-stat-lbl">Memories</div>
+        </div>
+      </div>
+    </div>
+    ${daily.length?`
+    <div class="insights-section">
+      <div class="insights-section-title">14-Day Activity</div>
+      <div class="daily-chart">${chartBars||'<div style="color:var(--muted);font-size:10px">No activity yet</div>'}</div>
+    </div>`:''}
+    ${domainRows?`
+    <div class="insights-section">
+      <div class="insights-section-title">By Domain (count / success%)</div>
+      ${domainRows}
+    </div>`:''}
+    ${recent.length?`
+    <div class="insights-section">
+      <div class="insights-section-title">Recent Unique Commands</div>
+      ${recent.map(c=>`<div class="recent-cmd-item" title="${esc(c)}" onclick="qa(${JSON.stringify(c)})">${esc(c)}</div>`).join('')}
+    </div>`:''}
+    <div class="insights-section">
+      <div class="insights-section-title">Goal Templates <span style="font-size:8px;color:var(--muted)">(click to run)</span></div>
+      ${GOAL_TEMPLATES.map(t=>`<div class="insight-goal-pill" onclick="qa(${JSON.stringify(t.cmd)});switchPanel('tools')"><span class="pill-icon">${t.icon}</span><span>${esc(t.label)}</span></div>`).join('')}
+    </div>
+    <button class="insights-refresh-btn" onclick="loadInsights()">⟳ Refresh Insights</button>`;
+}
+
+
 connectWS();
 initVoice();
 

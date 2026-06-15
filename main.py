@@ -39,7 +39,7 @@ async def lifespan(app_: FastAPI):
         _workflow_manager.stop_scheduler()
 
 
-app = FastAPI(title="PACCA", version="6.0.0", lifespan=lifespan)
+app = FastAPI(title="PACCA", version="7.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # WhatsApp inbound: maps sender E.164 number → pending confirmation info
@@ -476,6 +476,29 @@ async def undo_last():
     return result
 
 
+@app.get("/api/memory/stats")
+async def get_memory_stats():
+    """Return analytics for the Insights panel."""
+    agent = get_agent()
+    try:
+        stats = agent.memory.get_stats()
+        return stats
+    except Exception as e:
+        return {"error": str(e), "total_tasks": 0, "success_rate": 0,
+                "domains": [], "daily_activity": [], "recent_commands": []}
+
+
+@app.get("/api/active-goals")
+async def get_active_goals():
+    """Return the list of currently executing goals."""
+    agent = get_agent()
+    try:
+        goals = agent.supervisor.active_goals()
+        return {"active_goals": goals}
+    except Exception as e:
+        return {"active_goals": [], "error": str(e)}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
@@ -502,14 +525,14 @@ async def websocket_endpoint(ws: WebSocket):
         await outgoing.put({"type": type_, "data": data})
 
     await put("welcome", {
-        "version": "6.0.0",
+        "version": "7.0.0",
         "provider": agent.config.provider,
         "model": agent.config.model,
         "llm_available": (agent.llm_client.is_available() if agent.llm_client else False),
         "onboarding_complete": is_onboarding_complete(),
         "memory_count": agent.memory.task_count(),
         "workflow_count": len(_workflow_manager.list_workflows()) if _workflow_manager else 0,
-        "message": "PACCA v6.0 ready. Type a command, ask a question, or type 'help'.",
+        "message": "PACCA v7.0 ready. Type a command, ask a question, or type 'help'.",
     })
 
     try:

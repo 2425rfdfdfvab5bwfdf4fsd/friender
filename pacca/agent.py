@@ -228,6 +228,8 @@ class PACCAAgent:
             goal_timeout=600.0,
             max_depth=3,
         )
+        if llm_client is not None:
+            self.supervisor.set_llm_client(llm_client)
 
         # Confirmation gates: key = "task_id:confirmation_id" → asyncio.Queue(1)
         self._confirmation_gates: dict[str, asyncio.Queue] = {}

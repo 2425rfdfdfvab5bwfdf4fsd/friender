@@ -1,6 +1,7 @@
-"""PACCA Autonomous Goal Execution — Supervisor loop for multi-step goal decomposition."""
+"""PACCA Autonomous Goal Execution — Supervisor loop with LLM-powered goal decomposition."""
 from __future__ import annotations
 import asyncio
+import json
 import re
 import time
 import uuid
@@ -28,9 +29,36 @@ class GoalPlan:
     status: str = "planning"  # planning, executing, completed, failed, cancelled
     total_steps: int = 0
     completed_steps: int = 0
+    decomposition_method: str = "heuristic"  # heuristic | llm
 
 
-# ── Goal detection ──────────────────────────────────────────────────────────
+# ── LLM goal decomposition prompt ───────────────────────────────────────────
+
+_LLM_DECOMPOSE_SYSTEM = """You are PACCA's goal decomposition engine. Break a multi-step goal into concrete, atomic sub-commands that PACCA can execute one by one.
+
+RULES:
+1. Output ONLY a JSON array of command strings — no prose, no markdown, no explanation.
+2. Each command must be an atomic, executable instruction (1 tool call).
+3. Maximum 8 commands. Minimum 2 commands.
+4. Use natural language — PACCA will parse and route each command.
+5. Commands must be sequential and build on each other logically.
+6. Be specific about file paths, using ~/ for home directory.
+
+EXAMPLES:
+Goal: "research the top 5 LLM APIs and create a comparison spreadsheet"
+Output: ["search the web for top 5 LLM APIs 2026", "search the web for pricing and features of OpenAI Anthropic Gemini Cohere APIs", "search the web for LLM API performance benchmarks 2026", "create file ~/Desktop/llm_comparison.md with the research findings structured as a comparison table"]
+
+Goal: "check git status and commit any changed files with message 'daily update'"
+Output: ["git status in current directory", "git add all changed files in current directory", "git commit with message 'daily update'"]
+
+Goal: "search the web for Python async best practices and save to a file"
+Output: ["search the web for Python async await best practices 2025", "search the web for asyncio patterns common mistakes Python", "create file ~/async_notes.md with the research findings"]
+
+Goal: "list the files in my downloads folder and find any large files over 100MB"
+Output: ["list files in ~/Downloads", "search for files larger than 100MB in ~/Downloads"]"""
+
+
+# ── Heuristic goal detection ──────────────────────────────────────────────────
 
 _GOAL_PATTERNS = [
     r'\band\b.{3,50}\band\b',
@@ -70,7 +98,7 @@ def is_multi_step_goal(command: str) -> bool:
 
 
 def decompose_goal(goal: str) -> list[str]:
-    """Split a multi-step goal into individual sub-commands."""
+    """Split a multi-step goal into individual sub-commands using heuristics."""
     lower = goal.lower()
 
     step_patterns = [
@@ -80,7 +108,6 @@ def decompose_goal(goal: str) -> list[str]:
         r'\bafter that\b[,:]?\s+',
         r'\bfinally\b[,:]?\s+',
         r'\bnext\b[,:]?\s+',
-        r'\balsob\b[,:]?\s+',
         r'\band then\b[,:]?\s+',
     ]
 
@@ -115,7 +142,11 @@ def decompose_goal(goal: str) -> list[str]:
 
 
 class GoalSupervisor:
-    """Supervises autonomous multi-step goal execution with retry and replanning."""
+    """Supervises autonomous multi-step goal execution.
+
+    Uses LLM-powered decomposition when an LLM client is available,
+    falling back to heuristic (regex) decomposition otherwise.
+    """
 
     def __init__(
         self,
@@ -130,10 +161,76 @@ class GoalSupervisor:
         self.max_depth = max_depth
         self._active_goals: dict[str, GoalPlan] = {}
         self._cancelled: set[str] = set()
+        self._llm_client: Any = None
+
+    def set_llm_client(self, client: Any) -> None:
+        """Wire in an LLM client for intelligent goal decomposition."""
+        self._llm_client = client
+
+    # ── LLM-based decomposition ───────────────────────────────────────────────
+
+    async def _llm_decompose_goal(self, goal: str) -> list[str] | None:
+        """Use the LLM to decompose the goal into atomic sub-commands.
+
+        Returns None if the LLM is unavailable or decomposition fails.
+        """
+        if self._llm_client is None:
+            return None
+        try:
+            if not self._llm_client.is_available():
+                return None
+            raw = await self._llm_client._call(
+                _LLM_DECOMPOSE_SYSTEM,
+                f"Goal: {goal}",
+                max_tokens=512,
+            )
+            raw = raw.strip()
+            # Strip markdown fences if the model adds them
+            if raw.startswith("```"):
+                lines = raw.split("\n")
+                raw = "\n".join(lines[1:])
+                if "```" in raw:
+                    raw = raw[:raw.rfind("```")].strip()
+            commands = json.loads(raw)
+            if isinstance(commands, list) and len(commands) >= 2:
+                valid = [str(c).strip() for c in commands if str(c).strip()]
+                if valid:
+                    return valid[:8]
+        except Exception:
+            pass
+        return None
+
+    # ── Plan building ─────────────────────────────────────────────────────────
+
+    def _build_plan(self, goal: str, sub_commands: list[str],
+                    method: str = "heuristic") -> GoalPlan:
+        subtasks = [
+            SubTask(
+                task_id=str(uuid.uuid4())[:8],
+                description=cmd[:120],
+                command=cmd,
+                max_attempts=self.max_retries,
+            )
+            for cmd in sub_commands
+        ]
+        return GoalPlan(
+            goal=goal,
+            subtasks=subtasks,
+            total_steps=len(subtasks),
+            decomposition_method=method,
+        )
+
+    # ── Main execution loop ───────────────────────────────────────────────────
 
     async def execute_goal(self, goal: str,
                             emit: Callable[[str, dict], None]) -> None:
-        plan = self._build_plan(goal)
+        # Attempt LLM decomposition first; fall back to heuristics
+        sub_commands = await self._llm_decompose_goal(goal)
+        method = "llm" if sub_commands else "heuristic"
+        if not sub_commands:
+            sub_commands = decompose_goal(goal)
+
+        plan = self._build_plan(goal, sub_commands, method=method)
         self._active_goals[plan.goal_id] = plan
 
         emit("goal_start", {
@@ -142,6 +239,7 @@ class GoalSupervisor:
             "subtask_count": len(plan.subtasks),
             "subtasks": [{"id": t.task_id, "description": t.description}
                          for t in plan.subtasks],
+            "decomposition_method": method,
         })
 
         start_time = time.time()
@@ -202,21 +300,9 @@ class GoalSupervisor:
             "steps_completed": plan.completed_steps,
             "steps_total": len(plan.subtasks),
             "elapsed": round(time.time() - start_time, 1),
+            "decomposition_method": method,
         })
         self._active_goals.pop(plan.goal_id, None)
-
-    def _build_plan(self, goal: str) -> GoalPlan:
-        sub_commands = decompose_goal(goal)
-        subtasks = [
-            SubTask(
-                task_id=str(uuid.uuid4())[:8],
-                description=cmd[:120],
-                command=cmd,
-                max_attempts=self.max_retries,
-            )
-            for cmd in sub_commands
-        ]
-        return GoalPlan(goal=goal, subtasks=subtasks, total_steps=len(subtasks))
 
     async def _execute_subtask(self, subtask: SubTask, goal_id: str,
                                 emit: Callable[[str, dict], None]) -> bool:
@@ -255,6 +341,11 @@ class GoalSupervisor:
                     elif event.type == "cancelled":
                         subtask.status = "skipped"
                         return False
+                    elif event.type in ("goal_complete",):
+                        # Nested goal execution succeeded
+                        subtask.result_summary = "goal completed"
+                        subtask.status = "success"
+                        return True
 
                 if subtask.status != "success":
                     subtask.status = "failed"
@@ -286,6 +377,8 @@ class GoalSupervisor:
                 "status": g.status,
                 "completed": g.completed_steps,
                 "total": g.total_steps,
+                "decomposition_method": g.decomposition_method,
+                "elapsed": round(time.time() - g.created_at, 1),
             }
             for g in self._active_goals.values()
         ]

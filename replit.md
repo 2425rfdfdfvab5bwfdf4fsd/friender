@@ -1,4 +1,4 @@
-# PACCA v5.2 — Personal AI Computer-Control Agent
+# PACCA v7.0 — Personal AI Computer-Control Agent
 
 A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture.
 
