@@ -19,18 +19,29 @@ import uvicorn
 from pacca.agent import PACCAAgent, AgentEvent
 from pacca.config import PACCAConfig
 from pacca.personal import ReminderManager, TodoManager
+from pacca.personal.profile import UserProfile
+from pacca.personal.notes import NotesManager
+from pacca.personal.projects import ProjectsManager
 from pacca.ui.onboarding import (
     DISCLOSURE_TEXT, is_onboarding_complete, complete_onboarding
 )
 from pacca.tools.registry import TOOL_REGISTRY, list_tools
 from pacca.models.audit_log import AuditLogger
 from pacca.workflows.workflow_manager import WorkflowManager, parse_workflow_from_command
+from pacca.intelligence.morning_brief import generate_morning_brief
+from pacca.intelligence.pattern_detector import get_nudges
+from pacca.intelligence.notifications import NotificationManager
+from pacca.integrations import google_calendar
 
 _agent: PACCAAgent | None = None
 _config: PACCAConfig | None = None
 _workflow_manager: WorkflowManager | None = None
 _reminders = ReminderManager()
 _todos = TodoManager()
+_profile = UserProfile.load()
+_notes = NotesManager()
+_projects = ProjectsManager()
+_notif_manager = NotificationManager()
 
 
 @asynccontextmanager
@@ -616,6 +627,240 @@ async def update_todo(todo_id: str, body: dict):
 async def delete_todo(todo_id: str):
     ok = _todos.delete(todo_id)
     return {"status": "ok" if ok else "not_found"}
+
+
+# ── Profile API ───────────────────────────────────────────────────────────────
+
+@app.get("/api/profile")
+async def get_profile():
+    return _profile.to_dict()
+
+
+@app.post("/api/profile")
+async def update_profile(body: dict):
+    global _profile
+    _profile.update(body)
+    return {"status": "ok", "profile": _profile.to_dict()}
+
+
+# ── Notes API ─────────────────────────────────────────────────────────────────
+
+@app.get("/api/notes")
+async def list_notes(limit: int = 100, search: str = "", tag: str = ""):
+    notes = _notes.list_notes(limit=limit, search=search, tag=tag)
+    return {"notes": notes, "total": _notes.note_count(), "tags": _notes.all_tags()}
+
+
+@app.post("/api/notes")
+async def create_note(body: dict):
+    title = body.get("title", "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="title required")
+    note = _notes.create_note(
+        title=title,
+        content=body.get("content", ""),
+        tags=body.get("tags", []),
+        pinned=body.get("pinned", False),
+    )
+    return {"status": "ok", "note": note}
+
+
+@app.get("/api/notes/{note_id}")
+async def get_note(note_id: int):
+    note = _notes.get_note(note_id)
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return note
+
+
+@app.put("/api/notes/{note_id}")
+async def update_note(note_id: int, body: dict):
+    note = _notes.update_note(
+        note_id,
+        title=body.get("title"),
+        content=body.get("content"),
+        tags=body.get("tags"),
+        pinned=body.get("pinned"),
+    )
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return {"status": "ok", "note": note}
+
+
+@app.delete("/api/notes/{note_id}")
+async def delete_note(note_id: int):
+    deleted = _notes.delete_note(note_id)
+    return {"status": "ok" if deleted else "not_found"}
+
+
+# ── Projects API ──────────────────────────────────────────────────────────────
+
+@app.get("/api/projects")
+async def list_projects(status: str = ""):
+    projects = _projects.list_projects(status=status)
+    return {"projects": projects, "total": _projects.project_count()}
+
+
+@app.post("/api/projects")
+async def create_project(body: dict):
+    name = body.get("name", "").strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="name required")
+    project = _projects.create_project(
+        name=name,
+        description=body.get("description", ""),
+        color=body.get("color", ""),
+        due_date=body.get("due_date", ""),
+        tags=body.get("tags", []),
+    )
+    return {"status": "ok", "project": project}
+
+
+@app.put("/api/projects/{project_id}")
+async def update_project(project_id: int, body: dict):
+    project = _projects.update_project(project_id, **body)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"status": "ok", "project": project}
+
+
+@app.delete("/api/projects/{project_id}")
+async def delete_project(project_id: int):
+    deleted = _projects.delete_project(project_id)
+    return {"status": "ok" if deleted else "not_found"}
+
+
+@app.get("/api/projects/{project_id}/tasks")
+async def list_project_tasks(project_id: int, status: str = ""):
+    tasks = _projects.list_tasks(project_id, status=status)
+    return {"tasks": tasks}
+
+
+@app.post("/api/projects/{project_id}/tasks")
+async def add_project_task(project_id: int, body: dict):
+    title = body.get("title", "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="title required")
+    task = _projects.add_task(
+        project_id=project_id,
+        title=title,
+        description=body.get("description", ""),
+        priority=body.get("priority", "medium"),
+        due_date=body.get("due_date", ""),
+        time_estimate=body.get("time_estimate", 0),
+        tags=body.get("tags", []),
+    )
+    if not task:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"status": "ok", "task": task}
+
+
+@app.put("/api/projects/{project_id}/tasks/{task_id}")
+async def update_project_task(project_id: int, task_id: int, body: dict):
+    task = _projects.update_task(task_id, **body)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"status": "ok", "task": task}
+
+
+@app.delete("/api/projects/{project_id}/tasks/{task_id}")
+async def delete_project_task(project_id: int, task_id: int):
+    deleted = _projects.delete_task(task_id)
+    return {"status": "ok" if deleted else "not_found"}
+
+
+# ── Morning Brief API ─────────────────────────────────────────────────────────
+
+@app.get("/api/morning-brief")
+async def get_morning_brief(force: bool = False):
+    agent = get_agent()
+    todos = _todos.list_all(include_done=False)
+    reminders = _reminders.list_all(include_done=False)
+    nudges = get_nudges(
+        todos=todos,
+        reminders=reminders,
+        projects_manager=_projects,
+        memory=agent.memory,
+    )
+    brief = await generate_morning_brief(
+        profile=_profile,
+        todos_data=todos,
+        reminders_data=reminders,
+        projects_manager=_projects,
+        memory=agent.memory,
+        nudges=nudges,
+        llm_client=agent.llm_client,
+        force=force,
+    )
+    return brief
+
+
+# ── Nudges API ────────────────────────────────────────────────────────────────
+
+@app.get("/api/nudges")
+async def get_nudges_endpoint():
+    agent = get_agent()
+    todos = _todos.list_all(include_done=False)
+    reminders = _reminders.list_all(include_done=False)
+    nudges = get_nudges(
+        todos=todos,
+        reminders=reminders,
+        projects_manager=_projects,
+        memory=agent.memory,
+    )
+    return {"nudges": nudges}
+
+
+# ── Notifications API ─────────────────────────────────────────────────────────
+
+@app.get("/api/notifications")
+async def list_notifications(limit: int = 50, unread_only: bool = False):
+    notifs = _notif_manager.list_notifications(limit=limit, unread_only=unread_only)
+    return {"notifications": notifs, "unread_count": _notif_manager.unread_count()}
+
+
+@app.post("/api/notifications/{notif_id}/dismiss")
+async def dismiss_notification(notif_id: int):
+    ok = _notif_manager.dismiss(notif_id)
+    return {"status": "ok" if ok else "not_found", "unread_count": _notif_manager.unread_count()}
+
+
+@app.post("/api/notifications/dismiss-all")
+async def dismiss_all_notifications():
+    count = _notif_manager.dismiss_all()
+    return {"status": "ok", "dismissed": count}
+
+
+# ── Calendar API ──────────────────────────────────────────────────────────────
+
+@app.get("/api/calendar/status")
+async def calendar_status():
+    return {
+        "configured": google_calendar.is_configured(),
+        "setup_instructions": "" if google_calendar.is_configured() else google_calendar.get_setup_instructions(),
+    }
+
+
+@app.get("/api/calendar/events")
+async def get_calendar_events(days: int = 7):
+    result = await asyncio.to_thread(google_calendar.get_events, days_ahead=days)
+    return result
+
+
+@app.post("/api/calendar/events")
+async def create_calendar_event(body: dict):
+    title = body.get("title", "").strip()
+    start = body.get("start", "").strip()
+    end = body.get("end", "").strip()
+    if not title or not start or not end:
+        raise HTTPException(status_code=400, detail="title, start, and end required")
+    result = await asyncio.to_thread(
+        google_calendar.create_event,
+        title=title, start=start, end=end,
+        description=body.get("description", ""),
+        location=body.get("location", ""),
+    )
+    return result
 
 
 @app.websocket("/ws")
