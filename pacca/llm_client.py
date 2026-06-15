@@ -273,6 +273,10 @@ class LLMClient:
     async def complete_text(self, prompt: str, max_tokens: int = 1000) -> str:
         return await self._call("", prompt, max_tokens=max_tokens)
 
+    async def aask(self, system: str = "", user: str = "", max_tokens: int = 1000) -> str:
+        """Public async ask — used by morning brief, pattern detector, and other modules."""
+        return await self._call(system, user, max_tokens)
+
     async def _call(self, system: str, user: str, max_tokens: int = 2048) -> str:
         if self.provider == "anthropic":
             return await self._call_anthropic(system, user, max_tokens)

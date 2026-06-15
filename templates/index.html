@@ -482,6 +482,31 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .audit-entry{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;margin-bottom:4px;font-size:10.5px}
 .audit-time{color:var(--muted)}.audit-action{color:var(--accent2)}.audit-detail{color:var(--text2)}
 
+/* Onboarding wizard */
+.ob-steps{display:flex;align-items:center;gap:0;margin-bottom:22px}
+.ob-step-dot{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:var(--surface3);border:1.5px solid var(--border);color:var(--muted);flex-shrink:0;transition:all .2s}
+.ob-step-dot.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.ob-step-dot.done{background:rgba(var(--success-rgb),.2);border-color:var(--success);color:var(--success)}
+.ob-step-line{flex:1;height:1.5px;background:var(--border);margin:0 4px;transition:background .2s}
+.ob-step-line.done{background:var(--success)}
+.ob-field{margin-bottom:13px}
+.ob-label{font-size:10.5px;color:var(--text2);margin-bottom:5px;display:block;font-weight:600}
+.ob-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;outline:none;box-sizing:border-box}
+.ob-input:focus{border-color:rgba(var(--accent-rgb),.5)}
+.ob-select{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;outline:none;cursor:pointer}
+.ob-nav{display:flex;gap:8px;margin-top:18px}
+.ob-next{flex:1;background:var(--accent);color:#fff;border:none;padding:10px;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+.ob-next:hover{background:var(--accent2)}
+.ob-back{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:10px 16px;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;cursor:pointer}
+.ob-skip{background:transparent;border:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);text-decoration:underline;padding:0;margin-top:8px;display:block;text-align:center}
+/* Context chips after response */
+.ctx-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;padding:0 0 4px 0}
+.ctx-chip{font-size:10.5px;background:transparent;border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:16px;cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font);display:inline-flex;align-items:center;gap:4px}
+.ctx-chip:hover{border-color:rgba(var(--accent-rgb),.5);color:var(--accent);background:rgba(var(--accent-rgb),.07)}
+/* Browser notification button */
+.notif-enable-btn{background:transparent;border:none;cursor:pointer;font-size:15px;padding:4px 6px;color:var(--text2);border-radius:var(--radius-sm);transition:color .15s}
+.notif-enable-btn:hover{color:var(--accent)}
+.notif-enable-btn.enabled{color:var(--success)}
 /* Settings panel */
 .setting-group{margin-bottom:14px}
 .setting-label{font-size:10.5px;color:var(--text2);margin-bottom:5px;display:block;font-weight:600}
@@ -616,7 +641,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
           <button id="notif-dismiss-all" onclick="dismissAllNotifs()">Mark all read</button>
         </div>
         <div id="notif-list"><div id="notif-empty">No notifications</div></div>
-        <div id="notif-footer"><a onclick="dismissAllNotifs()">Clear all</a></div>
+        <div id="notif-footer">
+          <a onclick="dismissAllNotifs()">Clear all</a>
+          <a id="desktop-notif-link" onclick="requestBrowserNotifications()" style="margin-left:10px;color:var(--muted)" title="Enable desktop notifications">🖥 Desktop alerts</a>
+        </div>
       </div>
     </div>
   </div>
@@ -810,19 +838,100 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 <div id="onboarding-overlay" class="hidden">
   <div id="onboarding-box">
     <div id="onboarding-title">Welcome to PACCA</div>
-    <div id="onboarding-subtitle">Personal AI Computer-Control Agent — v7.0</div>
-    <div id="disclosure-box"></div>
-    <div class="onboarding-provider-row">
-      <span class="onboarding-provider-label">AI Provider:</span>
-      <select id="onboarding-provider">
-        <option value="anthropic">Anthropic (Claude)</option>
-        <option value="openai">OpenAI (GPT)</option>
-        <option value="gemini">Google (Gemini)</option>
-      </select>
+    <div id="onboarding-subtitle">Let's set up your personal AI assistant</div>
+
+    <!-- Step indicator -->
+    <div class="ob-steps">
+      <div class="ob-step-dot active" id="ob-dot-1">1</div>
+      <div class="ob-step-line" id="ob-line-1"></div>
+      <div class="ob-step-dot" id="ob-dot-2">2</div>
+      <div class="ob-step-line" id="ob-line-2"></div>
+      <div class="ob-step-dot" id="ob-dot-3">3</div>
+      <div class="ob-step-line" id="ob-line-3"></div>
+      <div class="ob-step-dot" id="ob-dot-4">4</div>
     </div>
-    <div class="onboarding-btns">
-      <button id="onboarding-decline" onclick="declineOnboarding()">Decline</button>
-      <button id="onboarding-accept" onclick="acceptOnboarding()">Accept &amp; Start →</button>
+
+    <!-- Step 1: Identity -->
+    <div id="ob-step-1">
+      <div class="ob-field">
+        <label class="ob-label">What's your name?</label>
+        <input class="ob-input" id="ob-name" placeholder="e.g. Alex" autofocus>
+      </div>
+      <div class="ob-field">
+        <label class="ob-label">Your role or title</label>
+        <input class="ob-input" id="ob-role" placeholder="e.g. Software Engineer, Founder, Student">
+      </div>
+      <div class="ob-field">
+        <label class="ob-label">Company or project <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input class="ob-input" id="ob-company" placeholder="e.g. Acme Corp">
+      </div>
+      <div class="ob-nav">
+        <button class="ob-next" onclick="obNext(1)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Preferences -->
+    <div id="ob-step-2" style="display:none">
+      <div class="ob-field">
+        <label class="ob-label">Your timezone</label>
+        <select class="ob-select" id="ob-tz">
+          <option value="UTC">UTC</option>
+          <option value="America/New_York">Eastern (ET)</option>
+          <option value="America/Chicago">Central (CT)</option>
+          <option value="America/Denver">Mountain (MT)</option>
+          <option value="America/Los_Angeles">Pacific (PT)</option>
+          <option value="Europe/London">London (GMT)</option>
+          <option value="Europe/Paris">Paris (CET)</option>
+          <option value="Asia/Kolkata">India (IST)</option>
+          <option value="Asia/Tokyo">Tokyo (JST)</option>
+          <option value="Asia/Singapore">Singapore (SGT)</option>
+          <option value="Australia/Sydney">Sydney (AEST)</option>
+        </select>
+      </div>
+      <div class="ob-field">
+        <label class="ob-label">How should I communicate?</label>
+        <select class="ob-select" id="ob-style">
+          <option value="balanced">Balanced — clear and conversational</option>
+          <option value="terse">Terse — short, direct answers</option>
+          <option value="detailed">Detailed — thorough explanations</option>
+        </select>
+      </div>
+      <div class="ob-field">
+        <label class="ob-label">Primary use cases <span style="color:var(--muted);font-weight:400">(optional)</span></label>
+        <input class="ob-input" id="ob-usecases" placeholder="e.g. coding, research, task management">
+      </div>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="obBack(2)">← Back</button>
+        <button class="ob-next" onclick="obNext(2)">Next →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: AI Provider -->
+    <div id="ob-step-3" style="display:none">
+      <div class="ob-field">
+        <label class="ob-label">AI Provider</label>
+        <select class="ob-select" id="ob-provider">
+          <option value="anthropic">Anthropic (Claude) — recommended</option>
+          <option value="openai">OpenAI (GPT-4)</option>
+          <option value="gemini">Google (Gemini)</option>
+        </select>
+      </div>
+      <div id="ob-disclosure-box" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:10px;color:var(--muted);max-height:100px;overflow-y:auto;margin-top:8px;line-height:1.5"></div>
+      <div class="ob-nav">
+        <button class="ob-back" onclick="obBack(3)">← Back</button>
+        <button class="ob-next" onclick="obNext(3)">Next →</button>
+      </div>
+      <button class="ob-skip" onclick="declineOnboarding()">Skip setup — run in offline mode</button>
+    </div>
+
+    <!-- Step 4: Ready -->
+    <div id="ob-step-4" style="display:none;text-align:center">
+      <div style="font-size:32px;margin-bottom:12px">🎉</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px" id="ob-ready-title">You're all set!</div>
+      <div style="font-size:11.5px;color:var(--text2);line-height:1.7;margin-bottom:20px" id="ob-ready-msg">PACCA is ready to help you.</div>
+      <div class="ob-nav">
+        <button class="ob-next" onclick="obFinish()" style="font-size:14px;padding:12px">Start using PACCA →</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1225,6 +1334,7 @@ function onCompleted(d) {
   S.running = false; setSendBtn(false);
   const b = S.activeBubble;
   finalizeExecBubble(b, d.steps_executed||0, d.steps_executed||0, false);
+  if (b) showContextualChips(b, d.output || '');
   S.activeBubble = null;
   refreshSidePanels();
 }
@@ -1244,8 +1354,54 @@ function onAdvisoryThinking(d) {
 
 function onAdvisory(d) {
   S.running = false; setSendBtn(false);
-  showTextResponse(S.activeBubble, d.response || '');
+  const b = S.activeBubble;
+  showTextResponse(b, d.response || '');
+  if (b) showContextualChips(b, d.response || '');
   S.activeBubble = null;
+}
+
+// ── Contextual action chips after assistant response ──────────────────────────
+function showContextualChips(bubble, responseText) {
+  if (!bubble) return;
+  const text = (responseText || '').toLowerCase();
+  const chips = [];
+  chips.push({icon:'📌', label:'Save to Notes', action:() => {
+    switchPanel('notes');
+    openNoteEditor(null);
+    const snip = (responseText||'').slice(0,200).replace(/\n+/g,' ').trim();
+    document.getElementById('note-content-input').value = responseText || '';
+    document.getElementById('note-title-input').value = 'PACCA — ' + new Date().toLocaleDateString();
+    toast('Note editor opened — edit and save', 'info');
+  }});
+  chips.push({icon:'✓', label:'Create Task', action:() => {
+    const inp = document.getElementById('cmd-input');
+    inp.value = 'add task: ';
+    inp.focus();
+    autoResize(inp);
+  }});
+  if (text.includes('meeting') || text.includes('schedule') || text.includes('calendar') || text.includes('event')) {
+    chips.push({icon:'📅', label:'Add to Calendar', action:() => {
+      switchPanel('calendar');
+      toast('Open Google Calendar to add this event', 'info');
+    }});
+  }
+  chips.push({icon:'↩', label:'Follow up', action:() => {
+    document.getElementById('cmd-input').focus();
+  }});
+  const bar = document.createElement('div');
+  bar.className = 'ctx-chips';
+  bar.innerHTML = chips.map((c,i) =>
+    `<button class="ctx-chip" id="ctxc-${i}">${c.icon} ${c.label}</button>`
+  ).join('');
+  const msgBody = bubble.querySelector('.msg-body');
+  if (msgBody) {
+    msgBody.appendChild(bar);
+    chips.forEach((c,i) => {
+      const btn = document.getElementById('ctxc-'+i);
+      if (btn) btn.addEventListener('click', () => { c.action(); bar.remove(); });
+    });
+    scrollToBottom();
+  }
 }
 
 function onConfirmRequired(d) {
@@ -1670,8 +1826,40 @@ async function loadNotifications() {
     const badge = document.getElementById('notif-badge');
     if (cnt > 0) { badge.textContent = cnt; badge.classList.add('show'); }
     else badge.classList.remove('show');
+    // Show browser notification for new unread items
+    if (cnt > 0 && cnt > (S.notifCount||0) && Notification.permission === 'granted') {
+      const newest = (d.notifications||[]).find(n => !n.read);
+      if (newest) {
+        new Notification('PACCA — ' + (newest.title||'New notification'), {
+          body: newest.message || '',
+          icon: '/static/favicon.ico',
+          tag: 'pacca-notif-' + newest.id,
+          silent: false,
+        });
+      }
+    }
     S.notifCount = cnt;
+    // Update desktop alerts link
+    const lnk = document.getElementById('desktop-notif-link');
+    if (lnk) {
+      if (Notification.permission === 'granted') { lnk.textContent = '✓ Desktop alerts on'; lnk.style.color = 'var(--success)'; }
+      else if (Notification.permission === 'denied') { lnk.textContent = '🚫 Alerts blocked'; lnk.style.color = 'var(--danger)'; }
+    }
   } catch(_){}
+}
+
+async function requestBrowserNotifications() {
+  if (!('Notification' in window)) { toast('Browser notifications not supported', 'warn'); return; }
+  if (Notification.permission === 'granted') { toast('Desktop notifications already enabled ✓', 'ok'); return; }
+  if (Notification.permission === 'denied') { toast('Notifications blocked — enable in browser settings', 'warn'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    toast('Desktop notifications enabled ✓', 'ok');
+    new Notification('PACCA notifications active', {body: 'You\'ll be notified of reminders and alerts.', silent: true});
+    loadNotifications();
+  } else {
+    toast('Notification permission denied', 'warn');
+  }
 }
 
 function renderNotifications(notifs) {
@@ -1935,9 +2123,21 @@ function renderNotes(notes) {
     return `<div class="note-card ${n.pinned?'pinned':''}" onclick="openNoteEditor(${JSON.stringify(n)})">
       <div class="note-title">${n.pinned?'<span class="note-pin-icon">📌</span>':''}${esc(n.title)}</div>
       ${preview?`<div class="note-preview">${esc(preview)}</div>`:''}
-      <div class="note-meta">${tagsHtml}<span class="note-date">${d}</span><button class="note-del-btn" onclick="deleteNote(event,${n.id})">✕</button></div>
+      <div class="note-meta">${tagsHtml}<span class="note-date">${d}</span>
+        <button class="note-del-btn" title="${n.pinned?'Unpin':'Pin'}" onclick="toggleNotePin(event,${n.id},${n.pinned?'true':'false'})">${n.pinned?'📌':'📍'}</button>
+        <button class="note-del-btn" onclick="deleteNote(event,${n.id})">✕</button>
+      </div>
     </div>`;
   }).join('');
+}
+
+async function toggleNotePin(e, id, currentlyPinned) {
+  e.stopPropagation();
+  try {
+    await fetch(`/api/notes/${id}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({pinned:!currentlyPinned})});
+    toast(currentlyPinned ? 'Note unpinned' : 'Note pinned 📌', 'ok');
+    loadNotes();
+  } catch(e) { toast('Failed to update note', 'err'); }
 }
 
 function openNoteEditor(note) {
@@ -2419,20 +2619,81 @@ async function deleteReminder(id) {
   await fetch(`/api/reminders/${id}`, {method:'DELETE'}); loadAssistantPanel();
 }
 
-// ── Onboarding ────────────────────────────────────────────────────────────────
+// ── Onboarding wizard ─────────────────────────────────────────────────────────
+const _OB = { step: 1, data: {} };
+
 async function showOnboarding() {
   try {
     const r = await fetch('/api/disclosure');
     const d = await r.json();
-    document.getElementById('disclosure-box').textContent = d.text || '';
+    const box = document.getElementById('ob-disclosure-box');
+    if (box) box.textContent = d.text || '';
   } catch(_){}
+  _OB.step = 1;
+  _obShowStep(1);
   document.getElementById('onboarding-overlay').classList.remove('hidden');
 }
 
-async function acceptOnboarding() {
-  const provider = document.getElementById('onboarding-provider').value;
-  await fetch('/api/onboard', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider})});
+function _obShowStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('ob-step-'+i).style.display = i === n ? '' : 'none';
+    const dot = document.getElementById('ob-dot-'+i);
+    if (dot) dot.className = 'ob-step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+    if (i < 4) {
+      const line = document.getElementById('ob-line-'+i);
+      if (line) line.className = 'ob-step-line' + (i < n ? ' done' : '');
+    }
+  });
+}
+
+function obNext(fromStep) {
+  if (fromStep === 1) {
+    _OB.data.name = (document.getElementById('ob-name').value||'').trim();
+    _OB.data.role = (document.getElementById('ob-role').value||'').trim();
+    _OB.data.company = (document.getElementById('ob-company').value||'').trim();
+    _OB.step = 2; _obShowStep(2);
+  } else if (fromStep === 2) {
+    _OB.data.timezone = document.getElementById('ob-tz').value;
+    _OB.data.communication_style = document.getElementById('ob-style').value;
+    _OB.data.use_cases = (document.getElementById('ob-usecases').value||'').trim();
+    _OB.step = 3; _obShowStep(3);
+  } else if (fromStep === 3) {
+    _OB.data.provider = document.getElementById('ob-provider').value;
+    const name = _OB.data.name || 'there';
+    const readyTitle = document.getElementById('ob-ready-title');
+    const readyMsg = document.getElementById('ob-ready-msg');
+    if (readyTitle) readyTitle.textContent = `You're all set${name !== 'there' ? ', ' + name : ''}!`;
+    if (readyMsg) readyMsg.textContent = `PACCA is ready to help you with ${_OB.data.use_cases || 'tasks, research, and more'}.`;
+    _OB.step = 4; _obShowStep(4);
+  }
+}
+
+function obBack(fromStep) {
+  _OB.step = fromStep - 1; _obShowStep(_OB.step);
+}
+
+async function obFinish() {
+  const payload = {
+    name: _OB.data.name,
+    role: _OB.data.role,
+    company: _OB.data.company,
+    timezone: _OB.data.timezone || 'UTC',
+    communication_style: _OB.data.communication_style || 'balanced',
+    onboarding_complete: true,
+    provider: _OB.data.provider || 'anthropic',
+  };
+  try {
+    await fetch('/api/profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    await fetch('/api/onboard', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider: payload.provider})});
+    if (payload.name) {
+      S.profile = S.profile || {};
+      S.profile.name = payload.name;
+      S.profile.initials = payload.name[0].toUpperCase();
+      renderProfileSection(S.profile);
+    }
+  } catch(_){}
   document.getElementById('onboarding-overlay').classList.add('hidden');
+  toast(`Welcome${_OB.data.name ? ', ' + _OB.data.name : ''}! 👋`, 'ok', 3000);
   if (!S.briefShown) { S.briefShown = true; loadMorningBrief(); }
 }
 
