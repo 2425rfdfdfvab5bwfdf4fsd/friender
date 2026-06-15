@@ -186,9 +186,125 @@ class MemoryManager:
             self._run_implicit_preference_detection()
 
     def _prune_episodic(self, keep_days: int = 90) -> None:
+        """Delete episodic records older than keep_days that were never compressed."""
         cutoff = time.time() - keep_days * 86400
         self._conn.execute("DELETE FROM episodic WHERE created_at < ?", (cutoff,))
         self._conn.commit()
+
+    def compress_old_sessions(
+        self,
+        days: int = 7,
+        llm_summary_fn=None,
+    ) -> dict:
+        """Summarize episodic records older than `days` days into semantic memory.
+
+        Gap #2 — MemoryCompressor:
+        - Groups tasks older than `days` by calendar-day × intent_domain
+        - Produces a 1–2 sentence summary per group (deterministic, or via LLM)
+        - Stores each summary in semantic_memory with source="compressed_session"
+        - Deletes the original episodic rows to keep the DB lean
+
+        Args:
+            days: Age threshold in days (default 7)
+            llm_summary_fn: Optional async/sync callable(text) -> str for LLM summaries.
+                            Pass None to use deterministic template summaries.
+
+        Returns:
+            {"compressed": int, "groups": int, "skipped": int}
+        """
+        import math as _math
+        from collections import defaultdict as _dd
+
+        cutoff = time.time() - days * 86400
+        rows = self._conn.execute(
+            """SELECT id, task_id, command, intent_verb, intent_domain,
+                      outcome, steps_executed, files_affected, created_at
+               FROM episodic
+               WHERE created_at < ?
+               ORDER BY created_at ASC
+               LIMIT 500""",
+            (cutoff,),
+        ).fetchall()
+
+        if not rows:
+            return {"compressed": 0, "groups": 0, "skipped": 0}
+
+        # ── Group by (calendar-day, domain) ──────────────────────────────────
+        groups: dict[tuple, list] = _dd(list)
+        for r in rows:
+            day = time.strftime("%Y-%m-%d", time.localtime(r["created_at"]))
+            domain = r["intent_domain"] or "general"
+            groups[(day, domain)].append(r)
+
+        compressed_total = 0
+        groups_written = 0
+        skipped = 0
+
+        for (day, domain), g_rows in groups.items():
+            try:
+                # ── Build deterministic summary ───────────────────────────
+                verbs: Counter = Counter(
+                    r["intent_verb"] for r in g_rows if r["intent_verb"]
+                )
+                outcomes: Counter = Counter(r["outcome"] for r in g_rows)
+                n = len(g_rows)
+                ok = outcomes.get("completed", 0)
+                top_verb = verbs.most_common(1)[0][0] if verbs else "executed tasks"
+                sample_cmds = [r["command"][:70] for r in g_rows[:4]]
+                summary = (
+                    f"On {day}, {n} {domain} task(s) were completed "
+                    f"({ok}/{n} succeeded). "
+                    f"Primary action: {top_verb}. "
+                    f"Examples: {'; '.join(sample_cmds)}."
+                )
+
+                # ── Optionally upgrade via LLM ────────────────────────────
+                if llm_summary_fn is not None:
+                    bullet_list = "\n".join(
+                        f"- {r['command'][:80]} ({r['outcome']})" for r in g_rows
+                    )
+                    prompt = (
+                        f"Summarize these {n} computer-control tasks in 1–2 sentences, "
+                        f"focusing on what was accomplished and any notable outcomes.\n\n"
+                        f"{bullet_list}"
+                    )
+                    try:
+                        llm_result = llm_summary_fn(prompt)
+                        # Support both sync and async callables
+                        if hasattr(llm_result, "__await__"):
+                            import asyncio as _aio
+                            try:
+                                loop = _aio.get_running_loop()
+                                # Can't await inside sync method; fall back
+                            except RuntimeError:
+                                llm_result = _aio.run(llm_result)
+                                if llm_result:
+                                    summary = llm_result.strip()
+                    except Exception:
+                        pass  # Keep deterministic summary on LLM error
+
+                # ── Persist compressed summary ─────────────────────────────
+                self.store_knowledge(
+                    summary,
+                    source="compressed_session",
+                    tags=["compressed", domain, day],
+                )
+
+                # ── Delete original episodic rows ──────────────────────────
+                ids = [r["id"] for r in g_rows]
+                self._conn.execute(
+                    f"DELETE FROM episodic WHERE id IN ({','.join('?' * len(ids))})",
+                    ids,
+                )
+                self._conn.commit()
+
+                compressed_total += n
+                groups_written += 1
+
+            except Exception:
+                skipped += len(g_rows)
+
+        return {"compressed": compressed_total, "groups": groups_written, "skipped": skipped}
 
     def recent_tasks(self, limit: int = 20, domain: str | None = None) -> list[dict]:
         if domain:

@@ -388,6 +388,59 @@ class LLMClient:
                 ) from e
             raise RuntimeError(f"Advisor call failed: {e}") from e
 
+    # ── Gap #3 / Gap #4: Reflection prompt template ──────────────────────────
+
+    REFLECTION_PROMPT = """You are PACCA's error recovery engine. A step in an autonomous goal has just failed.
+
+Your job: suggest ONE revised command string that avoids the same failure.
+
+Rules:
+1. Output ONLY the revised command — no prose, no JSON, no code fences, no explanation.
+2. Use a different approach from the original if possible (alternative tool, different path, etc.).
+3. If the error indicates a missing prerequisite, prefix with: "create that file first, then <command>"
+4. If the error is permission-related, suggest using a path in ~/Downloads or /tmp instead.
+5. If the failure is clearly unrecoverable (network down, binary missing, service unavailable), output exactly: SKIP
+6. Keep the revised command short — PACCA's parser expects a natural-language command string."""
+
+    async def reflect(
+        self,
+        command: str,
+        error: str,
+        goal: str = "",
+        previous_results: list[str] | None = None,
+        max_tokens: int = 200,
+    ) -> str | None:
+        """Ask the LLM to reflect on a step failure and return a revised command.
+
+        Gap #3: ReflectionPrompt — reusable template wired into GoalSupervisor's retry loop.
+
+        Returns:
+            A revised natural-language command string.
+            "SKIP" if the failure is unrecoverable.
+            None if the LLM is unavailable or raises an exception.
+        """
+        if not self.is_available():
+            return None
+
+        context_parts = [f"Goal: {goal}"] if goal else []
+        context_parts.append(f"Failed command: {command}")
+        context_parts.append(f"Error: {error[:400]}")
+        if previous_results:
+            context_parts.append(f"Prior successful steps: {'; '.join(previous_results[:3])}")
+        context_parts.append("\nRevised command:")
+        context = "\n".join(context_parts)
+
+        try:
+            raw = await self._call(self.REFLECTION_PROMPT, context, max_tokens=max_tokens)
+            result = raw.strip()
+            # Strip any accidental code fences the model adds
+            if result.startswith("```"):
+                lines = result.split("\n")
+                result = "\n".join(lines[1:]).rstrip("`").strip()
+            return result or None
+        except Exception:
+            return None
+
     async def complete_text(self, prompt: str, max_tokens: int = 1000) -> str:
         return await self._call("", prompt, max_tokens=max_tokens)
 

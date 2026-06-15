@@ -777,6 +777,10 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
       <!-- Memory panel -->
       <div id="panel-memory" class="panel">
         <span class="mem-count-badge" id="mem-count-label">🧠 0 memories</span>
+        <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+          <button class="panel-btn" onclick="triggerMemoryCompress()" title="Summarize tasks older than 7 days into compressed memory paragraphs">🗜️ Compress (7d)</button>
+          <button class="panel-btn" onclick="triggerDetectPrefs()" title="Scan task history for implicit user preferences">🔍 Detect Prefs</button>
+        </div>
         <input class="mem-search" id="mem-search" placeholder="Search memories…" oninput="searchMemory(this.value)">
         <div id="mem-list"></div>
         <div id="pref-section" style="margin-top:12px"></div>
@@ -2456,6 +2460,53 @@ async function searchMemory(q) {
       ).join('') : '<div class="panel-empty">No matches found.</div>';
     } catch(_){}
   }, 300);
+}
+
+// ── Memory actions ────────────────────────────────────────────────────────────
+async function triggerMemoryCompress() {
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Compressing…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/memory/compress?days=7', {method:'POST'});
+    const d = await r.json();
+    if (d.error) {
+      showToast('❌ Compress failed: ' + d.error, 'error');
+    } else if (d.compressed === 0) {
+      showToast('ℹ️ Nothing to compress — no tasks older than 7 days', 'info');
+    } else {
+      showToast(`🗜️ Compressed ${d.compressed} task(s) across ${d.groups} group(s) into memory`, 'success');
+      loadMemory();
+    }
+  } catch(e) {
+    showToast('❌ Compress error: ' + e.message, 'error');
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+async function triggerDetectPrefs() {
+  const btn = event.currentTarget;
+  const orig = btn.textContent;
+  btn.textContent = '⏳ Scanning…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/memory/detect-preferences', {method:'POST'});
+    const d = await r.json();
+    if (d.count > 0) {
+      showToast(`🔍 Detected ${d.count} implicit preference(s)`, 'success');
+      loadMemory();
+    } else {
+      showToast('ℹ️ No new implicit preferences detected yet', 'info');
+    }
+  } catch(e) {
+    showToast('❌ Detect prefs error: ' + e.message, 'error');
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
 }
 
 // ── Workflows panel ───────────────────────────────────────────────────────────

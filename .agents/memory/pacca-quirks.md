@@ -55,6 +55,26 @@ These dependencies must all be wired in `agent.py` `__init__` (all already done)
 
 `run_code` must appear in BOTH TOOL_DISPATCH (agent.py) AND registry.py to pass PlanValidator.
 
+## MemoryCompressor wires async LLM via aask() in main.py, not sync
+
+`compress_old_sessions()` accepts an optional `llm_summary_fn` (sync callable). The `/api/memory/compress` endpoint wraps `agent.llm_client.aask()` in a nested async def and passes it — the method itself is a coroutine, but the sqlite/compress logic is synchronous. The compress method detects this and falls back gracefully if the loop is already running.
+
+## Pre-goal file snapshots fire on the `plan` AgentEvent
+
+`GoalSupervisor._execute_subtask` now listens for `event.type == "plan"` before execution starts. It reads `step["args_preview"]` for `path`/`destination`/`file_path` fields on snapshot-eligible tools (`create_file`, `move_file`, `copy_file`, `write_tests`, `refactor_code`). Only files that already exist are checkpointed.
+
+## rollback_goal now restores snapshot files AND deletes created files
+
+Formerly only deleted `plan.files_created`. Now also iterates `plan.checkpoint_dir`, stem-matches each snapshot to `files_created` candidates for restoration, then falls back to `~/stem_name` if no match.
+
+## LLMClient.reflect() is the canonical reflection entry point
+
+`supervisor._reflect_on_failure()` now calls `llm_client.reflect()` first (via `hasattr` guard) and falls back to the old `_REFLECT_SYSTEM` direct `_call()` path. Both code paths produce the same output contract: revised command string, "SKIP", or None.
+
+## playwright-stealth 2.0.3 — call stealth_async after new_page, inside _STEALTH_MODE guard
+
+`stealth_async(page)` must be called before any navigation. It's wrapped in `try/except ImportError` so manual UA/webdriver masking still works if the package is missing.
+
 ## T007 skip_steps flow — confirmation_id must be exactly "plan_risk"
 
 The agent's `confirm()` method only stores skip_steps when `confirmation_id == "plan_risk"`. The agent emits `confirmation_required` with `confirmation_id: "plan_risk"` only for the plan-level risk gate (not per-step confirmations). The UI reads checkboxes only when `confId === 'plan_risk'`.

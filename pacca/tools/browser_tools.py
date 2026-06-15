@@ -194,6 +194,15 @@ class BrowserController:
                 )
 
             self._page = await self._context.new_page()
+
+            # Gap #11: playwright-stealth for advanced bot detection evasion
+            # Suppresses CDP fingerprints, canvas noise, WebGL props, etc.
+            if _STEALTH_MODE:
+                try:
+                    from playwright_stealth import stealth_async
+                    await stealth_async(self._page)
+                except ImportError:
+                    pass  # Falls back to manual add_init_script above
         except ImportError:
             raise RuntimeError(
                 "Playwright not installed. Run: pip install playwright && python -m playwright install chromium"

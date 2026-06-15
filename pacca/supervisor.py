@@ -238,11 +238,25 @@ class GoalSupervisor:
     ) -> str | None:
         """Ask LLM to suggest a revised command after a step failure.
 
+        Delegates to llm_client.reflect() (the canonical ReflectionPrompt template)
+        if available; falls back to direct _call with _REFLECT_SYSTEM.
+
         Returns revised command string, "SKIP" to skip the step, or None if LLM unavailable.
         """
         if self._llm_client is None or not self._llm_client.is_available():
             return None
 
+        # Use the canonical reflect() method on LLMClient (Gap #3 proper integration)
+        if hasattr(self._llm_client, "reflect"):
+            return await self._llm_client.reflect(
+                command=command,
+                error=error,
+                goal=goal,
+                previous_results=previous_results,
+                max_tokens=200,
+            )
+
+        # Fallback: direct call with local _REFLECT_SYSTEM template
         context = (
             f"Goal: {goal}\n"
             f"Failed step: {command}\n"
@@ -256,7 +270,7 @@ class GoalSupervisor:
             revised = await self._llm_client._call(
                 _REFLECT_SYSTEM,
                 context,
-                max_tokens=150,
+                max_tokens=200,
             )
             revised = revised.strip().strip('"\'')
             if revised and len(revised) > 4:
@@ -298,11 +312,50 @@ class GoalSupervisor:
             pass
 
     def rollback_goal(self, goal_id: str) -> dict:
-        """Delete files created during the goal and report what was rolled back."""
+        """Roll back a goal by:
+        1. Restoring checkpointed files that existed before execution.
+        2. Deleting files that were newly created during execution.
+        """
         plan = self._active_goals.get(goal_id)
-        results = {"goal_id": goal_id, "deleted": [], "errors": []}
+        results = {
+            "goal_id": goal_id,
+            "restored": [],
+            "deleted": [],
+            "errors": [],
+        }
 
         if plan:
+            # ── 1. Restore pre-execution file snapshots ───────────────────
+            if plan.checkpoint_dir:
+                ckpt = Path(plan.checkpoint_dir)
+                if ckpt.exists():
+                    for snap_file in ckpt.iterdir():
+                        if not snap_file.is_file():
+                            continue
+                        # Find the original path via the episodic record in
+                        # files_created; best-effort restoration uses stem matching
+                        try:
+                            # Attempt to restore to the file path tracked in plan
+                            # We stored: ckpt / original_filename (possibly suffixed)
+                            # We restore to any matching file in files_created or cwd
+                            stem = snap_file.stem.split("_")[0]  # strip counter suffix
+                            restored = False
+                            for candidate in plan.files_created:
+                                cpath = Path(candidate)
+                                if cpath.stem == stem or cpath.name == snap_file.name:
+                                    shutil.copy2(str(snap_file), str(cpath))
+                                    results["restored"].append(str(cpath))
+                                    restored = True
+                                    break
+                            if not restored:
+                                # Copy back to cwd as a best-effort recovery
+                                dest = Path.home() / snap_file.name
+                                shutil.copy2(str(snap_file), str(dest))
+                                results["restored"].append(str(dest))
+                        except Exception as e:
+                            results["errors"].append(f"restore {snap_file.name}: {e}")
+
+            # ── 2. Delete newly created files ─────────────────────────────
             for fp in plan.files_created:
                 try:
                     p = Path(fp)
@@ -310,7 +363,7 @@ class GoalSupervisor:
                         p.unlink()
                         results["deleted"].append(fp)
                 except Exception as e:
-                    results["errors"].append(f"{fp}: {e}")
+                    results["errors"].append(f"delete {fp}: {e}")
 
         # Clean checkpoint dir
         try:
@@ -503,12 +556,31 @@ class GoalSupervisor:
             try:
                 results = []
                 task_id = str(uuid.uuid4())
+                # Tools whose execution may overwrite an EXISTING file on disk.
+                # We snapshot these paths BEFORE execution so rollback can restore them.
+                _SNAPSHOT_TOOLS = frozenset({
+                    "create_file", "move_file", "copy_file",
+                    "write_tests", "refactor_code",
+                })
+                # Which arg keys carry a destination/target file path
+                _PATH_ARGS = ("path", "destination", "file_path")
+
                 async for event in self._run_command(current_command, task_id):
-                    if event.type == "step_complete":
+                    if event.type == "plan":
+                        # Gap #9: snapshot existing files before they can be overwritten
+                        for step in event.data.get("steps", []):
+                            tool = step.get("tool", "")
+                            if tool in _SNAPSHOT_TOOLS:
+                                args = step.get("args_preview", step.get("args", {}))
+                                for field in _PATH_ARGS:
+                                    fp = args.get(field, "")
+                                    if fp and isinstance(fp, str):
+                                        self.checkpoint_file(plan, fp)
+                    elif event.type == "step_complete":
                         r = event.data.get("result", {})
                         if "error" not in r:
                             results.append(str(r)[:100])
-                            # Gap #9: track files created
+                            # Gap #9: track files created (for deletion on rollback)
                             if "created" in r or "saved" in r:
                                 fp = r.get("created") or r.get("saved", "")
                                 if fp and isinstance(fp, str):

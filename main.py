@@ -598,6 +598,36 @@ async def get_weekly_summary(days: int = 7):
         return {"error": str(e), "days": days, "total": 0}
 
 
+@app.post("/api/memory/compress")
+async def compress_memory(days: int = 7):
+    """Gap #2 — MemoryCompressor: summarize episodic records older than `days` days.
+
+    Groups old tasks by calendar-day × domain, writes a paragraph summary into
+    semantic_memory, then deletes the original episodic rows.
+    """
+    agent = get_agent()
+    try:
+        # Wire LLM summarization if available
+        llm_fn = None
+        if agent.llm_client and agent.llm_client.is_available():
+            async def _llm_summarize(prompt: str) -> str:
+                return await agent.llm_client.aask(
+                    system=(
+                        "You are a concise summarizer. Summarize the given list of "
+                        "computer-control tasks in 1–2 clear sentences, focusing on "
+                        "what was accomplished and any notable patterns."
+                    ),
+                    user=prompt,
+                    max_tokens=200,
+                )
+            llm_fn = _llm_summarize
+
+        result = agent.memory.compress_old_sessions(days=days, llm_summary_fn=llm_fn)
+        return {**result, "days_threshold": days}
+    except Exception as e:
+        return {"error": str(e), "compressed": 0, "groups": 0}
+
+
 @app.get("/api/reports")
 async def list_reports(limit: int = 20, search: str = ""):
     """List stored research reports."""
