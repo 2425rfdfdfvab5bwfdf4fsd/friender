@@ -35,6 +35,7 @@ from pacca.intelligence.morning_brief import generate_morning_brief
 from pacca.intelligence.pattern_detector import get_nudges
 from pacca.intelligence.notifications import NotificationManager
 from pacca.integrations import google_calendar
+from pacca.bridge_manager import get_bridge
 
 _agent: PACCAAgent | None = None
 _config: PACCAConfig | None = None
@@ -1112,6 +1113,63 @@ async def delete_calendar_event_api(event_id: str):
     from pacca.tools.calendar_tools import delete_calendar_event
     result = await asyncio.to_thread(delete_calendar_event, event_id=event_id)
     return result
+
+
+@app.get("/api/bridge/status")
+async def bridge_status():
+    return get_bridge().status()
+
+
+@app.websocket("/ws/bridge")
+async def bridge_websocket(ws: WebSocket):
+    """WebSocket endpoint for the local bridge agent."""
+    await ws.accept()
+
+    # Token auth
+    bridge_token = os.environ.get("PACCA_BRIDGE_TOKEN", "")
+    incoming_token = ws.headers.get("X-Bridge-Token", "")
+    if bridge_token and incoming_token != bridge_token:
+        await ws.send_text(json.dumps({"type": "error", "message": "Unauthorized"}))
+        await ws.close(code=4401)
+        return
+
+    # Wait for hello message
+    try:
+        raw_hello = await asyncio.wait_for(ws.receive_text(), timeout=10.0)
+        hello = json.loads(raw_hello)
+    except Exception:
+        await ws.close(code=4400)
+        return
+
+    platform_name = hello.get("platform", "unknown")
+    screen_w = int(hello.get("screen_width", 0))
+    screen_h = int(hello.get("screen_height", 0))
+
+    bridge = get_bridge()
+    await bridge.register(ws, platform_name, screen_w, screen_h)
+
+    try:
+        while True:
+            raw = await ws.receive_text()
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+
+            if msg.get("type") == "ping":
+                await bridge.handle_ping()
+                continue
+
+            cmd_id = msg.get("cmd_id")
+            if cmd_id:
+                await bridge.deliver_response(cmd_id, msg)
+
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        await bridge.unregister()
 
 
 @app.websocket("/ws")

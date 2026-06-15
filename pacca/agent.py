@@ -46,6 +46,7 @@ import pacca.tools.vision_tools as vision_tools
 import pacca.tools.code_tools as code_tools
 import pacca.tools.research_tools as research_tools
 import pacca.tools.calendar_tools as calendar_tools
+import pacca.tools.desktop_tools as desktop_tools
 
 
 @dataclass
@@ -111,6 +112,18 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "list_calendar_events": lambda args: calendar_tools.list_calendar_events(**_clean(args)),
     "create_calendar_event": lambda args: calendar_tools.create_calendar_event(**_clean(args)),
     "delete_calendar_event": lambda args: calendar_tools.delete_calendar_event(**_clean(args)),
+    # Desktop tools (via local bridge agent)
+    "desktop_screenshot": lambda args: desktop_tools.desktop_screenshot(**_clean(args)),
+    "desktop_click": lambda args: desktop_tools.desktop_click(**_clean(args)),
+    "desktop_double_click": lambda args: desktop_tools.desktop_double_click(**_clean(args)),
+    "desktop_right_click": lambda args: desktop_tools.desktop_right_click(**_clean(args)),
+    "desktop_type_text": lambda args: desktop_tools.desktop_type_text(**_clean(args)),
+    "desktop_key": lambda args: desktop_tools.desktop_key(**_clean(args)),
+    "desktop_scroll": lambda args: desktop_tools.desktop_scroll(**_clean(args)),
+    "desktop_move_mouse": lambda args: desktop_tools.desktop_move_mouse(**_clean(args)),
+    "desktop_drag": lambda args: desktop_tools.desktop_drag(**_clean(args)),
+    "desktop_find_and_click": lambda args: desktop_tools.desktop_find_and_click(**_clean(args)),
+    "desktop_read_screen": lambda args: desktop_tools.desktop_read_screen(**_clean(args)),
 }
 
 # Tools whose results can feed the undo manager

@@ -599,6 +599,17 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .cal-status-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;margin-left:auto}
 .cal-status-badge.connected{background:rgba(39,174,96,.15);color:#27ae60}
 .cal-status-badge.disconnected{background:rgba(245,166,35,.15);color:#f5a623}
+.bridge-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 9px;border-radius:20px;font-weight:600;border:1px solid transparent;transition:all .3s;white-space:nowrap}
+.bridge-badge.connected{background:rgba(39,174,96,.12);color:#27ae60;border-color:rgba(39,174,96,.3)}
+.bridge-badge.disconnected{background:var(--surface2);color:var(--muted);border-color:var(--border)}
+#bridge-help-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+#bridge-help-overlay.show{display:flex}
+#bridge-help-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);max-width:540px;width:100%;padding:24px 28px;position:relative}
+#bridge-help-box h3{margin:0 0 12px;font-size:15px;color:var(--text)}
+#bridge-help-box pre{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;font-size:11px;color:var(--accent);overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+#bridge-help-box .step{margin:8px 0;font-size:12px;color:var(--text2);line-height:1.6}
+#bridge-help-box .step b{color:var(--text)}
+#bridge-help-close{position:absolute;top:12px;right:14px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1}
 
 /* ── Onboarding ──────────────────────────────────────────────────────────── */
 #onboarding-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
@@ -692,6 +703,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
   </div>
   <div class="spacer"></div>
   <div id="hdr-right">
+    <span id="bridge-badge" class="bridge-badge disconnected" title="Local bridge — run local_bridge/bridge_agent.py on your computer" onclick="showBridgeHelp()" style="cursor:pointer">🖥 Bridge: Off</span>
     <button class="hdr-icon-btn" id="dryrun-btn" onclick="toggleDryRun()" title="Dry-run mode">🔍 Dry</button>
     <button class="hdr-icon-btn" id="dev-mode-btn" onclick="toggleDevMode()" title="Developer console">⌨ Console</button>
     <div id="notif-wrap">
@@ -3270,6 +3282,57 @@ loadAssistantPanel();
 
 // Periodic notification check
 setInterval(loadNotifications, 60000);
+
+// ── Bridge status polling ──────────────────────────────────────────────────
+async function pollBridgeStatus() {
+  try {
+    const r = await fetch('/api/bridge/status');
+    if (!r.ok) return;
+    const d = await r.json();
+    const badge = document.getElementById('bridge-badge');
+    if (!badge) return;
+    if (d.connected) {
+      badge.className = 'bridge-badge connected';
+      const plat = d.platform ? ` (${d.platform})` : '';
+      const sz = (d.screen_width && d.screen_height) ? ` ${d.screen_width}×${d.screen_height}` : '';
+      badge.textContent = `🖥 Bridge: On${plat}${sz}`;
+      badge.title = `Local bridge connected — ${d.platform} ${d.screen_width}×${d.screen_height}`;
+    } else {
+      badge.className = 'bridge-badge disconnected';
+      badge.textContent = '🖥 Bridge: Off';
+      badge.title = 'Local bridge not connected — click for setup instructions';
+    }
+  } catch(e) {}
+}
+pollBridgeStatus();
+setInterval(pollBridgeStatus, 10000);
+
+function showBridgeHelp() {
+  let el = document.getElementById('bridge-help-overlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'bridge-help-overlay';
+    el.innerHTML = `
+      <div id="bridge-help-box">
+        <button id="bridge-help-close" onclick="document.getElementById('bridge-help-overlay').classList.remove('show')">✕</button>
+        <h3>🖥 Connect Your Computer to PACCA</h3>
+        <div class="step"><b>Step 1</b> — Install the bridge on your computer:</div>
+        <pre>pip install pyautogui pillow websockets</pre>
+        <div class="step"><b>Step 2</b> — Download and run the bridge agent:</div>
+        <pre>python local_bridge/bridge_agent.py --server ${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/bridge</pre>
+        <div class="step"><b>Step 3</b> — The Bridge badge above will turn green when connected.</div>
+        <div class="step" style="margin-top:14px;color:var(--muted)">
+          Once connected, PACCA can take screenshots of your screen, click, type,
+          press keyboard shortcuts, and control any app — just like a human would.
+          Move your mouse to the top-left corner at any time to abort an action.
+        </div>
+      </div>
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+  }
+  el.classList.add('show');
+}
 </script>
 </body>
 </html>
