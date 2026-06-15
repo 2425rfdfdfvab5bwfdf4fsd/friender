@@ -74,7 +74,7 @@ DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(git|commit|diff|stage|repo|repository|branch)\b', re.I), "git"),
     (re.compile(r'\b(docx|xlsx|word|excel|spreadsheet|document)\b', re.I), "document"),
     (re.compile(r'\b(app|application|program|launch|quit|close)\b', re.I), "app"),
-    (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|uptime|resources|hardware|performance|sysmon|stats)\b', re.I), "system"),
+    (re.compile(r'\b(cpu|ram|memory|disk|process|system monitor|system info|system status|system check|system stats|system resources|uptime|resources|hardware|performance|sysmon|stats)\b', re.I), "system"),
     (re.compile(r'\b(file|folder|directory|path|\.pdf|\.txt|\.py|\.js|\.zip)\b', re.I), "file"),
     (re.compile(r'\b(whatsapp|send message|notify|notification|text message)\b', re.I), "messaging"),
     (re.compile(r'\b(image|photo|picture|screenshot|vision|analyze image|describe image|capture)\b', re.I), "vision"),
