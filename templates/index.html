@@ -10,22 +10,22 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
 <style>
 :root {
-  --bg:#030d03; --surface:#071007; --surface2:#0d1a0d; --surface3:#112411;
-  --border:#1a3a1a; --border2:#0f260f;
-  --accent:#00ff41; --accent2:#39ff14; --warn:#f0a500; --danger:#ff3333;
-  --muted:#2d6b2d; --text:#c8ffc8; --text2:#7abf7a;
-  --bblue:#00e676;
-  --btn-fg:#030d03;
-  --confirm-bg:rgba(3,15,3,.92); --confirm-danger-bg:rgba(15,3,3,.92);
-  /* RGB triplets for rgba() tints — update in html.light too */
-  --accent-rgb:0,255,65; --accent2-rgb:57,255,20;
-  --warn-rgb:240,165,0; --danger-rgb:255,51,51; --muted-rgb:45,107,45;
+  --bg:#090c12; --surface:#0d1117; --surface2:#131922; --surface3:#18202c;
+  --border:#1e2a3a; --border2:#162030;
+  --accent:#4f8ef7; --accent2:#7eb8fa; --warn:#f59e0b; --danger:#f04b4b;
+  --muted:#3a5270; --text:#dce6f5; --text2:#8ba3bc;
+  --bblue:#60a5fa;
+  --btn-fg:#ffffff;
+  --confirm-bg:rgba(9,12,18,.94); --confirm-danger-bg:rgba(18,9,9,.94);
+  /* RGB triplets for rgba() tints */
+  --accent-rgb:79,142,247; --accent2-rgb:126,184,250;
+  --warn-rgb:245,158,11; --danger-rgb:240,75,75; --muted-rgb:58,82,112;
   --sidebar-w:320px; --hdr-h:54px; --quickbar-h:42px; --mobile-nav-h:56px;
   --radius:8px; --radius-sm:6px; --radius-lg:14px;
-  --shadow:0 12px 40px rgba(0,0,0,.7);
-  --shadow-sm:0 4px 16px rgba(0,0,0,.45);
-  --glow-accent:0 0 20px rgba(var(--accent-rgb),.2);
-  --glow-green:0 0 16px rgba(var(--accent2-rgb),.18);
+  --shadow:0 12px 40px rgba(0,0,0,.75);
+  --shadow-sm:0 4px 16px rgba(0,0,0,.5);
+  --glow-accent:0 0 20px rgba(var(--accent-rgb),.18);
+  --glow-blue:0 0 16px rgba(var(--accent2-rgb),.14);
   --font:'Cascadia Code','Fira Code','JetBrains Mono','Consolas',monospace;
   --input-h:48px;
 }
@@ -79,7 +79,7 @@ body{
 #logo{display:flex;align-items:center;gap:9px;text-decoration:none;cursor:default;user-select:none;flex-shrink:0}
 #logo-wordmark{
   font-size:16px;font-weight:800;
-  background:linear-gradient(135deg,var(--accent) 0%,#c4b5fd 100%);
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
   -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
   letter-spacing:2px;
 }
@@ -282,11 +282,11 @@ body{
 #tts-btn.on{color:var(--accent2);border-color:rgba(var(--accent2-rgb),.5);background:rgba(var(--accent2-rgb),.08)}
 #send-btn{
   font-size:12px;padding:8px 20px;border-radius:var(--radius-sm);cursor:pointer;
-  background:linear-gradient(135deg,var(--accent) 0%,#c4b5fd 100%);
-  border:none;color:var(--btn-fg);font-weight:800;font-family:inherit;
+  background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+  border:none;color:var(--btn-fg);font-weight:700;font-family:inherit;
   transition:opacity .18s,transform .12s,box-shadow .18s;
   white-space:nowrap;letter-spacing:.4px;flex-shrink:0;
-  box-shadow:0 2px 12px rgba(var(--accent-rgb),.3);
+  box-shadow:0 2px 12px rgba(var(--accent-rgb),.35);
 }
 #send-btn:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 20px rgba(var(--accent-rgb),.4)}
 #send-btn:disabled{opacity:.25;cursor:not-allowed;transform:none;box-shadow:none}
@@ -1234,13 +1234,13 @@ function toast(msg, type='info', dur=3500) {
 function initTerm() {
   S.term = new Terminal({
     theme:{
-      background:'#0c0a14',foreground:'#ede9f6',cursor:'#a78bfa',
-      selectionBackground:'rgba(167,139,250,.25)',
-      black:'#0c0a14',red:'#f85149',green:'#34d399',yellow:'#e3b341',
-      blue:'#a78bfa',magenta:'#e879f9',cyan:'#67e8f9',white:'#ede9f6',
-      brightBlack:'#5c4e7a',brightRed:'#ff7b72',brightGreen:'#6ee7b7',
-      brightYellow:'#fde68a',brightBlue:'#c4b5fd',
-      brightMagenta:'#f0abfc',brightCyan:'#a5f3fc',brightWhite:'#f5f3ff',
+      background:'#090c12',foreground:'#dce6f5',cursor:'#4f8ef7',
+      selectionBackground:'rgba(79,142,247,.22)',
+      black:'#090c12',red:'#f04b4b',green:'#3dd68c',yellow:'#f59e0b',
+      blue:'#4f8ef7',magenta:'#a78bfa',cyan:'#38bdf8',white:'#dce6f5',
+      brightBlack:'#3a5270',brightRed:'#ff7272',brightGreen:'#6ee7b7',
+      brightYellow:'#fde68a',brightBlue:'#7eb8fa',
+      brightMagenta:'#c4b5fd',brightCyan:'#7dd3fc',brightWhite:'#f0f6ff',
     },
     fontFamily:"'Cascadia Code','Fira Code','Courier New',monospace",
     fontSize:13, lineHeight:1.45, cursorBlink:true, cursorStyle:'bar',
@@ -2734,13 +2734,13 @@ async function testWA(){
 
 // ── Light / Dark theme toggle ─────────────────────────────────────────────────
 const XTERM_DARK = {
-  background:'#0c0a14',foreground:'#ede9f6',cursor:'#a78bfa',
-  selectionBackground:'rgba(167,139,250,.25)',
-  black:'#0c0a14',red:'#f85149',green:'#34d399',yellow:'#e3b341',
-  blue:'#a78bfa',magenta:'#e879f9',cyan:'#67e8f9',white:'#ede9f6',
-  brightBlack:'#5c4e7a',brightRed:'#ff7b72',brightGreen:'#6ee7b7',
-  brightYellow:'#fde68a',brightBlue:'#c4b5fd',
-  brightMagenta:'#f0abfc',brightCyan:'#a5f3fc',brightWhite:'#f5f3ff',
+  background:'#090c12',foreground:'#dce6f5',cursor:'#4f8ef7',
+  selectionBackground:'rgba(79,142,247,.22)',
+  black:'#090c12',red:'#f04b4b',green:'#3dd68c',yellow:'#f59e0b',
+  blue:'#4f8ef7',magenta:'#a78bfa',cyan:'#38bdf8',white:'#dce6f5',
+  brightBlack:'#3a5270',brightRed:'#ff7272',brightGreen:'#6ee7b7',
+  brightYellow:'#fde68a',brightBlue:'#7eb8fa',
+  brightMagenta:'#c4b5fd',brightCyan:'#7dd3fc',brightWhite:'#f0f6ff',
 };
 const XTERM_LIGHT = {
   background:'#f0f4f8',foreground:'#1c2433',cursor:'#1a6bbf',
