@@ -684,6 +684,90 @@ html.light #wf-new-form input{background:var(--surface);color:var(--text)}
 html.light .tool-search,.mem-search,.rep-search{background:var(--surface2);color:var(--text)}
 html.light select.setting-input option{background:var(--surface)}
 
+/* ── Personal Assistant Panel ────────────────────────────────────────────── */
+.asst-section{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+.asst-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.asst-section-title{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.2px}
+.asst-todo-count{font-size:9px;background:rgba(var(--accent-rgb),.12);border:1px solid rgba(var(--accent-rgb),.25);border-radius:10px;padding:2px 7px;color:var(--accent);font-weight:700}
+.asst-add-row{display:flex;gap:5px;margin-bottom:10px}
+.asst-input{
+  flex:1;font:11px/1 var(--font);
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);padding:6px 9px;outline:none;min-width:0;
+  transition:border-color .15s;
+}
+.asst-input:focus{border-color:var(--accent)}
+.asst-select{
+  font:10px/1 var(--font);background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--muted);padding:5px 4px;cursor:pointer;outline:none;
+}
+.asst-add-btn{
+  flex-shrink:0;font-size:16px;line-height:1;
+  background:var(--accent);border:none;color:#fff;
+  border-radius:var(--radius-sm);padding:5px 10px;cursor:pointer;
+  transition:background .15s;font-weight:700;
+}
+.asst-add-btn:hover{background:var(--accent2)}
+.asst-empty{font-size:10.5px;color:var(--muted);text-align:center;padding:12px 0;font-style:italic}
+.todo-item{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:8px 0;border-bottom:1px solid var(--border2);
+  font-size:11px;line-height:1.4;
+}
+.todo-item:last-child{border-bottom:none}
+.todo-check{
+  flex-shrink:0;width:16px;height:16px;margin-top:1px;cursor:pointer;
+  accent-color:var(--accent);
+}
+.todo-text{flex:1;color:var(--text);word-break:break-word;cursor:pointer}
+.todo-text:hover{color:var(--accent2)}
+.todo-text.done-text{text-decoration:line-through;color:var(--muted)}
+.todo-pri{
+  flex-shrink:0;font-size:8.5px;padding:1px 5px;border-radius:6px;
+  font-weight:700;letter-spacing:.4px;text-transform:uppercase;align-self:center;
+}
+.todo-pri.high{background:rgba(240,75,75,.15);color:var(--danger)}
+.todo-pri.medium{background:rgba(79,142,247,.12);color:var(--accent)}
+.todo-pri.low{background:rgba(var(--muted-rgb),.15);color:var(--muted)}
+.todo-del{
+  flex-shrink:0;background:transparent;border:none;color:var(--muted);
+  cursor:pointer;font-size:12px;padding:2px;border-radius:3px;
+  transition:color .15s;
+}
+.todo-del:hover{color:var(--danger)}
+.rem-item{
+  padding:8px 10px;margin-bottom:6px;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+  font-size:11px;display:flex;gap:8px;align-items:flex-start;
+}
+.rem-item.overdue{border-color:rgba(var(--warn-rgb),.4);background:rgba(var(--warn-rgb),.05)}
+.rem-item-body{flex:1;min-width:0}
+.rem-item-text{color:var(--text);font-weight:600;word-break:break-word;line-height:1.35}
+.rem-item-when{font-size:9.5px;color:var(--muted);margin-top:3px}
+.rem-item-when.overdue-lbl{color:var(--warn)}
+.rem-item-actions{display:flex;flex-direction:column;gap:4px;flex-shrink:0}
+.rem-btn{
+  font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;
+  background:transparent;border:1px solid var(--border);color:var(--muted);
+  transition:all .15s;font-family:inherit;
+}
+.rem-btn:hover{color:var(--text);border-color:var(--accent)}
+.rem-btn.done-btn:hover{color:var(--accent2);border-color:var(--accent2)}
+.rem-btn.del-btn:hover{color:var(--danger);border-color:var(--danger)}
+.asst-link-btn{
+  font:10px/1 var(--font);background:transparent;border:1px solid var(--border);
+  color:var(--muted);padding:4px 10px;border-radius:4px;cursor:pointer;
+  transition:all .15s;
+}
+.asst-link-btn:hover{color:var(--text);border-color:var(--accent)}
+.asst-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.asst-quick-btn{
+  font:10px/1 var(--font);padding:7px 6px;border-radius:var(--radius-sm);
+  background:var(--surface);border:1px solid var(--border);color:var(--text2);
+  cursor:pointer;text-align:left;transition:all .18s;
+}
+.asst-quick-btn:hover{color:var(--accent);border-color:rgba(var(--accent-rgb),.4);background:rgba(var(--accent-rgb),.06)}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    RESPONSIVE  +  POLISH
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -966,6 +1050,10 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(var(-
   <button class="qa-btn" onclick="qa('memory weekly summary')"><span class="qa-icon">📅</span>Weekly</button>
   <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">💬</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
+  <div class="qa-sep"></div>
+  <button class="qa-btn" onclick="switchPanel('assistant')"><span class="qa-icon">🤖</span>My Assistant</button>
+  <button class="qa-btn" onclick="qa('show todos')"><span class="qa-icon">✅</span>My Todos</button>
+  <button class="qa-btn" onclick="qa('show reminders')"><span class="qa-icon">🔔</span>Reminders</button>
 </div>
 
 <!-- Report full-view overlay -->
@@ -1076,6 +1164,7 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(var(-
       <div class="ptab" onclick="switchPanel('audit')" id="tab-audit" title="Audit Log"><span class="ptab-icon">🔍</span><span class="ptab-lbl">Audit</span></div>
       <div class="ptab" onclick="switchPanel('insights')" id="tab-insights" title="Insights"><span class="ptab-icon">📈</span><span class="ptab-lbl">Stats</span></div>
       <div class="ptab" onclick="switchPanel('settings')" id="tab-settings" title="Settings"><span class="ptab-icon">⚙️</span><span class="ptab-lbl">Config</span></div>
+      <div class="ptab" onclick="switchPanel('assistant')" id="tab-assistant" title="Personal Assistant"><span class="ptab-icon">🤖</span><span class="ptab-lbl">Me</span></div>
     </div>
     <div id="panel-title-bar">
       <span id="panel-title-text">🔧 Tools</span>
@@ -1090,6 +1179,57 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(var(-
     <div class="panel" id="panel-audit"><div style="color:var(--muted);font-size:11px">No audit entries yet.</div></div>
     <div class="panel" id="panel-insights"><div style="color:var(--muted);font-size:11px">Loading insights…</div></div>
     <div class="panel" id="panel-settings"><div style="color:var(--muted);font-size:11px">Loading…</div></div>
+    <div class="panel" id="panel-assistant">
+      <!-- Todos section -->
+      <div class="asst-section">
+        <div class="asst-section-hdr">
+          <span class="asst-section-title">✅ To-Do List</span>
+          <span class="asst-todo-count" id="asst-todo-count">0</span>
+        </div>
+        <div class="asst-add-row">
+          <input id="asst-todo-input" class="asst-input" placeholder="Add a task… (e.g. Buy groceries)" autocomplete="off" spellcheck="false">
+          <select id="asst-todo-pri" class="asst-select" title="Priority">
+            <option value="medium">Med</option>
+            <option value="high">High</option>
+            <option value="low">Low</option>
+          </select>
+          <button class="asst-add-btn" onclick="addTodoFromUI()">+</button>
+        </div>
+        <div id="asst-todo-list"><div class="asst-empty">No tasks yet. Add one above!</div></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button class="asst-link-btn" onclick="loadAssistantPanel()">⟳ Refresh</button>
+          <button class="asst-link-btn" id="asst-show-done-btn" onclick="toggleShowDoneTodos()">Show done</button>
+        </div>
+      </div>
+
+      <!-- Reminders section -->
+      <div class="asst-section" style="margin-top:14px">
+        <div class="asst-section-hdr">
+          <span class="asst-section-title">🔔 Reminders</span>
+          <span class="asst-todo-count" id="asst-rem-count">0</span>
+        </div>
+        <div class="asst-add-row">
+          <input id="asst-rem-input" class="asst-input" placeholder="Remind me to…" autocomplete="off" spellcheck="false">
+          <input id="asst-rem-when" class="asst-input" placeholder="When? (e.g. tomorrow at 9am)" autocomplete="off" spellcheck="false" style="flex:1.4">
+          <button class="asst-add-btn" onclick="addReminderFromUI()">+</button>
+        </div>
+        <div id="asst-rem-list"><div class="asst-empty">No reminders. Set one above!</div></div>
+        <button class="asst-link-btn" onclick="loadAssistantPanel()" style="margin-top:8px">⟳ Refresh</button>
+      </div>
+
+      <!-- Quick commands -->
+      <div class="asst-section" style="margin-top:14px">
+        <div class="asst-section-title" style="margin-bottom:8px">💬 Quick Commands</div>
+        <div class="asst-quick-grid">
+          <button class="asst-quick-btn" onclick="qa('show system cpu and memory usage')">📊 System</button>
+          <button class="asst-quick-btn" onclick="qa('list files in current directory')">📁 Files</button>
+          <button class="asst-quick-btn" onclick="qa('git status in current directory')">🌿 Git</button>
+          <button class="asst-quick-btn" onclick="qa('search the web for latest AI news')">🌐 Web</button>
+          <button class="asst-quick-btn" onclick="qa('how do I write clean Python code?')">💬 Ask AI</button>
+          <button class="asst-quick-btn" onclick="switchPanel('memory')">🧠 Memory</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1196,6 +1336,15 @@ const SUGGESTIONS = [
   {icon:'🧠', label:'compare Redis vs Memcached for session storage', hint:'advisor'},
   {icon:'🧠', label:'what are the OWASP top 10 vulnerabilities?', hint:'advisor'},
   {icon:'🧠', label:'ask: ', hint:'force advisor mode'},
+  // Personal assistant
+  {icon:'✅', label:'add todo ', hint:'personal'},
+  {icon:'✅', label:'add todo buy groceries !high', hint:'personal'},
+  {icon:'✅', label:'add task call the doctor', hint:'personal'},
+  {icon:'✅', label:'show todos', hint:'personal'},
+  {icon:'🔔', label:'remind me tomorrow at 9am to ', hint:'personal'},
+  {icon:'🔔', label:'remind me in 1 hour to check emails', hint:'personal'},
+  {icon:'🔔', label:'remind me to call mum next Monday at 10am', hint:'personal'},
+  {icon:'🔔', label:'show reminders', hint:'personal'},
   // Special
   {icon:'↩', label:'undo', hint:'special'},
   {icon:'❓', label:'help', hint:'special'},
@@ -1317,6 +1466,27 @@ function route(type,d) {
     case 'preference_stored':    onPreferenceStored(d); break;
     case 'memory_weekly':        onMemoryWeekly(d); break;
     case 'preferences_display':  onPreferencesDisplay(d); break;
+    // ── Personal assistant events ─────────────────────────────────────────
+    case 'reminder_added':
+      pr(ts()+C.green+'🔔 '+d.message+C.rst);
+      toast('Reminder set!', 'ok');
+      if(document.getElementById('panel-assistant').classList.contains('active')) loadAssistantPanel();
+      break;
+    case 'todo_added':
+      pr(ts()+C.green+'✅ '+d.message+C.rst);
+      toast('Task added!', 'ok');
+      if(document.getElementById('panel-assistant').classList.contains('active')) loadAssistantPanel();
+      break;
+    case 'todo_list':
+      renderTodoList(d.todos||[]);
+      pr(ts()+C.cyan+'📋 To-do list ('+d.count+' items):'+C.rst);
+      (d.todos||[]).forEach((t,i)=>pr(C.gray+(i+1)+'. '+C.rst+(t.done?C.gray:'')+(t.priority==='high'?C.red:'')+(t.priority==='low'?C.gray:'')+t.text+C.rst+C.gray+' ['+t.priority+']'+C.rst));
+      break;
+    case 'reminder_list':
+      renderReminderList(d.reminders||[]);
+      pr(ts()+C.cyan+'🔔 Reminders ('+d.count+' upcoming):'+C.rst);
+      (d.reminders||[]).forEach((r,i)=>{const due=r.due?r.due.slice(0,16).replace('T',' '):'?';pr(C.gray+(i+1)+'. '+C.rst+r.text+C.gray+' — '+due+C.rst);});
+      break;
     case 'pong':                 break;
     default: break;
   }
@@ -2228,7 +2398,7 @@ function toggleFullscreen(){
   setTimeout(()=>S.fit&&S.fit.fit(),230);
 }
 
-const PANEL_TITLES={sysmon:'📊 System Monitor',tools:'🔧 Tools',memory:'🧠 Memory',workflows:'🔄 Workflows',reports:'📄 Reports',history:'📋 History',audit:'🔍 Audit Log',insights:'📈 Insights',settings:'⚙️ Config'};
+const PANEL_TITLES={sysmon:'📊 System Monitor',tools:'🔧 Tools',memory:'🧠 Memory',workflows:'🔄 Workflows',reports:'📄 Reports',history:'📋 History',audit:'🔍 Audit Log',insights:'📈 Insights',settings:'⚙️ Config',assistant:'🤖 My Assistant'};
 function switchPanel(name){
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -2247,7 +2417,151 @@ function switchPanel(name){
   if(name==='workflows') loadWorkflows();
   if(name==='insights') loadInsights();
   if(name==='reports') loadReports();
+  if(name==='assistant') loadAssistantPanel();
 }
+
+// ── Personal Assistant ─────────────────────────────────────────────────────────
+const ASST = { showDone: false };
+
+async function loadAssistantPanel() {
+  try {
+    const [todosRes, remsRes] = await Promise.all([
+      fetch('/api/todos?include_done='+ASST.showDone),
+      fetch('/api/reminders'),
+    ]);
+    const todosData = await todosRes.json();
+    const remsData = await remsRes.json();
+    renderTodoList(todosData.todos || []);
+    renderReminderList(remsData.reminders || []);
+    const tc = document.getElementById('asst-todo-count');
+    if(tc) tc.textContent = todosData.count || 0;
+    const rc = document.getElementById('asst-rem-count');
+    if(rc) rc.textContent = remsData.count || 0;
+  } catch(e) {
+    console.error('loadAssistantPanel', e);
+  }
+}
+
+function renderTodoList(todos) {
+  const el = document.getElementById('asst-todo-list');
+  if(!el) return;
+  if(!todos.length) { el.innerHTML = '<div class="asst-empty">No tasks yet. Add one above!</div>'; return; }
+  el.innerHTML = todos.map(t => `
+    <div class="todo-item" id="todo-${esc(t.id)}">
+      <input type="checkbox" class="todo-check" ${t.done?'checked':''} onchange="toggleTodoDone('${esc(t.id)}',this.checked)" title="Mark done">
+      <span class="todo-text ${t.done?'done-text':''}" onclick="toggleTodoDone('${esc(t.id)}',${!t.done})">${esc(t.text)}</span>
+      <span class="todo-pri ${esc(t.priority)}">${esc(t.priority)}</span>
+      <button class="todo-del" onclick="deleteTodo('${esc(t.id)}')" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+function renderReminderList(rems) {
+  const el = document.getElementById('asst-rem-list');
+  if(!el) return;
+  if(!rems.length) { el.innerHTML = '<div class="asst-empty">No upcoming reminders.</div>'; return; }
+  const now = new Date();
+  el.innerHTML = rems.map(r => {
+    const due = new Date(r.due);
+    const overdue = due < now;
+    const dueStr = due.toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="rem-item ${overdue?'overdue':''}" id="rem-${esc(r.id)}">
+      <div class="rem-item-body">
+        <div class="rem-item-text">${esc(r.text)}</div>
+        <div class="rem-item-when ${overdue?'overdue-lbl':''}">${overdue?'⚠ Overdue — ':''}${dueStr}</div>
+      </div>
+      <div class="rem-item-actions">
+        <button class="rem-btn done-btn" onclick="doneReminder('${esc(r.id)}')" title="Dismiss">✓</button>
+        <button class="rem-btn del-btn" onclick="deleteReminder('${esc(r.id)}')" title="Delete">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addTodoFromUI() {
+  const inp = document.getElementById('asst-todo-input');
+  const pri = document.getElementById('asst-todo-pri');
+  const text = (inp.value||'').trim();
+  if(!text) { inp.focus(); return; }
+  try {
+    const r = await fetch('/api/todos', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,priority:pri.value})});
+    const d = await r.json();
+    inp.value = '';
+    toast('Task added!', 'ok');
+    loadAssistantPanel();
+  } catch(e) { toast('Failed to add task', 'err'); }
+}
+
+async function addReminderFromUI() {
+  const inp = document.getElementById('asst-rem-input');
+  const when = document.getElementById('asst-rem-when');
+  const text = (inp.value||'').trim();
+  const whenVal = (when.value||'in 1 hour').trim();
+  if(!text) { inp.focus(); return; }
+  try {
+    const r = await fetch('/api/reminders', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,when:whenVal})});
+    const d = await r.json();
+    inp.value = ''; when.value = '';
+    toast('Reminder set: '+d.reminder.due.slice(0,16).replace('T',' '), 'ok', 4000);
+    loadAssistantPanel();
+  } catch(e) { toast('Failed to add reminder', 'err'); }
+}
+
+async function toggleTodoDone(id, done) {
+  if(done) {
+    await fetch('/api/todos/'+id+'/done', {method:'POST'});
+    toast('Task done!', 'ok', 2000);
+  }
+  loadAssistantPanel();
+}
+
+async function deleteTodo(id) {
+  await fetch('/api/todos/'+id, {method:'DELETE'});
+  toast('Task removed', 'info', 2000);
+  loadAssistantPanel();
+}
+
+async function doneReminder(id) {
+  await fetch('/api/reminders/'+id+'/done', {method:'POST'});
+  toast('Reminder dismissed', 'ok', 2000);
+  loadAssistantPanel();
+}
+
+async function deleteReminder(id) {
+  await fetch('/api/reminders/'+id, {method:'DELETE'});
+  loadAssistantPanel();
+}
+
+function toggleShowDoneTodos() {
+  ASST.showDone = !ASST.showDone;
+  const btn = document.getElementById('asst-show-done-btn');
+  if(btn) btn.textContent = ASST.showDone ? 'Hide done' : 'Show done';
+  loadAssistantPanel();
+}
+
+// Enter key handlers for assistant inputs
+document.addEventListener('DOMContentLoaded', () => {
+  const todoInp = document.getElementById('asst-todo-input');
+  if(todoInp) todoInp.addEventListener('keydown', e => { if(e.key==='Enter') addTodoFromUI(); });
+  const remInp = document.getElementById('asst-rem-input');
+  if(remInp) remInp.addEventListener('keydown', e => { if(e.key==='Enter') addReminderFromUI(); });
+  const remWhen = document.getElementById('asst-rem-when');
+  if(remWhen) remWhen.addEventListener('keydown', e => { if(e.key==='Enter') addReminderFromUI(); });
+});
+
+// Poll for due reminders every 60 seconds and show toasts
+setInterval(async () => {
+  try {
+    const r = await fetch('/api/reminders/due');
+    const d = await r.json();
+    (d.reminders||[]).forEach(rem => {
+      toast('🔔 Reminder: '+rem.text, 'warn', 8000);
+      fetch('/api/reminders/'+rem.id+'/done', {method:'POST'});
+    });
+    if((d.reminders||[]).length && document.getElementById('panel-assistant').classList.contains('active')) {
+      loadAssistantPanel();
+    }
+  } catch(_) {}
+}, 60000);
 
 // ── Voice Interface (Web Speech API) ─────────────────────────────────────────
 function initVoice() {

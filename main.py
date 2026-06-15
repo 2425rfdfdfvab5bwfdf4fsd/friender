@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -17,6 +18,7 @@ import uvicorn
 
 from pacca.agent import PACCAAgent, AgentEvent
 from pacca.config import PACCAConfig
+from pacca.personal import ReminderManager, TodoManager
 from pacca.ui.onboarding import (
     DISCLOSURE_TEXT, is_onboarding_complete, complete_onboarding
 )
@@ -27,6 +29,8 @@ from pacca.workflows.workflow_manager import WorkflowManager, parse_workflow_fro
 _agent: PACCAAgent | None = None
 _config: PACCAConfig | None = None
 _workflow_manager: WorkflowManager | None = None
+_reminders = ReminderManager()
+_todos = TodoManager()
 
 
 @asynccontextmanager
@@ -543,6 +547,77 @@ async def get_active_goals():
         return {"active_goals": [], "error": str(e)}
 
 
+# ── Reminders API ────────────────────────────────────────────────────────────
+
+@app.get("/api/reminders")
+async def list_reminders(include_done: bool = False):
+    return {"reminders": _reminders.list_all(include_done=include_done), "count": _reminders.count()}
+
+
+@app.post("/api/reminders")
+async def create_reminder(body: dict):
+    text = body.get("text", "").strip()
+    when = body.get("when", "in 1 hour").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    r = _reminders.add(text, when)
+    return {"status": "ok", "reminder": r}
+
+
+@app.post("/api/reminders/{reminder_id}/done")
+async def complete_reminder(reminder_id: str):
+    ok = _reminders.mark_done(reminder_id)
+    return {"status": "ok" if ok else "not_found"}
+
+
+@app.delete("/api/reminders/{reminder_id}")
+async def delete_reminder(reminder_id: str):
+    ok = _reminders.delete(reminder_id)
+    return {"status": "ok" if ok else "not_found"}
+
+
+@app.get("/api/reminders/due")
+async def get_due_reminders():
+    return {"reminders": _reminders.list_due()}
+
+
+# ── Todos API ────────────────────────────────────────────────────────────────
+
+@app.get("/api/todos")
+async def list_todos(include_done: bool = False):
+    return {"todos": _todos.list_all(include_done=include_done), "count": _todos.count()}
+
+
+@app.post("/api/todos")
+async def create_todo(body: dict):
+    text = body.get("text", "").strip()
+    priority = body.get("priority", "medium")
+    if not text:
+        raise HTTPException(status_code=400, detail="text required")
+    t = _todos.add(text, priority)
+    return {"status": "ok", "todo": t}
+
+
+@app.post("/api/todos/{todo_id}/done")
+async def complete_todo(todo_id: str):
+    ok = _todos.mark_done(todo_id)
+    return {"status": "ok" if ok else "not_found"}
+
+
+@app.put("/api/todos/{todo_id}")
+async def update_todo(todo_id: str, body: dict):
+    t = _todos.update(todo_id, text=body.get("text"), priority=body.get("priority"))
+    if not t:
+        raise HTTPException(status_code=404, detail="not found")
+    return {"status": "ok", "todo": t}
+
+
+@app.delete("/api/todos/{todo_id}")
+async def delete_todo(todo_id: str):
+    ok = _todos.delete(todo_id)
+    return {"status": "ok" if ok else "not_found"}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
@@ -648,6 +723,41 @@ async def websocket_endpoint(ws: WebSocket):
                     fact = command[9:].strip()
                     agent.memory.store_knowledge(fact, source="user")
                     await put("status", {"message": f"Stored in memory: {fact[:80]}"})
+                    continue
+
+                # ── Personal assistant shortcuts ──────────────────────────
+                if low.startswith("remind me") or low.startswith("set reminder"):
+                    from pacca.personal.reminders import parse_reminder_command
+                    parsed = parse_reminder_command(command)
+                    if parsed:
+                        what, when_str = parsed
+                        r = _reminders.add(what, when_str)
+                        await put("reminder_added", {
+                            "reminder": r,
+                            "message": f"Reminder set: \"{what}\" — due {r['due'][:16].replace('T', ' ')}",
+                        })
+                        continue
+
+                if (low.startswith("add todo") or low.startswith("todo:") or low.startswith("add task")):
+                    from pacca.personal.todos import parse_todo_command
+                    parsed = parse_todo_command(re.sub(r"^add task", "add todo", command.strip(), flags=re.IGNORECASE))
+                    if parsed:
+                        text, priority = parsed
+                        t = _todos.add(text, priority)
+                        await put("todo_added", {
+                            "todo": t,
+                            "message": f"To-do added [{priority}]: \"{text}\"",
+                        })
+                        continue
+
+                if low in ("todos", "my todos", "show todos", "list todos", "tasks", "my tasks"):
+                    items = _todos.list_all()
+                    await put("todo_list", {"todos": items, "count": len(items)})
+                    continue
+
+                if low in ("reminders", "my reminders", "show reminders", "list reminders"):
+                    items = _reminders.list_all()
+                    await put("reminder_list", {"reminders": items, "count": len(items)})
                     continue
 
                 if low in ("workflows", "list workflows", "show workflows"):
