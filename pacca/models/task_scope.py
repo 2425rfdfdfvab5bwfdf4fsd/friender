@@ -78,7 +78,7 @@ DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(file|folder|directory|path|\.pdf|\.txt|\.py|\.js|\.zip)\b', re.I), "file"),
     (re.compile(r'\b(whatsapp|send message|notify|notification|text message)\b', re.I), "messaging"),
     (re.compile(r'\b(image|photo|picture|screenshot|vision|analyze image|describe image|capture)\b', re.I), "vision"),
-    (re.compile(r'\b(generate code|write code|code for|explain code|refactor|unit test|code quality|programming)\b', re.I), "coding"),
+    (re.compile(r'\b(generate code|generate_code|write code|code for|explain code|refactor|unit test|code quality|programming)\b', re.I), "coding"),
     (re.compile(r'\b(research|investigate|summarize url|summarize website|web research|find info about)\b', re.I), "research"),
 ]
 

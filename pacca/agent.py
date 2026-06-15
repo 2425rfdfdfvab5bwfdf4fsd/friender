@@ -309,6 +309,7 @@ class PACCAAgent:
             "show weekly summary",
             "show weekly",
             "weekly summary",
+            "memory weekly",
             "this week",
             "recent activity",
             "my activity",

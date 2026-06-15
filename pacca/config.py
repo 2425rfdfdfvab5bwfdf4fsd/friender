@@ -52,7 +52,7 @@ class PACCAConfig:
         if not cfg.allowed_path_prefixes:
             home = str(Path.home())
             cwd = os.getcwd()
-            cfg.allowed_path_prefixes = list({home, cwd, str(PACCA_DIR)})
+            cfg.allowed_path_prefixes = list({home, cwd, str(PACCA_DIR), "/tmp", "/var/tmp"})
 
         # Replit AI Integrations for Anthropic — takes priority over all other keys
         if os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY"):

@@ -72,6 +72,9 @@ _GOAL_PATTERNS = [
     r'^analyze .{10,} and\b',
     r'^build .{10,} and\b',
     r'^create .{10,} and\b',
+    r'^search .{5,} and\s+(save|create|write|store)\b',
+    r'\band\s+(save|create|write|store)\s+.{5,}\b',
+    r'^open url .{10,} and\b',
 ]
 
 _SIMPLE_PATTERNS = [
