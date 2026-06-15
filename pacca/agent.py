@@ -387,6 +387,11 @@ class PACCAAgent:
             pass
         _user_context = "\n".join(_user_context_lines)
 
+        # effective_cmd: cleaned English description of the task (from deep analysis).
+        # Falls back to raw_cmd if deep analysis is unavailable or returns no description.
+        effective_cmd = raw_cmd
+        _llm_routed = False  # True once LLM has classified and handled this message
+
         if not dry_run and not _is_clear_action and self.llm_client is not None \
                 and self.llm_client.is_available() and not self.config.offline_mode:
             try:
@@ -395,6 +400,9 @@ class PACCAAgent:
                 )
                 intent = analysis.get("intent", "task")
                 response_text = analysis.get("response", "").strip()
+                task_description = analysis.get("task_description", "").strip()
+
+                _llm_routed = True  # LLM successfully classified this message
 
                 if intent in ("chat", "advisory") and response_text:
                     yield AgentEvent("advisory", {
@@ -405,7 +413,11 @@ class PACCAAgent:
                         "model": self.config.model,
                     })
                     return
-                # intent == "task" → fall through to pipeline below
+
+                # intent == "task" — use the LLM's clean English task description
+                # so the command parser and planner understand even informal/Urdu inputs
+                if task_description:
+                    effective_cmd = task_description
 
             except Exception:
                 # Deep analysis failed — fall through to offline pattern-based routing
@@ -496,7 +508,8 @@ class PACCAAgent:
             return
 
         # ── Advisory path: questions / analysis / expert guidance ─────────────
-        if self.advisory_detector.is_advisory(raw_cmd):
+        # Skip when LLM deep analysis already classified and handled this message
+        if not _llm_routed and self.advisory_detector.is_advisory(raw_cmd):
             if (self.llm_client is not None and self.llm_client.is_available()
                     and not self.config.offline_mode):
                 yield AgentEvent("status", {
@@ -551,7 +564,7 @@ class PACCAAgent:
 
         yield AgentEvent("status", {"message": "Parsing command...", "task_id": task_id})
 
-        scope = self.command_parser.parse(raw_cmd, task_id=task_id)
+        scope = self.command_parser.parse(effective_cmd, task_id=task_id)
         scope.dry_run = dry_run
 
         self.audit_logger.log_event(
@@ -582,9 +595,14 @@ class PACCAAgent:
             })
             try:
                 mem_context = self.memory.build_context_for_command(
-                    raw_cmd, scope.intent_domain
+                    effective_cmd, scope.intent_domain
                 )
-                plan = await self.llm_client.plan(scope, context=mem_context)
+                # Prepend user profile context so the planner knows who it's working for
+                full_context = (
+                    f"USER PROFILE:\n{_user_context}\n\n{mem_context}"
+                    if _user_context else mem_context
+                )
+                plan = await self.llm_client.plan(scope, context=full_context)
             except Exception as e:
                 yield AgentEvent("warning", {
                     "message": f"LLM unavailable ({e}) — falling back to heuristic planner"
