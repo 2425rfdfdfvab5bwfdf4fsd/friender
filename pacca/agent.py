@@ -214,6 +214,9 @@ class PACCAAgent:
             code_tools.set_llm_client(llm_client)
             research_tools.set_llm_client(llm_client)
 
+        # Wire memory manager into research tools so reports are auto-persisted
+        research_tools.set_memory_manager(self.memory)
+
         self.gateway = ContentDataGateway(
             redactor=self.redactor,
             consent_store=self.consent_store,
@@ -286,6 +289,51 @@ class PACCAAgent:
                 "message": "🔍 Dry-run mode — plan will be shown but NOT executed",
                 "task_id": task_id,
             })
+
+        # ── Natural language preference detection ────────────────────────────────
+        if not dry_run:
+            pref_result = self.memory.parse_and_store_preference(raw_cmd)
+            if pref_result is not None:
+                yield AgentEvent("preference_stored", {
+                    "task_id": task_id,
+                    "message": pref_result,
+                })
+                return
+
+        # ── Memory query shorthand commands ──────────────────────────────────────
+        _lower = raw_cmd.lower().strip()
+        _weekly_triggers = (
+            "what have i been working on",
+            "what did i work on",
+            "show my work this week",
+            "weekly summary",
+            "this week",
+            "recent activity",
+            "my activity",
+            "what have i done",
+        )
+        if not dry_run and any(_lower.startswith(t) or _lower == t for t in _weekly_triggers):
+            summary = self.memory.get_weekly_summary()
+            yield AgentEvent("memory_weekly", {
+                "task_id": task_id,
+                "summary": summary,
+            })
+            return
+
+        _pref_triggers = (
+            "show my preferences",
+            "my preferences",
+            "list preferences",
+            "show preferences",
+            "what are my preferences",
+        )
+        if not dry_run and (_lower in _pref_triggers or _lower.startswith("show my preferences")):
+            prefs = self.memory.get_all_preferences()
+            yield AgentEvent("preferences_display", {
+                "task_id": task_id,
+                "preferences": prefs,
+            })
+            return
 
         # ── Autonomous goal execution path ─────────────────────────────────────
         if is_multi_step_goal(raw_cmd) and not dry_run:
@@ -397,7 +445,10 @@ class PACCAAgent:
                 "message": f"Planning with {self.config.provider} / {self.config.model}..."
             })
             try:
-                plan = await self.llm_client.plan(scope)
+                mem_context = self.memory.build_context_for_command(
+                    raw_cmd, scope.intent_domain
+                )
+                plan = await self.llm_client.plan(scope, context=mem_context)
             except Exception as e:
                 yield AgentEvent("warning", {
                     "message": f"LLM unavailable ({e}) — falling back to heuristic planner"

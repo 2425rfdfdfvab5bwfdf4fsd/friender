@@ -84,9 +84,20 @@ class MemoryManager:
                 ran_at REAL NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT NOT NULL,
+                content TEXT NOT NULL,
+                queries_run TEXT DEFAULT '[]',
+                sources_count INTEGER DEFAULT 0,
+                saved_path TEXT DEFAULT '',
+                created_at REAL NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_episodic_domain ON episodic(intent_domain);
             CREATE INDEX IF NOT EXISTS idx_episodic_created ON episodic(created_at);
             CREATE INDEX IF NOT EXISTS idx_project_path ON project_memory(project_path);
+            CREATE INDEX IF NOT EXISTS idx_reports_created ON reports(created_at);
         """)
         self._conn.commit()
 
@@ -358,6 +369,212 @@ class MemoryManager:
             "recent_commands": recent,
             "semantic_memory_count": sem_count,
             "workflow_runs": wf_count,
+        }
+
+    # ── Reports Storage ──────────────────────────────────────────────────────
+
+    def store_report(self, topic: str, content: str,
+                     queries_run: list[str] | None = None,
+                     sources_count: int = 0,
+                     saved_path: str = "") -> int:
+        """Persist a research report and return its row id."""
+        cur = self._conn.execute(
+            """INSERT INTO reports (topic, content, queries_run, sources_count, saved_path, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (topic[:200], content[:50000],
+             json.dumps(queries_run or []),
+             sources_count, saved_path or "",
+             time.time())
+        )
+        self._conn.commit()
+        return cur.lastrowid
+
+    def get_reports(self, limit: int = 20, search: str = "") -> list[dict]:
+        """Return stored reports, newest first. Optionally filter by topic keyword."""
+        if search:
+            rows = self._conn.execute(
+                """SELECT id, topic, content, queries_run, sources_count, saved_path, created_at
+                   FROM reports
+                   WHERE topic LIKE ? OR content LIKE ?
+                   ORDER BY created_at DESC LIMIT ?""",
+                (f"%{search}%", f"%{search}%", limit)
+            ).fetchall()
+        else:
+            rows = self._conn.execute(
+                """SELECT id, topic, content, queries_run, sources_count, saved_path, created_at
+                   FROM reports ORDER BY created_at DESC LIMIT ?""",
+                (limit,)
+            ).fetchall()
+        result = []
+        for r in rows:
+            try:
+                queries = json.loads(r["queries_run"])
+            except Exception:
+                queries = []
+            result.append({
+                "id": r["id"],
+                "topic": r["topic"],
+                "content": r["content"],
+                "queries_run": queries,
+                "sources_count": r["sources_count"],
+                "saved_path": r["saved_path"],
+                "created_at": r["created_at"],
+                "created_at_str": time.strftime("%Y-%m-%d %H:%M", time.localtime(r["created_at"])),
+            })
+        return result
+
+    def get_report(self, report_id: int) -> dict | None:
+        """Fetch a single full report by id."""
+        row = self._conn.execute(
+            "SELECT * FROM reports WHERE id=?", (report_id,)
+        ).fetchone()
+        if not row:
+            return None
+        try:
+            queries = json.loads(row["queries_run"])
+        except Exception:
+            queries = []
+        return {
+            "id": row["id"],
+            "topic": row["topic"],
+            "content": row["content"],
+            "queries_run": queries,
+            "sources_count": row["sources_count"],
+            "saved_path": row["saved_path"],
+            "created_at": row["created_at"],
+            "created_at_str": time.strftime("%Y-%m-%d %H:%M", time.localtime(row["created_at"])),
+        }
+
+    def delete_report(self, report_id: int) -> bool:
+        cur = self._conn.execute("DELETE FROM reports WHERE id=?", (report_id,))
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    def report_count(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0]
+
+    # ── Natural Language Preference Detection ────────────────────────────────
+
+    _PREF_PATTERNS = [
+        # "remember that X" / "remember X"
+        (re.compile(r'^remember\s+(?:that\s+)?(.+)$', re.IGNORECASE), "user_note"),
+        # "always X"
+        (re.compile(r'^always\s+(.+)$', re.IGNORECASE), "always"),
+        # "never X"
+        (re.compile(r'^never\s+(.+)$', re.IGNORECASE), "never"),
+        # "I prefer X" / "prefer X"
+        (re.compile(r'^(?:i\s+)?prefer\s+(.+)$', re.IGNORECASE), "preference"),
+        # "I like X" / "I want X"
+        (re.compile(r'^i\s+(?:like|want|use|need)\s+(.+)$', re.IGNORECASE), "preference"),
+        # "set preference X = Y"
+        (re.compile(r'^set\s+preference[:\s]+(.+)$', re.IGNORECASE), "set"),
+        # "my default X is Y"
+        (re.compile(r'^my\s+(?:default\s+)?(.+?)\s+is\s+(.+)$', re.IGNORECASE), "default"),
+        # "use X for Y" / "use X"
+        (re.compile(r'^use\s+(.+)\s+for\s+(.+)$', re.IGNORECASE), "tool_pref"),
+        # "don't X" / "do not X"
+        (re.compile(r"^don't\s+(.+)$", re.IGNORECASE), "never"),
+        (re.compile(r'^do\s+not\s+(.+)$', re.IGNORECASE), "never"),
+    ]
+
+    def parse_and_store_preference(self, command: str) -> str | None:
+        """Detect a natural language preference statement and store it.
+
+        Returns a human-readable confirmation string if a preference was stored,
+        or None if the command is not a preference statement.
+        """
+        cmd = command.strip()
+        for pattern, pref_type in self._PREF_PATTERNS:
+            m = pattern.match(cmd)
+            if not m:
+                continue
+            groups = m.groups()
+            if pref_type == "default" and len(groups) == 2:
+                key = f"default_{groups[0].strip().lower().replace(' ', '_')}"
+                value = groups[1].strip()
+            elif pref_type == "tool_pref" and len(groups) == 2:
+                key = f"tool_for_{groups[1].strip().lower().replace(' ', '_')}"
+                value = groups[0].strip()
+            elif pref_type == "always":
+                key = f"always_{_tokenize(groups[0])}"
+                key = "always_" + "_".join(list(_tokenize(groups[0]).keys())[:4])
+                value = f"ALWAYS: {groups[0].strip()}"
+            elif pref_type == "never":
+                key = "never_" + "_".join(list(_tokenize(groups[0]).keys())[:4])
+                value = f"NEVER: {groups[0].strip()}"
+            else:
+                key = "note_" + "_".join(list(_tokenize(groups[0]).keys())[:4])
+                value = groups[0].strip()
+
+            self.set_preference(key, value)
+            self.store_knowledge(
+                f"User preference: {value}",
+                source="user_preference",
+                tags=["preference", pref_type],
+            )
+            return f"✓ Preference saved: **{value}**"
+        return None
+
+    # ── Weekly / Temporal Summaries ──────────────────────────────────────────
+
+    def get_weekly_summary(self, days: int = 7) -> dict:
+        """Return a summary of activity for the last N days."""
+        cutoff = time.time() - days * 86400
+        rows = self._conn.execute(
+            """SELECT command, intent_domain, intent_verb, outcome, steps_executed, created_at
+               FROM episodic WHERE created_at >= ? ORDER BY created_at DESC""",
+            (cutoff,)
+        ).fetchall()
+
+        if not rows:
+            return {"days": days, "total": 0, "tasks": [], "domains": {}, "summary": ""}
+
+        domain_counts: dict[str, int] = {}
+        verb_counts: dict[str, int] = {}
+        successes = 0
+        for r in rows:
+            d = r["intent_domain"] or "other"
+            v = r["intent_verb"] or "other"
+            domain_counts[d] = domain_counts.get(d, 0) + 1
+            verb_counts[v] = verb_counts.get(v, 0) + 1
+            if r["outcome"] == "completed":
+                successes += 1
+
+        top_domain = max(domain_counts, key=domain_counts.get) if domain_counts else "none"
+        tasks_preview = [
+            {
+                "command": r["command"][:80],
+                "domain": r["intent_domain"],
+                "outcome": r["outcome"],
+                "ts": time.strftime("%a %b %d %H:%M", time.localtime(r["created_at"])),
+            }
+            for r in rows[:20]
+        ]
+
+        summary_lines = [
+            f"**Last {days} days:** {len(rows)} task(s), "
+            f"{successes} succeeded ({round(successes/len(rows)*100)}% success rate).",
+            f"**Most active domain:** {top_domain} ({domain_counts.get(top_domain, 0)} tasks).",
+        ]
+        if rows:
+            summary_lines.append(f"**Most recent:** {rows[0]['command'][:60]}")
+
+        report_rows = self._conn.execute(
+            "SELECT topic, created_at FROM reports WHERE created_at >= ? ORDER BY created_at DESC LIMIT 5",
+            (cutoff,)
+        ).fetchall()
+        reports_preview = [{"topic": r["topic"], "ts": time.strftime("%a %b %d", time.localtime(r["created_at"]))} for r in report_rows]
+
+        return {
+            "days": days,
+            "total": len(rows),
+            "successes": successes,
+            "domains": domain_counts,
+            "verbs": verb_counts,
+            "top_domain": top_domain,
+            "tasks": tasks_preview,
+            "reports": reports_preview,
+            "summary": " ".join(summary_lines),
         }
 
     def close(self) -> None:

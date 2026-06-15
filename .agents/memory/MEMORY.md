@@ -2,3 +2,4 @@
 - [PACCA known quirks](pacca-quirks.md) — git_add secret-reset bypass; PlanValidator list-path gaps; settings UI threshold values
 - [PACCA advisory mode](pacca-advisory.md) — expert advisor persona added; AdvisoryIntentDetector in pacca/advisor.py routes questions to LLM; advisory overlay in UI renders markdown via marked.js
 - [PACCA v7.0 upgrades](pacca-v7-upgrades.md) — LLM goal decomposition in supervisor.py; /api/memory/stats endpoint; Insights panel (📈 tab); GoalSupervisor.set_llm_client() wired in agent.py
+- [PACCA v7.1 memory features](pacca-v71-memory.md) — Reports panel (📄 tab), weekly summary overlay, NL preference detection, memory context injected into every LLM plan call

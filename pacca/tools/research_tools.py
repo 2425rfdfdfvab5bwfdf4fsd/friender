@@ -5,6 +5,12 @@ import urllib.parse
 from pathlib import Path
 
 _llm_client = None
+_memory_manager = None
+
+
+def set_memory_manager(manager) -> None:
+    global _memory_manager
+    _memory_manager = manager
 
 _SYNTHESIS_SYSTEM = """You are PACCA's Research Agent. You synthesize web research into clear, structured reports.
 
@@ -172,12 +178,28 @@ async def research_topic(topic: str, depth: int = 3,
         "generated_at": date_str,
     }
 
+    saved_path = ""
     # Step 5: Optionally save to file
     if output_path:
         p = Path(output_path).expanduser()
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(report, encoding="utf-8")
         result["saved"] = str(p)
+        saved_path = str(p)
+
+    # Step 6: Persist to memory reports store
+    if _memory_manager is not None:
+        try:
+            report_id = _memory_manager.store_report(
+                topic=topic,
+                content=report,
+                queries_run=queries,
+                sources_count=len(sources),
+                saved_path=saved_path,
+            )
+            result["report_id"] = report_id
+        except Exception:
+            pass
 
     return result
 

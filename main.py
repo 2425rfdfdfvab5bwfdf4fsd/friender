@@ -488,6 +488,46 @@ async def get_memory_stats():
                 "domains": [], "daily_activity": [], "recent_commands": []}
 
 
+@app.get("/api/memory/weekly")
+async def get_weekly_summary(days: int = 7):
+    """Return a summary of activity for the last N days."""
+    agent = get_agent()
+    try:
+        summary = agent.memory.get_weekly_summary(days=days)
+        return summary
+    except Exception as e:
+        return {"error": str(e), "days": days, "total": 0}
+
+
+@app.get("/api/reports")
+async def list_reports(limit: int = 20, search: str = ""):
+    """List stored research reports."""
+    agent = get_agent()
+    try:
+        reports = agent.memory.get_reports(limit=limit, search=search)
+        return {"reports": reports, "total": agent.memory.report_count()}
+    except Exception as e:
+        return {"reports": [], "total": 0, "error": str(e)}
+
+
+@app.get("/api/reports/{report_id}")
+async def get_report(report_id: int):
+    """Fetch a single full research report by ID."""
+    agent = get_agent()
+    report = agent.memory.get_report(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
+    return report
+
+
+@app.delete("/api/reports/{report_id}")
+async def delete_report(report_id: int):
+    """Delete a research report."""
+    agent = get_agent()
+    deleted = agent.memory.delete_report(report_id)
+    return {"status": "ok" if deleted else "not_found", "id": report_id}
+
+
 @app.get("/api/active-goals")
 async def get_active_goals():
     """Return the list of currently executing goals."""

@@ -272,6 +272,59 @@ select.setting-input option{background:var(--surface2)}
 .mem-search{width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:11px;outline:none;margin-bottom:8px}
 .mem-search:focus{border-color:var(--accent)}
 
+/* ── Reports panel ───────────────────────────────────────────────────────── */
+.rep-search{width:100%;padding:5px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:11px;outline:none;margin-bottom:8px}
+.rep-search:focus{border-color:var(--accent)}
+.rep-item{padding:9px;border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:6px;background:var(--surface2);cursor:pointer;transition:border-color .15s}
+.rep-item:hover{border-color:var(--accent)}
+.rep-topic{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px;line-height:1.3}
+.rep-meta{font-size:9px;color:var(--muted);margin-bottom:5px;display:flex;gap:6px;align-items:center}
+.rep-preview{font-size:10px;color:var(--text2);line-height:1.5;max-height:40px;overflow:hidden;margin-bottom:5px}
+.rep-actions{display:flex;gap:6px}
+.rep-btn{font-size:9px;padding:3px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;transition:all .12s}
+.rep-btn:hover{color:var(--text);border-color:var(--accent)}
+.rep-btn.del:hover{color:var(--danger);border-color:var(--danger)}
+#rep-count-badge{font-size:10px;padding:2px 8px;background:rgba(88,166,255,.1);border:1px solid rgba(88,166,255,.2);border-radius:10px;color:var(--accent);margin-bottom:10px;display:inline-block}
+.rep-full-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:90;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.rep-full-overlay.hidden{display:none}
+.rep-full-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(860px,94vw);max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow)}
+.rep-full-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.rep-full-title{flex:1;font-size:13px;font-weight:700;color:var(--accent);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rep-full-meta{font-size:10px;color:var(--muted)}
+.rep-full-close{font-size:16px;background:transparent;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:3px;line-height:1}
+.rep-full-close:hover{color:var(--text)}
+.rep-full-body{padding:18px 20px;overflow-y:auto;flex:1;font-size:12px;line-height:1.8;color:var(--text2)}
+.rep-full-body h1,.rep-full-body h2,.rep-full-body h3{color:var(--text);margin:14px 0 6px}
+.rep-full-body h1{font-size:16px;border-bottom:1px solid var(--border);padding-bottom:6px}
+.rep-full-body h2{font-size:14px}
+.rep-full-body h3{font-size:12px}
+.rep-full-body p{margin-bottom:8px}
+.rep-full-body ul,.rep-full-body ol{padding-left:18px;margin-bottom:8px}
+.rep-full-body li{margin-bottom:3px}
+.rep-full-body code{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:11px;font-family:inherit}
+.rep-full-body table{border-collapse:collapse;width:100%;margin-bottom:10px}
+.rep-full-body th{background:var(--surface2);padding:6px 10px;text-align:left;border:1px solid var(--border);font-size:11px;color:var(--text)}
+.rep-full-body td{padding:5px 10px;border:1px solid var(--border2);font-size:11px}
+.rep-full-ftr{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+/* Weekly summary overlay */
+.weekly-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:90;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.weekly-overlay.hidden{display:none}
+.weekly-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;width:min(640px,92vw);max-height:82vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow)}
+.weekly-hdr{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.weekly-title{flex:1;font-size:13px;font-weight:700;color:var(--accent)}
+.weekly-close{font-size:16px;background:transparent;border:none;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:3px}
+.weekly-close:hover{color:var(--text)}
+.weekly-body{padding:16px 18px;overflow-y:auto;flex:1;font-size:12px;line-height:1.7}
+.weekly-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.weekly-stat-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center}
+.weekly-stat-val{font-size:22px;font-weight:700;color:var(--accent)}
+.weekly-stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-top:2px}
+.weekly-task-item{padding:5px 0;border-bottom:1px solid var(--border2);font-size:10px;display:flex;gap:6px;align-items:flex-start}
+.weekly-task-item:last-child{border-bottom:none}
+.weekly-task-cmd{flex:1;color:var(--text2)}
+.weekly-task-ts{color:var(--muted);white-space:nowrap;font-size:9px}
+.weekly-section-title{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--accent);margin:10px 0 5px;padding-top:8px;border-top:1px solid var(--border)}
+
 /* ── Workflow panel ──────────────────────────────────────────────────────── */
 .wf-item{padding:8px;border:1px solid var(--border2);border-radius:var(--radius);margin-bottom:6px;background:var(--surface2)}
 .wf-name{font-size:11px;font-weight:700;color:var(--text);margin-bottom:3px}
@@ -520,10 +573,59 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
   <button class="qa-btn" onclick="qa('open url https://news.ycombinator.com and take a screenshot')"><span class="qa-icon">📸</span>Screenshot HN</button>
   <div class="qa-sep"></div>
   <button class="qa-btn" onclick="switchPanel('insights')" title="View Insights panel"><span class="qa-icon">📈</span>Insights</button>
+  <button class="qa-btn" onclick="switchPanel('reports')" title="View saved research reports"><span class="qa-icon">📄</span>Reports</button>
+  <button class="qa-btn" onclick="qa('memory weekly summary')"><span class="qa-icon">📅</span>Weekly</button>
   <button class="qa-btn" onclick="qa('how do I design a rate limiter for a REST API?')"><span class="qa-icon">🧠</span>Advisor</button>
   <button class="qa-btn" onclick="qa('help')"><span class="qa-icon">❓</span>Help</button>
   <button class="qa-btn" onclick="qa('undo')"><span class="qa-icon">↩</span>Undo</button>
   <button class="qa-btn" onclick="openPalette()" title="Command palette"><span class="qa-icon">⌨</span>Ctrl+K</button>
+</div>
+
+<!-- Report full-view overlay -->
+<div id="rep-full-overlay" class="rep-full-overlay hidden">
+  <div class="rep-full-box">
+    <div class="rep-full-hdr">
+      <div class="rep-full-title" id="rep-full-title">Report</div>
+      <div class="rep-full-meta" id="rep-full-date"></div>
+      <button class="rep-full-close" onclick="closeReportFull()">✕</button>
+    </div>
+    <div class="rep-full-body" id="rep-full-body"></div>
+    <div class="rep-full-ftr">
+      <span id="rep-full-save-path" style="font-size:10px;color:var(--muted);flex:1"></span>
+      <button class="rep-btn" onclick="copyReportText()">📋 Copy</button>
+      <button class="rep-btn" onclick="closeReportFull()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly summary overlay -->
+<div id="weekly-overlay" class="weekly-overlay hidden">
+  <div class="weekly-box">
+    <div class="weekly-hdr">
+      <div class="weekly-title">📅 <span id="weekly-days-title">Last 7 Days</span></div>
+      <button class="weekly-close" onclick="document.getElementById('weekly-overlay').classList.add('hidden')">✕</button>
+    </div>
+    <div class="weekly-body">
+      <div class="weekly-stat-row">
+        <div class="weekly-stat-card">
+          <div class="weekly-stat-val" id="weekly-total-val">0</div>
+          <div class="weekly-stat-lbl">Tasks</div>
+        </div>
+        <div class="weekly-stat-card">
+          <div class="weekly-stat-val" id="weekly-success-val" style="color:var(--accent2)">0</div>
+          <div class="weekly-stat-lbl">Succeeded</div>
+        </div>
+        <div class="weekly-stat-card">
+          <div class="weekly-stat-val" id="weekly-rate-val" style="color:var(--accent)">0%</div>
+          <div class="weekly-stat-lbl">Success Rate</div>
+        </div>
+      </div>
+      <div id="weekly-tasks-section">
+        <div class="weekly-section-title">Recent Tasks</div>
+        <div id="weekly-tasks-list"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Main layout -->
@@ -575,7 +677,8 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
       <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon">📊</div>
       <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools">Tools</div>
       <div class="ptab" onclick="switchPanel('memory')" id="tab-memory">🧠</div>
-      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows">⚙ Flows</div>
+      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows">⚙</div>
+      <div class="ptab" onclick="switchPanel('reports')" id="tab-reports">📄</div>
       <div class="ptab" onclick="switchPanel('history')" id="tab-history">📋</div>
       <div class="ptab" onclick="switchPanel('audit')" id="tab-audit">Audit</div>
       <div class="ptab" onclick="switchPanel('insights')" id="tab-insights">📈</div>
@@ -585,6 +688,7 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
     <div class="panel active" id="panel-tools"><div style="color:var(--muted);font-size:11px">Loading tools…</div></div>
     <div class="panel" id="panel-memory"><div style="color:var(--muted);font-size:11px">Loading memory…</div></div>
     <div class="panel" id="panel-workflows"><div style="color:var(--muted);font-size:11px">Loading workflows…</div></div>
+    <div class="panel" id="panel-reports"><div style="color:var(--muted);font-size:11px">Loading reports…</div></div>
     <div class="panel" id="panel-history"><div style="color:var(--muted);font-size:11px">No tasks yet.</div></div>
     <div class="panel" id="panel-audit"><div style="color:var(--muted);font-size:11px">No audit entries yet.</div></div>
     <div class="panel" id="panel-insights"><div style="color:var(--muted);font-size:11px">Loading insights…</div></div>
@@ -654,9 +758,15 @@ const SUGGESTIONS = [
   {icon:'⚙', label:'save this as a workflow called daily_check every day at 9am', hint:'workflow'},
   {icon:'⚙', label:'list workflows', hint:'workflow'},
   {icon:'⚙', label:'workflows', hint:'workflow'},
-  // Memory
+  // Memory & Reports
   {icon:'🧠', label:'memory', hint:'memory'},
   {icon:'🧠', label:'remember ', hint:'memory'},
+  {icon:'🧠', label:'always use Python 3.12 for all scripts', hint:'preference'},
+  {icon:'🧠', label:'never delete files without asking me first', hint:'preference'},
+  {icon:'🧠', label:'I prefer dark mode interfaces', hint:'preference'},
+  {icon:'🧠', label:'show my preferences', hint:'memory'},
+  {icon:'📅', label:'memory weekly summary', hint:'memory'},
+  {icon:'📄', label:'reports', hint:'reports'},
   // Advisor
   {icon:'🧠', label:'how do I design a rate limiter for a REST API?', hint:'advisor'},
   {icon:'🧠', label:'how do I implement JWT authentication securely?', hint:'advisor'},
@@ -782,6 +892,10 @@ function route(type,d) {
     case 'memory_data':          onMemoryData(d); break;
     case 'workflow_list':        onWorkflowList(d); break;
     case 'workflow_saved':       onWorkflowSaved(d); break;
+    // ── New v7.1 events ───────────────────────────────────────────────────
+    case 'preference_stored':    onPreferenceStored(d); break;
+    case 'memory_weekly':        onMemoryWeekly(d); break;
+    case 'preferences_display':  onPreferencesDisplay(d); break;
     case 'pong':                 break;
     default: break;
   }
@@ -830,6 +944,7 @@ function onWelcome(d) {
   loadMemory();
   loadWorkflows();
   loadInsights();
+  loadReports();
   refreshHeaderStats();
   setInterval(refreshHeaderStats, 8000);
 }
@@ -1022,7 +1137,7 @@ function onCompleted(d) {
   pr(C.bold+C.bgreen+'  ✓ Task Complete'+C.rst+C.gray+'  '+ok+'/'+tot+' step'+(tot!==1?'s':'')+' succeeded'+C.rst);
   if(d.can_undo) pr('  '+C.gray+'Tip: type '+C.cyan+'undo'+C.gray+' to reverse the last action'+C.rst);
   pr('');
-  loadHistory(); loadAudit(); loadMemory();
+  loadHistory(); loadAudit(); loadMemory(); loadReports();
   toast('Task complete — '+ok+'/'+tot+' steps succeeded', 'ok');
   ttsSpeak('Task complete. '+ok+' of '+tot+' steps succeeded.');
 }
@@ -1664,6 +1779,7 @@ function switchPanel(name){
   if(name==='memory') loadMemory();
   if(name==='workflows') loadWorkflows();
   if(name==='insights') loadInsights();
+  if(name==='reports') loadReports();
 }
 
 // ── Voice Interface (Web Speech API) ─────────────────────────────────────────
@@ -2218,6 +2334,200 @@ function palRun(cmd){
   // Auto-send if it's a direct command (not a prefix stub)
   if(!cmd.endsWith(' ') && !cmd.endsWith(':') && !cmd.endsWith('"')){
     sendCommand();
+  }
+}
+
+// ── Preference stored event ────────────────────────────────────────────────────
+function onPreferenceStored(d) {
+  S.running = false; setSendRunning(false);
+  const msg = d.message || 'Preference saved';
+  pr('');
+  pr(C.bgreen + '  🧠 ' + C.rst + C.white + msg.replace(/\*\*/g, '') + C.rst);
+  pr('  ' + C.gray + 'Stored in persistent preferences — will inform all future LLM plans.' + C.rst);
+  pr('');
+  toast('Preference saved', 'ok', 3000);
+  loadMemory();
+}
+
+// ── Weekly summary event ───────────────────────────────────────────────────────
+function onMemoryWeekly(d) {
+  S.running = false; setSendRunning(false);
+  const s = d.summary;
+  pr('');
+  pr(C.bold + C.bblue + '  📅 Weekly Activity Summary' + C.rst + C.gray + ' (last ' + (s.days || 7) + ' days)' + C.rst);
+  sep();
+  if (!s.total) {
+    pr('  ' + C.gray + 'No tasks recorded in the last ' + (s.days || 7) + ' days.' + C.rst);
+  } else {
+    pr('  Total tasks: ' + C.white + s.total + C.rst + '  Succeeded: ' + C.bgreen + (s.successes || 0) + C.rst);
+    if (s.top_domain) pr('  Most active: ' + C.cyan + s.top_domain + C.rst);
+    if (s.tasks && s.tasks.length) {
+      pr('');
+      pr('  ' + C.gray + 'Recent tasks:' + C.rst);
+      s.tasks.slice(0, 8).forEach(t => {
+        const oc = t.outcome === 'completed' ? C.bgreen : C.bred;
+        pr('    ' + C.gray + t.ts + C.rst + '  ' + oc + '●' + C.rst + ' ' + C.white + t.command.substring(0, 60) + C.rst);
+      });
+    }
+  }
+  sep();
+  pr('');
+  showWeeklyOverlay(s);
+}
+
+// ── Preferences display event ──────────────────────────────────────────────────
+function onPreferencesDisplay(d) {
+  S.running = false; setSendRunning(false);
+  const prefs = d.preferences || {};
+  pr('');
+  pr(C.bold + C.bblue + '  🧠 Your Preferences' + C.rst);
+  sep();
+  const keys = Object.keys(prefs);
+  if (!keys.length) {
+    pr('  ' + C.gray + 'No preferences stored yet.' + C.rst);
+    pr('  ' + C.gray + 'Try: ' + C.cyan + 'always use Python 3.12' + C.gray + ' or ' + C.cyan + 'never delete files' + C.rst);
+  } else {
+    keys.forEach(k => {
+      pr('  ' + C.cyan + k + C.rst + ': ' + C.white + String(prefs[k]).substring(0, 80) + C.rst);
+    });
+  }
+  sep();
+  pr('');
+}
+
+// ── Weekly summary overlay ────────────────────────────────────────────────────
+function showWeeklyOverlay(s) {
+  let overlay = document.getElementById('weekly-overlay');
+  if (!overlay) return;
+  document.getElementById('weekly-days-title').textContent = 'Last ' + (s.days || 7) + ' Days';
+  document.getElementById('weekly-total-val').textContent = s.total || 0;
+  document.getElementById('weekly-success-val').textContent = (s.successes || 0);
+  const rate = s.total ? Math.round((s.successes || 0) / s.total * 100) : 0;
+  document.getElementById('weekly-rate-val').textContent = rate + '%';
+  const tasksEl = document.getElementById('weekly-tasks-list');
+  tasksEl.innerHTML = '';
+  const section = document.getElementById('weekly-tasks-section');
+  if (s.tasks && s.tasks.length) {
+    section.style.display = '';
+    s.tasks.slice(0, 15).forEach(t => {
+      const div = document.createElement('div');
+      div.className = 'weekly-task-item';
+      const oc = t.outcome === 'completed' ? 'var(--accent2)' : 'var(--danger)';
+      div.innerHTML = `<span style="color:${oc};flex-shrink:0">●</span><span class="weekly-task-cmd">${esc(t.command)}</span><span class="weekly-task-ts">${esc(t.ts)}</span>`;
+      tasksEl.appendChild(div);
+    });
+  } else {
+    section.style.display = 'none';
+  }
+  overlay.classList.remove('hidden');
+}
+
+// ── Reports panel ─────────────────────────────────────────────────────────────
+let _reportsCache = [];
+
+async function loadReports(search = '') {
+  const p = document.getElementById('panel-reports');
+  try {
+    const url = search ? `/api/reports?search=${encodeURIComponent(search)}` : '/api/reports';
+    const r = await fetch(url);
+    const d = await r.json();
+    _reportsCache = d.reports || [];
+    renderReports(_reportsCache, d.total || 0);
+  } catch(e) {
+    if (p) p.innerHTML = `<div style="color:var(--muted);font-size:11px">Error loading reports: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderReports(reports, total) {
+  const p = document.getElementById('panel-reports');
+  if (!p) return;
+  if (!reports.length) {
+    p.innerHTML = `
+      <div id="rep-count-badge">0 reports</div>
+      <input class="rep-search" placeholder="Search reports…" oninput="loadReports(this.value)">
+      <div style="color:var(--muted);font-size:11px;padding:10px 0">
+        <div style="font-size:16px;margin-bottom:8px">📄</div>
+        <div>No research reports yet.</div>
+        <div style="margin-top:6px;font-size:10px">Run <span style="color:var(--accent);cursor:pointer" onclick="qa('research_topic: large language models')">research_topic: &lt;topic&gt;</span> to generate one.</div>
+      </div>`;
+    return;
+  }
+  p.innerHTML = `
+    <div id="rep-count-badge">${total} report${total !== 1 ? 's' : ''}</div>
+    <input class="rep-search" placeholder="Search reports…" oninput="loadReports(this.value)">
+    <div id="rep-list"></div>`;
+  const list = document.getElementById('rep-list');
+  reports.forEach(rep => {
+    const div = document.createElement('div');
+    div.className = 'rep-item';
+    const preview = rep.content.replace(/[#*_`]/g, '').substring(0, 100) + '…';
+    const queries = (rep.queries_run || []).length;
+    div.innerHTML = `
+      <div class="rep-topic">${esc(rep.topic)}</div>
+      <div class="rep-meta">
+        <span>${esc(rep.created_at_str)}</span>
+        ${queries ? `<span>${queries} search${queries !== 1 ? 'es' : ''}</span>` : ''}
+        ${rep.sources_count ? `<span>${rep.sources_count} sources</span>` : ''}
+        ${rep.saved_path ? `<span style="color:var(--accent2)">💾 saved</span>` : ''}
+      </div>
+      <div class="rep-preview">${esc(preview)}</div>
+      <div class="rep-actions">
+        <button class="rep-btn" onclick="viewReport(${rep.id})">📖 Read</button>
+        <button class="rep-btn" onclick="reResearch(${JSON.stringify(esc(rep.topic))})">🔬 Re-run</button>
+        <button class="rep-btn del" onclick="deleteReport(${rep.id})">🗑</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+async function viewReport(id) {
+  try {
+    const r = await fetch(`/api/reports/${id}`);
+    const rep = await r.json();
+    const overlay = document.getElementById('rep-full-overlay');
+    document.getElementById('rep-full-title').textContent = rep.topic;
+    document.getElementById('rep-full-date').textContent = rep.created_at_str;
+    const body = document.getElementById('rep-full-body');
+    if (typeof marked !== 'undefined') {
+      body.innerHTML = marked.parse(rep.content);
+    } else {
+      body.textContent = rep.content;
+    }
+    document.getElementById('rep-full-save-path').textContent = rep.saved_path ? '💾 ' + rep.saved_path : '';
+    overlay.classList.remove('hidden');
+  } catch(e) {
+    toast('Failed to load report: ' + e.message, 'err');
+  }
+}
+
+function closeReportFull() {
+  document.getElementById('rep-full-overlay').classList.add('hidden');
+}
+
+async function deleteReport(id) {
+  if (!confirm('Delete this report?')) return;
+  try {
+    await fetch(`/api/reports/${id}`, { method: 'DELETE' });
+    toast('Report deleted', 'ok', 2000);
+    loadReports();
+  } catch(e) {
+    toast('Failed to delete: ' + e.message, 'err');
+  }
+}
+
+function reResearch(topic) {
+  const inp = document.getElementById('cmd-input');
+  inp.value = 'research_topic: ' + topic;
+  inp.focus();
+  switchPanel('tools');
+}
+
+function copyReportText() {
+  const body = document.getElementById('rep-full-body');
+  if (body) {
+    navigator.clipboard.writeText(body.innerText || body.textContent || '')
+      .then(() => toast('Report copied to clipboard', 'ok', 2000))
+      .catch(() => toast('Copy failed', 'warn'));
   }
 }
 

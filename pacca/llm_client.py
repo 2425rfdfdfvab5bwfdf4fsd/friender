@@ -65,11 +65,14 @@ CRITICAL RULES — any violation causes immediate plan rejection:
 7. Do NOT include "requires_confirmation" in args.
 8. All file paths must be absolute or start with ~/ — never relative paths.
 9. For git tools, always include "repo_path" pointing to the git repository root.
+10. RESPECT user preferences from the memory context below — they reflect how the user wants PACCA to behave.
 
 ALLOWED TOOLS (ONLY these — no others):
 {allowed_tools}
 
 TASK SCOPE: intent_verb={intent_verb}, intent_domain={intent_domain}
+
+{memory_context}
 
 EXAMPLES of correct output:
 - "list my downloads folder" → [{{"tool":"list_directory","args":{{"path":"~/Downloads"}},"description":"List Downloads folder"}}]
@@ -163,16 +166,18 @@ class LLMClient:
                 f"{status['failure_count']} failures, resets in {status['reset_in']:.0f}s"
             )
 
+        mem_section = ""
+        if context:
+            mem_section = f"MEMORY CONTEXT (use to inform the plan, do not output):\n{context}\n"
         system = SYSTEM_PROMPT_TEMPLATE.format(
             max_steps=task_scope.max_steps,
             allowed_tools=", ".join(sorted(task_scope.allowed_tools)),
             intent_verb=task_scope.intent_verb,
             intent_domain=task_scope.intent_domain,
             redacted_command=task_scope.redacted_command,
+            memory_context=mem_section,
         )
         prompt = task_scope.redacted_command
-        if context:
-            prompt += f"\n\nAdditional context:\n{context}"
 
         last_error = None
         delay = 1.0
