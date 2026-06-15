@@ -31,3 +31,4 @@ pyyaml>=6.0
 rich==13.9.4
 uvicorn[standard]==0.32.1
 websockets==14.1
+anthropic
