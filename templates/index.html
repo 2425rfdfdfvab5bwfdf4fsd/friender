@@ -34,7 +34,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 @keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(12px)}}
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
-#header{display:flex;align-items:center;gap:10px;padding:0 16px;height:var(--hdr-h);background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20}
+#header{display:flex;align-items:center;gap:10px;padding:0 16px;height:var(--hdr-h);background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;z-index:20;position:relative}
+#header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(77,157,224,.45) 25%,rgba(63,185,80,.3) 65%,transparent 100%);pointer-events:none}
 #logo{display:flex;align-items:center;gap:8px;text-decoration:none;cursor:default;user-select:none;flex-shrink:0}
 #logo-wordmark{font-size:15px;font-weight:800;color:var(--accent);letter-spacing:1.5px}
 #logo-sub{color:var(--muted);font-weight:400;font-size:10px;letter-spacing:.3px;padding:2px 7px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;white-space:nowrap}
@@ -140,12 +141,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 /* ── Sidebar ────────────────────────────────────────────────────────────── */
 #sidebar{width:var(--sidebar-w);background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width .2s ease;overflow:hidden}
 #sidebar.collapsed{width:0}
-#panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);padding:4px 4px 0;gap:2px;overflow-x:auto;scrollbar-width:none}
+#panel-tabs{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--surface2);padding:3px 3px 0;gap:1px;overflow-x:auto;scrollbar-width:none}
 #panel-tabs::-webkit-scrollbar{display:none}
-.ptab{flex:1;padding:6px 4px 7px;font-size:10px;text-align:center;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:color .15s,background .15s,border-color .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:36px}
+.ptab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px 5px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;border-radius:var(--radius-sm) var(--radius-sm) 0 0;transition:color .15s,background .15s,border-color .15s;min-width:30px}
 .ptab.active{color:var(--accent);border-color:var(--accent);background:var(--surface)}
 .ptab:hover:not(.active){color:var(--text2);background:rgba(255,255,255,.03)}
-.panel{display:none;flex:1;overflow-y:auto;padding:14px}
+.ptab-icon{font-size:13px;line-height:1}
+.ptab-lbl{font-size:7px;letter-spacing:.4px;text-transform:uppercase;line-height:1;opacity:.7;white-space:nowrap}
+.ptab.active .ptab-lbl{opacity:1}
+/* ── Panel title bar ──────────────────────────────────────────────────────── */
+#panel-title-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px 7px;border-bottom:1px solid var(--border2);flex-shrink:0;background:var(--surface)}
+#panel-title-text{font-size:11px;font-weight:700;color:var(--text);letter-spacing:.2px}
+#panel-title-count{font-size:9px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:1px 7px}
+.panel{display:none;flex:1;overflow-y:auto;padding:12px 14px}
 .panel.active{display:block}
 .panel::-webkit-scrollbar{width:4px}
 .panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
@@ -173,17 +181,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);height:100vh
 /* ── Tools panel ────────────────────────────────────────────────────────── */
 .tool-search{width:100%;padding:6px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:11px;outline:none;margin-bottom:10px}
 .tool-search:focus{border-color:var(--accent)}
-.tool-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border2);cursor:pointer}
+.tool-item{display:flex;align-items:flex-start;gap:8px;padding:8px 7px;margin:0 -7px;border-bottom:1px solid var(--border2);cursor:pointer;border-radius:var(--radius-sm);transition:background .12s}
 .tool-item:last-child{border-bottom:none}
-.tool-item:hover{background:rgba(88,166,255,.04);margin:0 -4px;padding-left:4px;padding-right:4px;border-radius:var(--radius-sm)}
-.tool-name{font-size:11px;color:var(--accent);font-weight:600}
-.tool-desc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.4}
-.risk-badge{font-size:9px;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;font-weight:700;margin-top:2px}
-.risk-low{background:rgba(63,185,80,.15);color:var(--accent2)}
-.risk-medium{background:rgba(227,179,65,.15);color:var(--warn)}
-.risk-high{background:rgba(248,81,73,.15);color:var(--danger)}
-.domain-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);padding:10px 0 4px;border-top:1px solid var(--border);margin-top:4px}
-.domain-label:first-child{border-top:none;padding-top:0;margin-top:0}
+.tool-item:hover{background:rgba(88,166,255,.06);border-bottom-color:transparent}
+.tool-name{font-size:11px;color:var(--accent);font-weight:600;letter-spacing:.2px}
+.tool-desc{font-size:10px;color:var(--muted);margin-top:2px;line-height:1.45}
+.risk-badge{font-size:8.5px;padding:2px 6px;border-radius:3px;white-space:nowrap;flex-shrink:0;font-weight:700;margin-top:2px;letter-spacing:.3px}
+.risk-low{background:rgba(63,185,80,.12);color:var(--accent2)}
+.risk-medium{background:rgba(227,179,65,.12);color:var(--warn)}
+.risk-high{background:rgba(248,81,73,.12);color:var(--danger)}
+.domain-label{display:flex;align-items:center;gap:7px;font-size:8.5px;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);padding:12px 0 6px;margin-top:2px}
+.domain-label:first-child{padding-top:2px;margin-top:0}
+.domain-label::before{content:'';width:12px;height:1px;background:var(--border);flex-shrink:0}
+.domain-label::after{content:'';flex:1;height:1px;background:var(--border)}
+/* ── Tool flags ─────────────────────────────────────────────────────────── */
+.tool-flag{display:inline-flex;align-items:center;font-size:9px;padding:1px 5px;border-radius:3px;font-weight:600;line-height:1.6}
+.tool-flag-rev{background:rgba(63,185,80,.12);color:var(--accent2)}
+.tool-flag-egress{background:rgba(227,179,65,.12);color:var(--warn)}
+.tool-flag-confirm{background:rgba(248,81,73,.12);color:var(--danger)}
+.tool-flag-undo{background:rgba(139,148,158,.1);color:var(--muted)}
 
 /* ── History panel ──────────────────────────────────────────────────────── */
 .hist-item{padding:8px;border-bottom:1px solid var(--border2);border-radius:var(--radius-sm);cursor:pointer;transition:background .12s;position:relative}
@@ -703,15 +719,19 @@ html.light .pal-item:hover,html.light .pal-item.pal-active{background:rgba(9,105
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="panel-tabs">
-      <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon" title="System Monitor">📊</div>
-      <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools" title="Tools">🔧 Tools</div>
-      <div class="ptab" onclick="switchPanel('memory')" id="tab-memory" title="Memory">🧠</div>
-      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows" title="Workflows">⚙</div>
-      <div class="ptab" onclick="switchPanel('reports')" id="tab-reports" title="Reports">📄</div>
-      <div class="ptab" onclick="switchPanel('history')" id="tab-history" title="History">📋</div>
-      <div class="ptab" onclick="switchPanel('audit')" id="tab-audit" title="Audit Log">🔍 Audit</div>
-      <div class="ptab" onclick="switchPanel('insights')" id="tab-insights" title="Insights">📈</div>
-      <div class="ptab" onclick="switchPanel('settings')" id="tab-settings" title="Settings">⚙ Settings</div>
+      <div class="ptab" onclick="switchPanel('sysmon')" id="tab-sysmon" title="System Monitor"><span class="ptab-icon">📊</span><span class="ptab-lbl">Sys</span></div>
+      <div class="ptab active" onclick="switchPanel('tools')" id="tab-tools" title="Tools"><span class="ptab-icon">🔧</span><span class="ptab-lbl">Tools</span></div>
+      <div class="ptab" onclick="switchPanel('memory')" id="tab-memory" title="Memory"><span class="ptab-icon">🧠</span><span class="ptab-lbl">Mem</span></div>
+      <div class="ptab" onclick="switchPanel('workflows')" id="tab-workflows" title="Workflows"><span class="ptab-icon">🔄</span><span class="ptab-lbl">Flows</span></div>
+      <div class="ptab" onclick="switchPanel('reports')" id="tab-reports" title="Reports"><span class="ptab-icon">📄</span><span class="ptab-lbl">Rpts</span></div>
+      <div class="ptab" onclick="switchPanel('history')" id="tab-history" title="History"><span class="ptab-icon">📋</span><span class="ptab-lbl">Hist</span></div>
+      <div class="ptab" onclick="switchPanel('audit')" id="tab-audit" title="Audit Log"><span class="ptab-icon">🔍</span><span class="ptab-lbl">Audit</span></div>
+      <div class="ptab" onclick="switchPanel('insights')" id="tab-insights" title="Insights"><span class="ptab-icon">📈</span><span class="ptab-lbl">Stats</span></div>
+      <div class="ptab" onclick="switchPanel('settings')" id="tab-settings" title="Settings"><span class="ptab-icon">⚙️</span><span class="ptab-lbl">Config</span></div>
+    </div>
+    <div id="panel-title-bar">
+      <span id="panel-title-text">🔧 Tools</span>
+      <span id="panel-title-count"></span>
     </div>
     <div class="panel" id="panel-sysmon"><div style="color:var(--muted);font-size:11px">Loading system info…</div></div>
     <div class="panel active" id="panel-tools"><div style="color:var(--muted);font-size:11px">Loading tools…</div></div>
@@ -1797,6 +1817,7 @@ function toggleFullscreen(){
   setTimeout(()=>S.fit&&S.fit.fit(),230);
 }
 
+const PANEL_TITLES={sysmon:'📊 System Monitor',tools:'🔧 Tools',memory:'🧠 Memory',workflows:'🔄 Workflows',reports:'📄 Reports',history:'📋 History',audit:'🔍 Audit Log',insights:'📈 Insights',settings:'⚙️ Config'};
 function switchPanel(name){
   document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
@@ -1804,6 +1825,8 @@ function switchPanel(name){
   const panel=document.getElementById('panel-'+name);
   if(tab) tab.classList.add('active');
   if(panel) panel.classList.add('active');
+  const titleEl=document.getElementById('panel-title-text');
+  if(titleEl) titleEl.textContent=PANEL_TITLES[name]||name;
   if(!S.sidebarOpen) toggleSidebar();
   if(name==='history') loadHistory();
   if(name==='audit') loadAudit();
@@ -2046,11 +2069,11 @@ function renderToolList(tools){
       div.onclick=()=>{ document.getElementById('cmd-input').value=t.name.replace(/_/g,' ')+' '; document.getElementById('cmd-input').focus(); };
       const rl=(t.risk_level||'low').toLowerCase();
       const flags=[
-        t.reversible?'<span style="font-size:9px;color:var(--accent2)">↩rev</span>':'',
-        t.data_egress?'<span style="font-size:9px;color:var(--warn)">☁egress</span>':'',
-        t.requires_confirmation?'<span style="font-size:9px;color:var(--danger)">⚠confirm</span>':'',
-        t.undo_supported?'<span style="font-size:9px;color:var(--muted)">undo</span>':'',
-      ].filter(Boolean).join(' ');
+        t.reversible?'<span class="tool-flag tool-flag-rev">↩ rev</span>':'',
+        t.data_egress?'<span class="tool-flag tool-flag-egress">☁ egress</span>':'',
+        t.requires_confirmation?'<span class="tool-flag tool-flag-confirm">⚠ confirm</span>':'',
+        t.undo_supported?'<span class="tool-flag tool-flag-undo">↩ undo</span>':'',
+      ].filter(Boolean).join('');
       div.innerHTML=`<div style="flex:1;min-width:0">
         <div class="tool-name">${esc(t.name)}</div>
         <div class="tool-desc">${esc(t.description)}</div>
