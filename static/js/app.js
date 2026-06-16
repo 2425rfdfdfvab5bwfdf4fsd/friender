@@ -1352,19 +1352,86 @@ function renderProfileSection(p) {
   const nm = document.getElementById('profile-name');
   const rl = document.getElementById('profile-role');
   const initials = p.initials || (p.name ? p.name[0].toUpperCase() : 'P');
-  av.textContent = initials;
-  av.style.background = `linear-gradient(135deg, ${p.avatar_color||'#4f8ef7'}, ${p.avatar_color||'#7eb8fa'})`;
   nm.textContent = p.name || 'User';
   rl.textContent = p.role || 'Personal AI Assistant';
+  // Try to show profile photo in sidebar avatar
+  fetch('/api/profile/photo', {method:'HEAD'}).then(r => {
+    if (r.ok) {
+      av.innerHTML = `<img src="/api/profile/photo?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block">`;
+      av.style.background = 'none';
+    } else {
+      av.textContent = initials;
+      av.style.background = `linear-gradient(135deg, ${p.avatar_color||'#4f8ef7'}, ${p.avatar_color||'#7eb8fa'})`;
+    }
+  }).catch(() => {
+    av.textContent = initials;
+    av.style.background = `linear-gradient(135deg, ${p.avatar_color||'#4f8ef7'}, ${p.avatar_color||'#7eb8fa'})`;
+  });
+}
+
+let _pfPendingPhoto = null;
+
+function previewProfilePhoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('Photo must be under 5 MB', 'err'); return; }
+  _pfPendingPhoto = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = document.getElementById('pf-photo-img');
+    const ini = document.getElementById('pf-photo-initials');
+    const rm  = document.getElementById('pf-photo-remove');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    ini.style.display = 'none';
+    rm.style.display = 'inline';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function removeProfilePhoto() {
+  _pfPendingPhoto = null;
+  try { await fetch('/api/profile/photo', {method:'DELETE'}); } catch(_) {}
+  const img = document.getElementById('pf-photo-img');
+  const ini = document.getElementById('pf-photo-initials');
+  const rm  = document.getElementById('pf-photo-remove');
+  const ring = document.getElementById('pf-photo-ring');
+  img.src = ''; img.style.display = 'none';
+  ini.style.display = '';
+  rm.style.display = 'none';
+  document.getElementById('pf-photo-input').value = '';
+  // Reset sidebar avatar
+  const p = S.profile || {};
+  const av = document.getElementById('profile-avatar');
+  const initials = p.initials || (p.name ? p.name[0].toUpperCase() : 'P');
+  av.innerHTML = initials;
+  av.style.background = `linear-gradient(135deg, ${p.avatar_color||'#4f8ef7'}, ${p.avatar_color||'#7eb8fa'})`;
+  toast('Photo removed', 'ok');
 }
 
 function openProfileEditor() {
   const p = S.profile || {};
+  _pfPendingPhoto = null;
   document.getElementById('pf-name').value = p.name || '';
   document.getElementById('pf-role').value = p.role || '';
   document.getElementById('pf-company').value = p.company || '';
   document.getElementById('pf-tz').value = p.timezone || 'UTC';
   document.getElementById('pf-style').value = p.communication_style || 'balanced';
+  // Reset photo UI then load current photo if exists
+  const img = document.getElementById('pf-photo-img');
+  const ini = document.getElementById('pf-photo-initials');
+  const rm  = document.getElementById('pf-photo-remove');
+  const initials = p.initials || (p.name ? p.name[0].toUpperCase() : 'P');
+  ini.textContent = initials;
+  img.src = ''; img.style.display = 'none'; ini.style.display = ''; rm.style.display = 'none';
+  fetch('/api/profile/photo', {method:'HEAD'}).then(r => {
+    if (r.ok) {
+      img.src = `/api/profile/photo?t=${Date.now()}`;
+      img.style.display = 'block';
+      ini.style.display = 'none';
+      rm.style.display = 'inline';
+    }
+  }).catch(()=>{});
   document.getElementById('profile-overlay').classList.add('show');
 }
 function closeProfileEditor() { document.getElementById('profile-overlay').classList.remove('show'); }
@@ -1378,6 +1445,13 @@ async function saveProfile() {
     onboarding_complete: true,
   };
   try {
+    // Upload photo first if one was selected
+    if (_pfPendingPhoto) {
+      const fd = new FormData();
+      fd.append('file', _pfPendingPhoto);
+      await fetch('/api/profile/photo', {method:'POST', body: fd});
+      _pfPendingPhoto = null;
+    }
     const r = await fetch('/api/profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
     const d = await r.json();
     S.profile = d.profile;

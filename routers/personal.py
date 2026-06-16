@@ -1,10 +1,16 @@
 """Personal data routes — profile, todos, reminders, notes, projects."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+import shutil
+from pathlib import Path
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 
 from arix.app_state import todos, reminders, notes, projects, profile as _profile_singleton
 import arix.app_state as state
+
+_ARIX_DIR = Path.home() / ".arix"
 
 router = APIRouter(tags=["personal"])
 
@@ -20,6 +26,32 @@ async def get_profile():
 async def update_profile(body: dict):
     state.profile.update(body)
     return {"status": "ok", "profile": state.profile.to_dict()}
+
+
+@router.post("/api/profile/photo")
+async def upload_profile_photo(file: UploadFile = File(...)):
+    _ARIX_DIR.mkdir(parents=True, exist_ok=True)
+    photo_path = _ARIX_DIR / "profile_photo.jpg"
+    with photo_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+    return {"status": "ok", "url": "/api/profile/photo"}
+
+
+@router.get("/api/profile/photo")
+@router.head("/api/profile/photo")
+async def get_profile_photo():
+    photo_path = _ARIX_DIR / "profile_photo.jpg"
+    if not photo_path.exists():
+        raise HTTPException(status_code=404, detail="No photo uploaded")
+    return FileResponse(str(photo_path), media_type="image/jpeg")
+
+
+@router.delete("/api/profile/photo")
+async def delete_profile_photo():
+    photo_path = _ARIX_DIR / "profile_photo.jpg"
+    if photo_path.exists():
+        photo_path.unlink()
+    return {"status": "ok"}
 
 
 # ── Todos ─────────────────────────────────────────────────────────────────────
