@@ -130,12 +130,11 @@ function addUserMsg(text) {
 }
 
 function createAssistantBubble(taskId, thinkingText) {
-  const initials = S.profile?.initials || 'P';
   const div = document.createElement('div');
   div.className = 'msg msg-asst';
   div.dataset.task = taskId || '';
   div.innerHTML = `
-    <div class="msg-avatar">${esc(initials)}</div>
+    <div class="msg-avatar msg-avatar-logo"><img src="/static/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>
     <div class="msg-body">
       <div class="msg-thinking"><div class="thinking-dots"><b></b><b></b><b></b></div><span class="thinking-text">${esc(thinkingText||'Thinking…')}</span></div>
       <div class="msg-exec-card" style="display:none"></div>
@@ -384,8 +383,7 @@ function toggleAllPlanSteps(confId, checked) {
 function addSystemMsg(html) {
   const div = document.createElement('div');
   div.className = 'msg msg-asst';
-  const initials = S.profile?.initials || 'P';
-  div.innerHTML = `<div class="msg-avatar">${esc(initials)}</div><div class="msg-body"><div class="msg-text" style="display:block">${html}</div></div>`;
+  div.innerHTML = `<div class="msg-avatar msg-avatar-logo"><img src="/static/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div><div class="msg-body"><div class="msg-text" style="display:block">${html}</div></div>`;
   chatThread.appendChild(div);
   scrollToBottom();
   return div;
@@ -1313,7 +1311,7 @@ function renderBriefCard(d) {
   const nudgesHtml = (d.nudges||[]).map(n => `<div class="brief-nudge">${n.icon||'💡'} ${esc(n.title)}: ${esc(n.message)}</div>`).join('');
   const llmHtml = d.llm_summary ? `<div class="brief-llm">${renderMD(d.llm_summary)}</div>` : '';
   div.innerHTML = `
-    <div class="msg-avatar">${esc(initials)}</div>
+    <div class="msg-avatar msg-avatar-logo"><img src="/static/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>
     <div class="msg-body">
       <div class="brief-card">
         <button class="brief-close" onclick="this.closest('.msg').remove()">✕</button>
