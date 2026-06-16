@@ -39,6 +39,7 @@
     </div>
   </div>
   <div class="spacer"></div>
+  <button id="rsb-toggle-btn" class="hdr-icon-btn" onclick="toggleRightSidebar()" title="Quick Actions panel">⚡ Actions</button>
   <div id="hdr-right">
     <span id="bridge-badge" class="bridge-badge disconnected" title="Local bridge — run local_bridge/bridge_agent.py on your computer" onclick="showBridgeHelp()" style="cursor:pointer">🖥 Bridge: Off</span>
     <button class="hdr-icon-btn" id="dryrun-btn" onclick="toggleDryRun()" title="Dry-run mode">🔍 Dry</button>
@@ -532,6 +533,39 @@
     </div>
 
   </div>
+
+  <!-- ── Right Sidebar — Quick Actions ──────────────────────────────────── -->
+  <aside id="right-sidebar" class="rsb-collapsed">
+    <div id="rsb-header">
+      <span id="rsb-title">⚡ Quick Actions</span>
+      <button id="rsb-close-btn" onclick="toggleRightSidebar()" title="Close">✕</button>
+    </div>
+    <div id="rsb-body">
+
+      <div class="rsb-section-title">Actions</div>
+      <div id="rsb-actions-grid"></div>
+
+      <div class="rsb-section-title" style="margin-top:16px">To-dos</div>
+      <div style="display:flex;gap:5px;margin-bottom:7px">
+        <input class="panel-input" id="rsb-todo-input" placeholder="Add a task…" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')addRsbTodo()">
+        <select id="rsb-todo-pri" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 5px;border-radius:var(--radius-sm);font-family:var(--font);font-size:10px;outline:none">
+          <option value="medium">Med</option><option value="high">High</option><option value="low">Low</option><option value="urgent">!</option>
+        </select>
+        <button class="panel-btn primary" onclick="addRsbTodo()" style="flex:0;padding:5px 9px;white-space:nowrap">+</button>
+      </div>
+      <div id="rsb-todo-list"></div>
+
+      <div class="rsb-section-title" style="margin-top:16px">Reminders</div>
+      <div style="display:flex;gap:5px;margin-bottom:5px">
+        <input class="panel-input" id="rsb-rem-input" placeholder="Reminder…" style="margin:0;flex:1">
+        <input class="panel-input" id="rsb-rem-when" placeholder="when" style="margin:0;width:76px" value="in 1 hour">
+      </div>
+      <button class="panel-btn primary" onclick="addRsbReminder()" style="margin-bottom:8px;width:100%">+ Remind me</button>
+      <div id="rsb-rem-list"></div>
+
+    </div>
+  </aside>
+
 </div>
 
 <!-- ── Onboarding Overlay ──────────────────────────────────────────────────── -->

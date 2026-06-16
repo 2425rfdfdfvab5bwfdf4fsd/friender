@@ -1074,6 +1074,130 @@ function closeSidebarMobile() {
   }
 }
 
+// ── Right Sidebar ─────────────────────────────────────────────────────────────
+function toggleRightSidebar() {
+  const rsb = document.getElementById('right-sidebar');
+  const btn = document.getElementById('rsb-toggle-btn');
+  const isOpen = !rsb.classList.contains('rsb-collapsed');
+  rsb.classList.toggle('rsb-collapsed', isOpen);
+  btn && btn.classList.toggle('active', !isOpen);
+  if (!isOpen) loadRsbPanel();
+  if (S.termMode && S.fit) setTimeout(() => S.fit.fit(), 230);
+}
+
+async function loadRsbPanel() {
+  buildRsbActions();
+  try {
+    const [todosRes, remsRes] = await Promise.all([
+      fetch('/api/todos?include_done=false'),
+      fetch('/api/reminders')
+    ]);
+    const todosData = await todosRes.json();
+    const remsData  = await remsRes.json();
+    renderRsbTodoList(todosData.todos || []);
+    renderRsbRemList(remsData.reminders || []);
+  } catch(e) {}
+}
+
+function buildRsbActions() {
+  const el = document.getElementById('rsb-actions-grid');
+  if (!el) return;
+  const actions = [
+    {icon:'🌄', label:'Morning Brief',   fn:'loadMorningBrief()'},
+    {icon:'📱', label:'Apps',            fn:"switchPanel('apps')"},
+    {icon:'📈', label:'Insights',        fn:"switchPanel('insights')"},
+    {icon:'🧠', label:'Memory',          fn:"switchPanel('memory')"},
+    {icon:'🔄', label:'Workflows',       fn:"switchPanel('workflows')"},
+    {icon:'📊', label:'System',          fn:"switchPanel('sysmon')"},
+    {icon:'📝', label:'Notes',           fn:"switchPanel('notes')"},
+    {icon:'📅', label:'Calendar',        fn:"switchPanel('calendar')"},
+    {icon:'📧', label:'Gmail',           fn:"switchPanel('gmail')"},
+    {icon:'📋', label:'Trello',          fn:"switchPanel('trello')"},
+  ];
+  el.innerHTML = actions.map(a =>
+    `<button class="rsb-action-btn" onclick="${a.fn}">
+       <span class="rsb-action-icon">${a.icon}</span>${esc(a.label)}
+     </button>`
+  ).join('');
+}
+
+function renderRsbTodoList(todos) {
+  const el = document.getElementById('rsb-todo-list');
+  if (!el) return;
+  if (!todos.length) { el.innerHTML = '<div class="panel-empty">No tasks yet!</div>'; return; }
+  el.innerHTML = todos.map(t => `
+    <div class="asst-todo-item">
+      <input type="checkbox" class="asst-todo-check" ${t.done?'checked':''} onchange="toggleTodoDoneRsb('${esc(t.id)}',this.checked)">
+      <span class="asst-todo-text ${t.done?'done':''}">${esc(t.text)}</span>
+      <span class="asst-todo-pri ptask-pri ${esc(t.priority)}">${esc(t.priority)}</span>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="deleteTodoRsb('${esc(t.id)}')">✕</button>
+    </div>`).join('');
+}
+
+function renderRsbRemList(rems) {
+  const el = document.getElementById('rsb-rem-list');
+  if (!el) return;
+  const now = new Date();
+  const active = rems.filter(r => !r.done);
+  if (!active.length) { el.innerHTML = '<div class="panel-empty">No reminders.</div>'; return; }
+  el.innerHTML = active.map(r => {
+    const due = new Date(r.due);
+    const overdue = due < now;
+    const dueStr = due.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="asst-rem-item">
+      <div style="flex:1">
+        <div class="asst-rem-text">${esc(r.text)}</div>
+        <div class="asst-rem-when ${overdue?'overdue':''}">${overdue?'⚠ Overdue — ':''}${dueStr}</div>
+      </div>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="doneReminderRsb('${esc(r.id)}')">✓</button>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="deleteReminderRsb('${esc(r.id)}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addRsbTodo() {
+  const inp = document.getElementById('rsb-todo-input');
+  const pri = document.getElementById('rsb-todo-pri');
+  const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  try {
+    await fetch('/api/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, priority:pri.value})});
+    inp.value = ''; toast('Task added ✓','ok');
+    loadAssistantPanel(); loadRsbPanel();
+  } catch(e) { toast('Failed to add task','err'); }
+}
+
+async function addRsbReminder() {
+  const inp  = document.getElementById('rsb-rem-input');
+  const when = document.getElementById('rsb-rem-when');
+  const text = inp.value.trim();
+  const whenVal = when.value.trim() || 'in 1 hour';
+  if (!text) { inp.focus(); return; }
+  try {
+    await fetch('/api/reminders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, when:whenVal})});
+    inp.value = ''; toast('Reminder set ✓','ok');
+    loadAssistantPanel(); loadRsbPanel();
+  } catch(e) { toast('Failed to add reminder','err'); }
+}
+
+async function toggleTodoDoneRsb(id, done) {
+  if (done) await fetch(`/api/todos/${id}/done`, {method:'POST'});
+  else await fetch(`/api/todos/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({done:false})});
+  loadAssistantPanel(); loadRsbPanel();
+}
+async function deleteTodoRsb(id) {
+  await fetch(`/api/todos/${id}`, {method:'DELETE'});
+  loadAssistantPanel(); loadRsbPanel();
+}
+async function doneReminderRsb(id) {
+  await fetch(`/api/reminders/${id}/done`, {method:'POST'});
+  loadAssistantPanel(); loadRsbPanel();
+}
+async function deleteReminderRsb(id) {
+  await fetch(`/api/reminders/${id}`, {method:'DELETE'});
+  loadAssistantPanel(); loadRsbPanel();
+}
+
 function switchPanel(name) {
   document.querySelectorAll('.snav-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
