@@ -76,6 +76,7 @@
     <!-- Nav -->
     <nav id="snav">
       <button class="snav-btn active" data-panel="assistant" onclick="switchPanel('assistant')"><span class="snav-icon">🤖</span>Assistant</button>
+      <button class="snav-btn" data-panel="apps" onclick="switchPanel('apps')"><span class="snav-icon">📱</span>Apps</button>
       <button class="snav-btn" data-panel="projects" onclick="switchPanel('projects')"><span class="snav-icon">✓</span>Projects<span class="snav-badge" id="badge-projects" style="display:none">0</span></button>
       <button class="snav-btn" data-panel="notes" onclick="switchPanel('notes')"><span class="snav-icon">📝</span>Notes<span class="snav-badge" id="badge-notes" style="display:none">0</span></button>
       <button class="snav-btn" data-panel="calendar" onclick="switchPanel('calendar')"><span class="snav-icon">📅</span>Calendar</button>
@@ -112,6 +113,12 @@
         </div>
         <button class="panel-btn primary" onclick="addReminderFromUI()" style="margin-bottom:8px;flex:unset;width:100%">+ Add Reminder</button>
         <div id="asst-rem-list"></div>
+      </div>
+
+      <!-- Apps panel -->
+      <div id="panel-apps" class="panel">
+        <input class="panel-search" id="apps-search" placeholder="Search apps…" oninput="filterApps(this.value)" style="margin-bottom:10px">
+        <div id="apps-grid"></div>
       </div>
 
       <!-- Projects panel -->

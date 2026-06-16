@@ -937,6 +937,7 @@ function switchPanel(name) {
   else if (name === 'notes') loadNotes();
   else if (name === 'calendar') loadCalendar();
   else if (name === 'assistant') loadAssistantPanel();
+  else if (name === 'apps') loadAppsPanel();
 }
 
 function toggleDryRun() {
@@ -1075,36 +1076,75 @@ function renderWelcomeMsg() {
   const name = S.profile?.name ? `, ${S.profile.name.split(' ')[0]}` : '';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  addSystemMsg(`<div style="max-width:660px">
+  const featuredApps = [
+    {icon:'🎵',name:'TikTok',cmd:'Open TikTok'},
+    {icon:'📸',name:'Instagram',cmd:'Open Instagram'},
+    {icon:'💬',name:'WhatsApp',cmd:'Open WhatsApp messages'},
+    {icon:'💼',name:'LinkedIn',cmd:'Open LinkedIn feed'},
+    {icon:'📊',name:'Excel',cmd:'Open Microsoft Excel'},
+    {icon:'🎥',name:'OBS Studio',cmd:'Open OBS Studio'},
+    {icon:'🌐',name:'Chrome',cmd:'Open Google Chrome'},
+  ];
+  const pillsHtml = featuredApps.map(a =>
+    `<button class="home-app-pill" onclick="setInputAndSend('${a.cmd}')"><span class="hap-icon">${a.icon}</span>${esc(a.name)}</button>`
+  ).join('');
+
+  const examples = [
+    '"Delete temp files from my PC"',
+    '"Open TikTok and go to upload"',
+    '"Send a WhatsApp message to John saying I\'ll be late"',
+    '"Open LinkedIn and check my messages"',
+    '"Start recording on OBS"',
+  ];
+  const exIdx = Math.floor(Math.random() * examples.length);
+
+  addSystemMsg(`<div style="max-width:700px">
     <div style="font-size:19px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.3px">${greeting}${name} 👋</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:16px">I'm <b style="color:var(--accent2)">PACCA</b> — your personal AI employee. Just tell me what you need and I'll handle it.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">I'm <b style="color:var(--accent2)">PACCA</b> — your personal AI digital employee. Assign me any task and I'll figure out the steps, execute them automatically, and report back when done. I'll always ask before doing anything sensitive like sending messages, deleting important files, or making purchases.</div>
+    <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">Quick-launch apps</div>
+    <div class="home-apps-row">${pillsHtml}<button class="home-app-pill" onclick="switchPanel('apps')" style="border-style:dashed"><span class="hap-icon">📱</span>All Apps</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
         <div style="font-size:18px;margin-bottom:5px">📁</div>
         <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Files & Folders</div>
-        <div style="font-size:10.5px;color:var(--text2)">Create, move, search, organize</div>
+        <div style="font-size:10.5px;color:var(--text2)">Create, move, search, organize, clean up temp files</div>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
+        <div style="font-size:18px;margin-bottom:5px">📱</div>
+        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Apps & Automation</div>
+        <div style="font-size:10.5px;color:var(--text2)">Open, navigate, fill forms, complete workflows in any app</div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
         <div style="font-size:18px;margin-bottom:5px">🌐</div>
         <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Web & Research</div>
-        <div style="font-size:10.5px;color:var(--text2)">Browse, search, extract content</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:18px;margin-bottom:5px">💻</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Code & Git</div>
-        <div style="font-size:10.5px;color:var(--text2)">Run code, commit, diff, status</div>
+        <div style="font-size:10.5px;color:var(--text2)">Browse, search, extract content, download files</div>
       </div>
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
         <div style="font-size:18px;margin-bottom:5px">⚙️</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">System & Apps</div>
-        <div style="font-size:10.5px;color:var(--text2)">Monitor, launch, manage processes</div>
+        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">System & Maintenance</div>
+        <div style="font-size:10.5px;color:var(--text2)">Monitor resources, clean temp files, manage processes</div>
       </div>
     </div>
     <div style="font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
       <span>💡</span>
-      <span>Try: <span style="color:var(--accent2)">"delete temp files from my PC"</span> or <span style="color:var(--accent2)">"list files in ~/Documents"</span> — press <b style="color:var(--text2)">⌘K</b> for command palette</span>
+      <span>Try: <span style="color:var(--accent2)">${examples[exIdx]}</span> — or press <b style="color:var(--text2)">⌘K</b> for all commands</span>
     </div>
   </div>`);
+}
+
+function setInputAndSend(text) {
+  const inp = document.getElementById('cmd-input');
+  inp.value = text;
+  autoResize(inp);
+  inp.focus();
+}
+
+function setAppInput(text) {
+  const inp = document.getElementById('cmd-input');
+  inp.value = text;
+  autoResize(inp);
+  inp.focus();
+  toast('Edit the command then press Enter to run', 'info', 2200);
 }
 
 function renderBriefCard(d) {
@@ -1892,13 +1932,152 @@ function buildQuickActionList() {
   const el = document.getElementById('quick-action-list');
   const actions = [
     {icon:'🌄',label:'Morning Brief',action:()=>loadMorningBrief()},
+    {icon:'📱',label:'Apps',action:()=>switchPanel('apps')},
     {icon:'📈',label:'Activity Insights',action:()=>switchPanel('insights')},
     {icon:'🧠',label:'Search Memory',action:()=>switchPanel('memory')},
     {icon:'🔄',label:'View Workflows',action:()=>switchPanel('workflows')},
     {icon:'📊',label:'System Monitor',action:()=>switchPanel('sysmon')},
-    {icon:'🔍',label:'Audit Log',action:()=>switchPanel('audit')},
   ];
   el.innerHTML = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">${actions.map(a=>`<button class="panel-btn" onclick="(${a.action.toString()})()">${a.icon} ${esc(a.label)}</button>`).join('')}</div>`;
+}
+
+// ── Apps Panel ────────────────────────────────────────────────────────────────
+const APP_CATALOG = [
+  {
+    category: 'Social Media',
+    apps: [
+      { icon: '🎵', name: 'TikTok',     actions: [['Open','Open TikTok'],['Upload','Open TikTok upload page'],['Messages','Open TikTok messages']] },
+      { icon: '📸', name: 'Instagram',  actions: [['Open','Open Instagram'],['Reels','Open Instagram reels'],['DMs','Open Instagram messages']] },
+      { icon: '💬', name: 'WhatsApp',   actions: [['Open','Open WhatsApp'],['New message','Send a WhatsApp message to '],['Groups','Open WhatsApp groups']] },
+      { icon: '💼', name: 'LinkedIn',   actions: [['Feed','Open LinkedIn feed'],['Jobs','Open LinkedIn job search'],['Messages','Open LinkedIn messages']] },
+      { icon: '👥', name: 'Facebook',   actions: [['Open','Open Facebook'],['Messages','Open Facebook Messenger'],['Marketplace','Open Facebook Marketplace']] },
+      { icon: '🐦', name: 'X / Twitter',actions: [['Home','Open Twitter home'],['Compose','Compose a tweet'],['DMs','Open Twitter messages']] },
+      { icon: '👻', name: 'Snapchat',   actions: [['Open','Open Snapchat']] },
+      { icon: '💬', name: 'Discord',    actions: [['Open','Open Discord'],['Messages','Open Discord messages']] },
+      { icon: '✈️', name: 'Telegram',   actions: [['Open','Open Telegram'],['Messages','Open Telegram messages']] },
+    ]
+  },
+  {
+    category: 'Productivity',
+    apps: [
+      { icon: '📧', name: 'Gmail',         actions: [['Inbox','Open Gmail inbox'],['Compose','Compose a new email in Gmail'],['Sent','Open Gmail sent mail']] },
+      { icon: '📂', name: 'Google Drive',  actions: [['Open','Open Google Drive'],['New doc','Open Google Docs new document']] },
+      { icon: '📄', name: 'Google Docs',   actions: [['Open','Open Google Docs'],['New','Create a new Google Doc']] },
+      { icon: '📊', name: 'Google Sheets', actions: [['Open','Open Google Sheets'],['New','Create a new Google Sheet']] },
+      { icon: '📝', name: 'Notion',        actions: [['Open','Open Notion'],['New page','Open Notion and create a new page']] },
+      { icon: '💬', name: 'Slack',         actions: [['Open','Open Slack'],['Messages','Open Slack messages']] },
+      { icon: '📹', name: 'Zoom',          actions: [['Open','Open Zoom'],['New meeting','Start a new Zoom meeting']] },
+      { icon: '🗂️', name: 'Trello',        actions: [['Open','Open Trello']] },
+    ]
+  },
+  {
+    category: 'Office',
+    apps: [
+      { icon: '📊', name: 'Excel',       actions: [['Open','Open Microsoft Excel'],['New workbook','Open Excel and create a new workbook'],['Recent','Open Excel recent files']] },
+      { icon: '📝', name: 'Word',        actions: [['Open','Open Microsoft Word'],['New doc','Open Word and create a new document']] },
+      { icon: '📑', name: 'PowerPoint',  actions: [['Open','Open Microsoft PowerPoint'],['New','Open PowerPoint and create a new presentation']] },
+      { icon: '📓', name: 'OneNote',     actions: [['Open','Open Microsoft OneNote']] },
+      { icon: '📬', name: 'Outlook',     actions: [['Open','Open Microsoft Outlook'],['Compose','Compose a new email in Outlook']] },
+    ]
+  },
+  {
+    category: 'Creative & Media',
+    apps: [
+      { icon: '🎥', name: 'OBS Studio',     actions: [['Open','Open OBS Studio'],['Start recording','Open OBS Studio and start recording'],['Stream','Open OBS Studio and start streaming']] },
+      { icon: '▶️', name: 'YouTube',        actions: [['Open','Open YouTube'],['Studio','Open YouTube Studio'],['Upload','Open YouTube upload page']] },
+      { icon: '🎵', name: 'Spotify',        actions: [['Open','Open Spotify'],['Search','Open Spotify and search for ']] },
+      { icon: '🎬', name: 'Netflix',        actions: [['Open','Open Netflix'],['Search','Open Netflix and search for ']] },
+      { icon: '🎮', name: 'Twitch',         actions: [['Open','Open Twitch'],['Dashboard','Open Twitch streaming dashboard']] },
+      { icon: '🎨', name: 'Canva',          actions: [['Open','Open Canva'],['New design','Open Canva and create a new design']] },
+      { icon: '✏️', name: 'Figma',          actions: [['Open','Open Figma']] },
+    ]
+  },
+  {
+    category: 'Browsers',
+    apps: [
+      { icon: '🌐', name: 'Chrome',   actions: [['Open','Open Google Chrome'],['Search','Search the web for '],['New tab','Open Google Chrome new tab']] },
+      { icon: '🦊', name: 'Firefox',  actions: [['Open','Open Firefox'],['Search','Open Firefox and search for ']] },
+      { icon: '🔵', name: 'Edge',     actions: [['Open','Open Microsoft Edge']] },
+      { icon: '🦁', name: 'Brave',    actions: [['Open','Open Brave browser']] },
+    ]
+  },
+  {
+    category: 'Developer Tools',
+    apps: [
+      { icon: '💻', name: 'VS Code',   actions: [['Open','Open Visual Studio Code'],['Current folder','Open VS Code in current folder']] },
+      { icon: '🐙', name: 'GitHub',    actions: [['Open','Open GitHub'],['Pull requests','Open GitHub pull requests'],['Issues','Open GitHub issues']] },
+      { icon: '🖥️', name: 'Terminal',  actions: [['Open','Open Terminal']] },
+      { icon: '🤖', name: 'ChatGPT',   actions: [['Open','Open ChatGPT']] },
+    ]
+  },
+  {
+    category: 'System & Utilities',
+    apps: [
+      { icon: '🗑️', name: 'Cleanup Temp', actions: [['Scan','Scan for temp files on my PC'],['Clean','Delete temp files from my PC'],['Browser cache','Clean browser cache and temp files']] },
+      { icon: '📊', name: 'System Monitor',actions: [['Status','Show system CPU and memory status'],['Processes','Show running processes']] },
+      { icon: '📱', name: 'Find App',      actions: [['Search','Find installed apps on my computer'],['Running','List all running applications']] },
+    ]
+  },
+];
+
+let _appsRendered = false;
+function loadAppsPanel() {
+  if (_appsRendered) return;
+  _appsRendered = true;
+  const grid = document.getElementById('apps-grid');
+  if (!grid) return;
+  grid.innerHTML = APP_CATALOG.map(cat => {
+    const rows = [];
+    for (let i = 0; i < cat.apps.length; i += 2) {
+      const pair = cat.apps.slice(i, i + 2);
+      rows.push(`<div class="apps-grid-row">${pair.map(app => renderAppCard(app)).join('')}</div>`);
+    }
+    return `<div class="apps-category" data-category="${esc(cat.category.toLowerCase())}">
+      <div class="apps-cat-label">${esc(cat.category)}</div>
+      ${rows.join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderAppCard(app) {
+  const chipsHtml = app.actions.map(([label, cmd]) =>
+    `<button class="app-action-chip" onclick="setAppInput('${esc(cmd).replace(/'/g,"\\'")}');event.stopPropagation()">${esc(label)}</button>`
+  ).join('');
+  return `<div class="app-card" onclick="setInputAndSend('Open ${esc(app.name)}')" data-name="${esc(app.name.toLowerCase())}">
+    <div class="app-card-top">
+      <span class="app-card-icon">${app.icon}</span>
+      <span class="app-card-name">${esc(app.name)}</span>
+    </div>
+    <div class="app-card-actions">${chipsHtml}</div>
+  </div>`;
+}
+
+function filterApps(q) {
+  const query = q.toLowerCase().trim();
+  const grid = document.getElementById('apps-grid');
+  if (!grid) return;
+  let anyVisible = false;
+  grid.querySelectorAll('.app-card').forEach(card => {
+    const name = card.dataset.name || '';
+    const match = !query || name.includes(query);
+    card.classList.toggle('hidden', !match);
+    if (match) anyVisible = true;
+  });
+  grid.querySelectorAll('.apps-category').forEach(cat => {
+    const hasVisible = [...cat.querySelectorAll('.app-card')].some(c => !c.classList.contains('hidden'));
+    cat.style.display = hasVisible ? '' : 'none';
+  });
+  let emptyEl = grid.querySelector('.apps-empty');
+  if (!anyVisible && query) {
+    if (!emptyEl) {
+      emptyEl = document.createElement('div');
+      emptyEl.className = 'apps-empty';
+      grid.appendChild(emptyEl);
+    }
+    emptyEl.textContent = `No apps found for "${q}". Try typing the task in the chat instead.`;
+  } else if (emptyEl) {
+    emptyEl.remove();
+  }
 }
 
 function renderTodoList(todos) {
@@ -2112,6 +2291,14 @@ function setupDragDrop() {
 // ── Command Palette ───────────────────────────────────────────────────────────
 const PAL_ITEMS = [
   {icon:'🌄', label:'Morning Brief', desc:'Show today\'s briefing', action:()=>{loadMorningBrief();closePalette();}},
+  {icon:'📱', label:'Apps', desc:'Launch apps — TikTok, Instagram, WhatsApp, Excel…', action:()=>{switchPanel('apps');closePalette();}},
+  {icon:'🗑️', label:'Clean Temp Files', desc:'Delete temp files and free up disk space', action:()=>{prefill('Delete temp files from my PC');closePalette();}},
+  {icon:'🎵', label:'Open TikTok', desc:'Launch TikTok in browser', action:()=>{prefill('Open TikTok');closePalette();}},
+  {icon:'📸', label:'Open Instagram', desc:'Launch Instagram in browser', action:()=>{prefill('Open Instagram');closePalette();}},
+  {icon:'💬', label:'Send WhatsApp message', desc:'Open WhatsApp to send a message', action:()=>{prefill('Send a WhatsApp message to ');closePalette();}},
+  {icon:'💼', label:'Open LinkedIn', desc:'Launch LinkedIn in browser', action:()=>{prefill('Open LinkedIn feed');closePalette();}},
+  {icon:'📊', label:'Open Excel', desc:'Launch Microsoft Excel', action:()=>{prefill('Open Microsoft Excel');closePalette();}},
+  {icon:'🎥', label:'Open OBS Studio', desc:'Launch OBS Studio for recording/streaming', action:()=>{prefill('Open OBS Studio');closePalette();}},
   {icon:'📊', label:'System Monitor', desc:'Open system panel', action:()=>{switchPanel('sysmon');closePalette();}},
   {icon:'🧠', label:'Memory', desc:'View task memory', action:()=>{switchPanel('memory');closePalette();}},
   {icon:'📈', label:'Insights', desc:'Activity analytics', action:()=>{switchPanel('insights');closePalette();}},

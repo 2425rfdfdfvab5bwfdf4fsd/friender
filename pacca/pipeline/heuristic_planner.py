@@ -476,36 +476,39 @@ class HeuristicPlanner:
         return steps
 
     def _plan_webapp(self, low: str, cmd: str) -> list[dict]:
-        """Plan navigation to a web app, with optional action and search."""
+        """Plan navigation to a web app with optional action, search, and multi-step flows."""
         quotes = QUOTE_RE.findall(cmd)
 
-        # Social / productivity app name detection
         _APP_ALIASES: dict[str, str] = {
-            "whatsapp": "WhatsApp",
-            "instagram": "Instagram",
-            "tiktok": "TikTok",
-            "linkedin": "LinkedIn",
-            "facebook": "Facebook",
-            "twitter": "Twitter",
-            "youtube": "YouTube",
-            "gmail": "Gmail",
-            "google drive": "Google Drive",
-            "google docs": "Google Docs",
+            "whatsapp":      "WhatsApp",
+            "instagram":     "Instagram",
+            "tiktok":        "TikTok",
+            "linkedin":      "LinkedIn",
+            "facebook":      "Facebook",
+            "twitter":       "Twitter",
+            "x.com":         "Twitter",
+            "youtube":       "YouTube",
+            "gmail":         "Gmail",
+            "google drive":  "Google Drive",
+            "google docs":   "Google Docs",
             "google sheets": "Google Sheets",
-            "google calendar": "Google Calendar",
-            "spotify": "Spotify",
-            "discord": "Discord",
-            "telegram": "Telegram",
-            "netflix": "Netflix",
-            "reddit": "Reddit",
-            "notion": "Notion",
-            "figma": "Figma",
-            "canva": "Canva",
-            "slack": "Slack",
-            "zoom": "Zoom",
-            "github": "GitHub",
-            "chatgpt": "ChatGPT",
-            "snapchat": "Snapchat",
+            "google calendar":"Google Calendar",
+            "spotify":       "Spotify",
+            "discord":       "Discord",
+            "telegram":      "Telegram",
+            "netflix":       "Netflix",
+            "reddit":        "Reddit",
+            "notion":        "Notion",
+            "figma":         "Figma",
+            "canva":         "Canva",
+            "slack":         "Slack",
+            "zoom":          "Zoom",
+            "github":        "GitHub",
+            "chatgpt":       "ChatGPT",
+            "snapchat":      "Snapchat",
+            "twitch":        "Twitch",
+            "pinterest":     "Pinterest",
+            "soundcloud":    "SoundCloud",
         }
 
         app_name = ""
@@ -514,21 +517,32 @@ class HeuristicPlanner:
                 app_name = display
                 break
 
-        # Extract action intent
+        # Extract action intent — order matters (longer/more-specific first)
         action = "home"
         action_map = {
-            "message": "messages",
-            "dm":      "messages",
-            "inbox":   "inbox",
-            "compose": "compose",
-            "post":    "post",
-            "job":     "jobs",
-            "upload":  "upload",
-            "profile": "profile",
-            "search":  "home",
-            "explore": "explore",
-            "notification": "notifications",
-            "feed":    "home",
+            "messages":        "messages",
+            "messaging":       "messages",
+            "dm":              "messages",
+            "inbox":           "inbox",
+            "compose":         "compose",
+            "new email":       "compose",
+            "send email":      "compose",
+            "post":            "post",
+            "jobs":            "jobs",
+            "job search":      "jobs",
+            "upload":          "upload",
+            "profile":         "profile",
+            "explore":         "explore",
+            "reels":           "reels",
+            "following":       "following",
+            "subscriptions":   "subscriptions",
+            "notifications":   "notifications",
+            "network":         "network",
+            "connections":     "network",
+            "studio":          "studio",
+            "live":            "live",
+            "search":          "home",
+            "feed":            "home",
         }
         for kw, act in action_map.items():
             if kw in low:
@@ -542,11 +556,59 @@ class HeuristicPlanner:
                 break
 
         if not app_name:
-            # List available apps instead
             return [{"tool": "list_available_web_apps",
                      "args": {},
                      "description": "List all available web apps"}]
 
+        # ── Multi-step plans for specific high-value workflows ──
+        # TikTok upload
+        if app_name == "TikTok" and action == "upload":
+            return [
+                {"tool": "open_web_app",
+                 "args": {"app_name": "TikTok", "action": "upload"},
+                 "description": "Open TikTok upload page — add your video file and caption"},
+            ]
+
+        # WhatsApp send message (sensitive — requires confirmation)
+        if app_name == "WhatsApp" and any(w in low for w in ("send", "message", "write", "tell")):
+            contact = ""
+            to_m = re.compile(r'\bto\s+([A-Za-z][^\s,]+(?:\s+[A-Za-z][^\s,]+)?)', re.I).search(cmd)
+            if to_m:
+                contact = to_m.group(1)
+            msg_text = quotes[0] if quotes else ""
+            return [
+                {"tool": "open_web_app",
+                 "args": {"app_name": "WhatsApp", "action": "messages",
+                          "search_query": contact},
+                 "description": f"Open WhatsApp{' — search for ' + contact if contact else ''} (review before sending)"},
+            ]
+
+        # LinkedIn post / job search
+        if app_name == "LinkedIn":
+            if any(w in low for w in ("post", "write", "publish", "share")):
+                return [{"tool": "open_web_app",
+                         "args": {"app_name": "LinkedIn", "action": "post"},
+                         "description": "Open LinkedIn feed to compose a post"}]
+            if any(w in low for w in ("job", "jobs", "hiring", "vacancy", "position")):
+                return [{"tool": "open_web_app",
+                         "args": {"app_name": "LinkedIn", "action": "jobs",
+                                  "search_query": search_q},
+                         "description": f"Open LinkedIn job search{': ' + search_q if search_q else ''}"}]
+
+        # Gmail compose
+        if app_name == "Gmail" and any(w in low for w in ("compose", "send", "write", "new email")):
+            return [{"tool": "open_web_app",
+                     "args": {"app_name": "Gmail", "action": "compose"},
+                     "description": "Open Gmail compose window — review before sending"}]
+
+        # YouTube upload / Studio
+        if app_name == "YouTube" and any(w in low for w in ("upload", "publish", "studio")):
+            a = "upload" if "upload" in low else "studio"
+            return [{"tool": "open_web_app",
+                     "args": {"app_name": "YouTube", "action": a},
+                     "description": f"Open YouTube {'upload' if a == 'upload' else 'Studio'}"}]
+
+        # Default: open the app at the resolved action/section
         return [{
             "tool": "open_web_app",
             "args": {

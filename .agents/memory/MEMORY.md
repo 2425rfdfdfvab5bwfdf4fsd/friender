@@ -11,3 +11,4 @@
 - [PACCA router architecture](pacca-routers.md) — main.py split into 9 routers/ + pacca/app_state.py singletons; main.py is now 162 lines (was 1561); shared state via get_agent(), get_workflow_manager()
 - [PACCA v8.1 smarter AI](pacca-v81-smarter-ai.md) — CoT planning, progressive retry (self-heal→reflect→replan), adaptive goal re-synthesis, memory few-shot context injection
 - [PACCA digital employee](pacca-digital-employee.md) — 5 new tools: cleanup_temp_files, open_web_app, navigate_web_app, find_installed_apps, list_available_web_apps; 100+ apps in registry; web fallbacks; cleanup/webapp intent domains
+- [PACCA apps panel](pacca-apps-panel.md) — Apps sidebar panel (APP_CATALOG 7 categories, 40+ apps); renderWelcomeMsg updated with quick-launch pills + digital employee copy; enhanced _plan_webapp() with multi-step flows for WhatsApp/LinkedIn/TikTok/Gmail/YouTube; Apps in command palette

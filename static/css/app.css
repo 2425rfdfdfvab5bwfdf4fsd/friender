@@ -647,6 +647,32 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .pal-empty{padding:20px;text-align:center;font-size:11.5px;color:var(--muted)}
 #palette-footer{padding:8px 16px;border-top:1px solid var(--border);display:flex;gap:14px;font-size:10px;color:var(--muted)}
 
+/* ── Apps Panel ──────────────────────────────────────────────────────────── */
+.apps-category{margin-bottom:14px}
+.apps-cat-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:var(--muted);margin-bottom:6px;padding-left:2px}
+.apps-grid-row{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.app-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 9px;cursor:pointer;transition:background .14s,border-color .14s;display:flex;flex-direction:column;gap:4px}
+.app-card:hover{background:var(--surface3);border-color:rgba(var(--accent-rgb),.3)}
+.app-card-top{display:flex;align-items:center;gap:6px}
+.app-card-icon{font-size:16px;flex-shrink:0;line-height:1}
+.app-card-name{font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-card-actions{display:flex;flex-wrap:wrap;gap:3px}
+.app-action-chip{background:rgba(var(--accent-rgb),.1);border:1px solid rgba(var(--accent-rgb),.18);color:var(--accent2);font-size:9.5px;font-weight:500;padding:2px 7px;border-radius:20px;cursor:pointer;transition:background .12s;white-space:nowrap;font-family:var(--font)}
+.app-action-chip:hover{background:rgba(var(--accent-rgb),.22);border-color:rgba(var(--accent-rgb),.4)}
+.app-card.hidden{display:none}
+.apps-empty{text-align:center;font-size:11px;color:var(--muted);padding:24px 12px}
+
+/* ── Home screen featured apps row ──────────────────────────────────────── */
+.home-apps-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.home-app-pill{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 11px;cursor:pointer;transition:background .13s,border-color .13s;font-size:11px;font-weight:600;color:var(--text2)}
+.home-app-pill:hover{background:var(--surface3);border-color:rgba(var(--accent-rgb),.3);color:var(--text)}
+.home-app-pill .hap-icon{font-size:14px}
+
+/* ── Sensitive action confirm banner ─────────────────────────────────────── */
+.sensitive-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(var(--warn-rgb),.07);border:1px solid rgba(var(--warn-rgb),.25);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:10px;font-size:11px;color:var(--warn)}
+.sensitive-banner-icon{font-size:16px;flex-shrink:0}
+.sensitive-banner-text{line-height:1.5}
+
 /* ── Scrollbars ──────────────────────────────────────────────────────────── */
 *::-webkit-scrollbar{width:4px;height:4px}
 *::-webkit-scrollbar-track{background:transparent}
