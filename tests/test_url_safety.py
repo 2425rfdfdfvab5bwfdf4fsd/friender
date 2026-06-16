@@ -1,6 +1,6 @@
 """Tests for browser URL safety checks (SEC-07)."""
 import pytest
-from pacca.tools.browser_tools import _check_url_safety
+from arix.tools.browser_tools import _check_url_safety
 
 
 @pytest.mark.parametrize("url,expected_safe", [

@@ -1,4 +1,4 @@
-# PACCA v7.2 — Personal AI Computer-Control Agent
+# Arix v7.2 — Personal AI Computer-Control Agent
 
 > A security-first, LLM-powered agent that executes natural-language commands to control your computer — with a layered trust architecture, persistent multi-tier memory, and a web-based terminal interface.
 
@@ -36,16 +36,16 @@
 
 ## Overview
 
-PACCA is a personal AI agent that translates natural-language instructions into safe, audited computer-control actions. It combines an LLM planner with a rule-based heuristic fallback and wraps every execution in a nine-layer security pipeline — ensuring that every action on your machine is scoped, risk-scored, validated, and logged before it happens.
+Arix is a personal AI agent that translates natural-language instructions into safe, audited computer-control actions. It combines an LLM planner with a rule-based heuristic fallback and wraps every execution in a nine-layer security pipeline — ensuring that every action on your machine is scoped, risk-scored, validated, and logged before it happens.
 
-PACCA is built for power users, developers, and researchers who want an AI assistant with real local system access but cannot compromise on transparency or safety.
+Arix is built for power users, developers, and researchers who want an AI assistant with real local system access but cannot compromise on transparency or safety.
 
 **Core design principles:**
 
 - **Security by default** — every tool call requires a single-use HMAC-signed capability grant; nothing bypasses the pipeline
 - **Transparency** — every step is explained in plain language and recorded in a tamper-resistant audit log
-- **Resilience** — a fully capable heuristic planner keeps PACCA functional with no API key or internet connection
-- **Learning memory** — episodic, semantic, and skill-based memory lets PACCA learn from past tasks and improve over time
+- **Resilience** — a fully capable heuristic planner keeps Arix functional with no API key or internet connection
+- **Learning memory** — episodic, semantic, and skill-based memory lets Arix learn from past tasks and improve over time
 - **Honest risk communication** — plans are scored before execution; high-risk plans require explicit user confirmation
 
 ---
@@ -135,7 +135,7 @@ Audit Log
 | 6 | **PlanValidator** | Statically validates the full plan against the tool allowlist, path scope, URL blocklist, and payment-flow blocklist |
 | 7 | **CumulativePlanRiskEvaluator** | Scores the entire plan holistically before execution begins; blocks or gates based on thresholds |
 | 8 | **RuntimeStepValidator** | Re-validates arguments and performs a time-of-check / time-of-use (TOCTOU) check immediately before each step |
-| 9 | **AuditLogger** | Writes a tamper-resistant, redacted JSON record to `~/.pacca/audit.log` at mode `0600` |
+| 9 | **AuditLogger** | Writes a tamper-resistant, redacted JSON record to `~/.arix/audit.log` at mode `0600` |
 
 ---
 
@@ -200,7 +200,7 @@ Before risk scoring, the `PlanValidator` performs static analysis of the entire 
 
 ## Tool Registry
 
-PACCA ships with 38+ tools organized across eight domains.
+Arix ships with 38+ tools organized across eight domains.
 
 ### File
 
@@ -276,7 +276,7 @@ PACCA ships with 38+ tools organized across eight domains.
 
 ## Memory System
 
-PACCA maintains three tiers of persistent memory backed by SQLite at `~/.pacca/memory.db`.
+Arix maintains three tiers of persistent memory backed by SQLite at `~/.arix/memory.db`.
 
 ### Episodic Memory
 Records every executed task, its steps, outcomes, and duration. Powers:
@@ -290,7 +290,7 @@ Stores structured knowledge entries searchable by two methods:
 - **Neural vector index** — `text-embedding-3-small` embeddings via OpenAI API, cosine similarity ranking. Automatically falls back to TF-IDF when `OPENAI_API_KEY` is not set.
 
 ### Skill Library
-Saves successful multi-step task executions as named, reusable skills. When a future task matches a stored skill, PACCA can invoke it directly — bypassing LLM re-planning for known workflows.
+Saves successful multi-step task executions as named, reusable skills. When a future task matches a stored skill, Arix can invoke it directly — bypassing LLM re-planning for known workflows.
 
 ### Memory Compressor
 Periodically summarizes older episodic entries into compact semantic records to keep storage efficient and retrieval fast as history grows.
@@ -316,7 +316,7 @@ The built-in `HeuristicPlanner` generates multi-step plans using regex pattern m
 
 ### Workflow Scheduler
 
-Automate any sequence of PACCA commands on a recurring schedule using plain English:
+Automate any sequence of Arix commands on a recurring schedule using plain English:
 
 ```
 > every weekday at 9am: summarise my git log and send to Slack
@@ -324,18 +324,18 @@ Automate any sequence of PACCA commands on a recurring schedule using plain Engl
 > every Monday at 8am: generate my weekly report
 ```
 
-Natural-language phrases are converted to cron expressions automatically. Workflows are stored as YAML files in `~/.pacca/workflows/` and executed by an `AsyncIOScheduler`. Manage them via the `/api/workflows` endpoint or the web dashboard.
+Natural-language phrases are converted to cron expressions automatically. Workflows are stored as YAML files in `~/.arix/workflows/` and executed by an `AsyncIOScheduler`. Manage them via the `/api/workflows` endpoint or the web dashboard.
 
 ### Morning Brief
 
-Every morning, PACCA generates a personalized daily digest that includes:
+Every morning, Arix generates a personalized daily digest that includes:
 
 - **Overdue tasks** and **due-today reminders** from your to-do list
 - **Open tasks** and tracked **project items**
 - **Weekly activity summary** drawn from episodic memory
 - An LLM-narrated markdown summary (under 200 words) stitching everything together
 
-Briefs are cached daily in `~/.pacca/morning_brief_cache.json` to avoid redundant generation.
+Briefs are cached daily in `~/.arix/morning_brief_cache.json` to avoid redundant generation.
 
 ### Undo Manager
 
@@ -351,7 +351,7 @@ Destructive operations (move, create, delete) register an undo record on an in-m
 
 ### User Profiles
 
-PACCA personalizes its behavior based on a profile stored at `~/.pacca/profile.json` (mode `0600`):
+Arix personalizes its behavior based on a profile stored at `~/.arix/profile.json` (mode `0600`):
 
 | Field | Description |
 |---|---|
@@ -390,13 +390,13 @@ export ANTHROPIC_API_KEY="sk-ant-..."   # Recommended — uses Claude
 export OPENAI_API_KEY="sk-..."          # Alternative — uses GPT + enables neural vector memory
 ```
 
-> **No API key?** PACCA runs fully in **offline / demo mode** using the built-in heuristic planner. All 38+ tools, the security pipeline, memory system, and audit log remain completely functional.
+> **No API key?** Arix runs fully in **offline / demo mode** using the built-in heuristic planner. All 38+ tools, the security pipeline, memory system, and audit log remain completely functional.
 
 ---
 
 ## Configuration
 
-PACCA writes `~/.pacca/config.json` on first run. All values can be overridden there.
+Arix writes `~/.arix/config.json` on first run. All values can be overridden there.
 
 ### Full Configuration Reference
 
@@ -541,7 +541,7 @@ pacca/
 │
 ├── pacca/
 │   ├── agent.py                  # Central orchestrator — ties every layer together
-│   ├── config.py                 # Configuration dataclass + loader (~/.pacca/config.json)
+│   ├── config.py                 # Configuration dataclass + loader (~/.arix/config.json)
 │   ├── llm_client.py             # Anthropic/OpenAI client with retry, circuit breaker, fallback
 │   ├── heuristic_planner.py      # Regex-based offline planner (no API required)
 │   ├── supervisor.py             # LLM goal decomposition and multi-goal supervision
@@ -612,16 +612,16 @@ A browser-based xterm.js terminal with a tabbed dashboard. Available panels:
 All terminal interactions run over a persistent WebSocket connection (`/ws`). The REST API exposes history, memory, profile, and workflow management — suitable for external integrations, scripts, or mobile clients.
 
 ### WhatsApp
-PACCA accepts commands via a WhatsApp webhook (`/webhook/whatsapp`), enabling remote computer-control from any device. Responses are streamed back as WhatsApp messages in real time.
+Arix accepts commands via a WhatsApp webhook (`/webhook/whatsapp`), enabling remote computer-control from any device. Responses are streamed back as WhatsApp messages in real time.
 
 ### Advisory Mode
-When PACCA detects a question rather than a command, it automatically routes the message to the expert advisor persona — powered by the same LLM backend — and renders a markdown-formatted answer directly in the terminal without touching the execution pipeline.
+When Arix detects a question rather than a command, it automatically routes the message to the expert advisor persona — powered by the same LLM backend — and renders a markdown-formatted answer directly in the terminal without touching the execution pipeline.
 
 ---
 
 ## Audit Log
 
-All agent activity is written to `~/.pacca/audit.log` with the following guarantees:
+All agent activity is written to `~/.arix/audit.log` with the following guarantees:
 
 | Property | Detail |
 |---|---|
@@ -634,4 +634,4 @@ All agent activity is written to `~/.pacca/audit.log` with the following guarant
 
 ---
 
-*PACCA is designed for personal, local use. Review `allowed_path_prefixes`, `risk_proceed_threshold`, and `risk_confirm_threshold` in your config before running on sensitive systems.*
+*Arix is designed for personal, local use. Review `allowed_path_prefixes`, `risk_proceed_threshold`, and `risk_confirm_threshold` in your config before running on sensitive systems.*

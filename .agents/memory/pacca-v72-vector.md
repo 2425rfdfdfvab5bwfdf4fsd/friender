@@ -1,5 +1,5 @@
 ---
-name: PACCA v7.2 vector memory
+name: Arix v7.2 vector memory
 description: Gap #2 complete — VectorIndex neural embeddings replacing TF-IDF as semantic search backend
 ---
 
@@ -38,7 +38,7 @@ description: Gap #2 complete — VectorIndex neural embeddings replacing TF-IDF 
 ## Key design decisions
 
 **Why SQLite BLOB instead of sqlite-vec?**
-sqlite-vec failed to install in this Replit environment (network timeout on the package firewall). SQLite BLOB + numpy is functionally equivalent for PACCA's scale (hundreds to low thousands of memories) — exact cosine search over a numpy matrix is O(N) but trivially fast at this size. The schema is identical to what sqlite-vec would have used, so migration is straightforward if sqlite-vec becomes available.
+sqlite-vec failed to install in this Replit environment (network timeout on the package firewall). SQLite BLOB + numpy is functionally equivalent for Arix's scale (hundreds to low thousands of memories) — exact cosine search over a numpy matrix is O(N) but trivially fast at this size. The schema is identical to what sqlite-vec would have used, so migration is straightforward if sqlite-vec becomes available.
 
 **Why:** `sqlite-vec` is not installable behind Replit's package firewall; numpy (2.4.6) installed successfully and achieves the same result.
 

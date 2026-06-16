@@ -3,9 +3,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from pacca.intelligence.morning_brief import generate_morning_brief
-from pacca.intelligence.pattern_detector import get_nudges
-from pacca.app_state import get_agent, todos, reminders, projects, notifications, profile
+from arix.intelligence.morning_brief import generate_morning_brief
+from arix.intelligence.pattern_detector import get_nudges
+from arix.app_state import get_agent, todos, reminders, projects, notifications, profile
 
 router = APIRouter(tags=["intelligence"])
 

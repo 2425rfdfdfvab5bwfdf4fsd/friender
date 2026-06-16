@@ -1,7 +1,7 @@
 """Tests for CumulativePlanRiskEvaluator."""
 import pytest
 from unittest.mock import MagicMock
-from pacca.pipeline.risk_evaluator import (
+from arix.pipeline.risk_evaluator import (
     CumulativePlanRiskEvaluator, PROCEED_THRESHOLD, CONFIRM_THRESHOLD
 )
 

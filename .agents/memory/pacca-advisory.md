@@ -1,11 +1,11 @@
 ---
-name: PACCA advisory mode
+name: Arix advisory mode
 description: Expert advisor persona — how the two-mode routing works and where the key files are
 ---
 
 ## What was added
 
-PACCA now has two operating modes that are auto-detected from the user's input:
+Arix now has two operating modes that are auto-detected from the user's input:
 
 1. **Advisory mode** — questions, analysis, code help, strategy → LLM expert persona, rich markdown response in overlay panel
 2. **Action mode** — computer-control commands → existing tool pipeline unchanged
@@ -48,4 +48,4 @@ Clear action prefixes (list, create, move, git, etc.) short-circuit to action mo
 
 ## Why
 
-The original PACCA only produced JSON tool plans. Users also need expert guidance, debugging help, architecture advice, research, etc. — all handled by the advisor without any tool execution or security pipeline overhead.
+The original Arix only produced JSON tool plans. Users also need expert guidance, debugging help, architecture advice, research, etc. — all handled by the advisor without any tool execution or security pipeline overhead.

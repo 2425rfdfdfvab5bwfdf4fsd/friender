@@ -1,6 +1,6 @@
 ---
-name: PACCA known quirks
-description: Non-obvious bugs fixed and constraints for PACCA v5.2 security pipeline
+name: Arix known quirks
+description: Non-obvious bugs fixed and constraints for Arix v5.2 security pipeline
 ---
 
 ## git_add secret-reversal uses subprocess, not run_git

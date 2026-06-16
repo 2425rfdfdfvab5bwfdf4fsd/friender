@@ -1,5 +1,5 @@
 ---
-name: PACCA v7.0 upgrades
+name: Arix v7.0 upgrades
 description: Key architectural changes made in the v7.0 upgrade — LLM goal decomposition, memory stats API, Insights panel
 ---
 

@@ -6,8 +6,8 @@ from pathlib import Path
 from unittest.mock import MagicMock
 import pytest
 
-from pacca.security.safe_resource_resolver import SafeResourceResolver
-from pacca.models.resolved_resource import PathExpectation
+from arix.security.safe_resource_resolver import SafeResourceResolver
+from arix.models.resolved_resource import PathExpectation
 
 
 def _make_scope(prefixes: list[str] | None = None) -> MagicMock:

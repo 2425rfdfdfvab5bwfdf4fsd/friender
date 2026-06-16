@@ -1,4 +1,4 @@
-# PACCA — Testing Guide
+# Arix — Testing Guide
 
 ## Quick Start
 

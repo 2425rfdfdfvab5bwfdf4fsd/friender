@@ -5,7 +5,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 
-from pacca.integrations import google_calendar
+from arix.integrations import google_calendar
 
 router = APIRouter(prefix="/api/calendar", tags=["calendar"])
 
@@ -43,5 +43,5 @@ async def create_calendar_event(body: dict):
 
 @router.delete("/events/{event_id}")
 async def delete_calendar_event(event_id: str):
-    from pacca.tools.calendar_tools import delete_calendar_event as _delete
+    from arix.tools.calendar_tools import delete_calendar_event as _delete
     return await asyncio.to_thread(_delete, event_id=event_id)

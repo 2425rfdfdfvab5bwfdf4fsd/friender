@@ -1,6 +1,6 @@
 """Tests for MemoryManager WAL mode (REL-01)."""
 import pytest
-from pacca.memory.memory_manager import MemoryManager
+from arix.memory.memory_manager import MemoryManager
 
 
 def test_wal_mode_enabled():

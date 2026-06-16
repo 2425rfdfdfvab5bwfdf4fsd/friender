@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from pacca.app_state import todos, reminders, notes, projects, profile as _profile_singleton
-import pacca.app_state as state
+from arix.app_state import todos, reminders, notes, projects, profile as _profile_singleton
+import arix.app_state as state
 
 router = APIRouter(tags=["personal"])
 

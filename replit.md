@@ -1,4 +1,4 @@
-# PACCA v7.0 — Personal AI Computer-Control Agent
+# Arix v7.0 — Personal AI Computer-Control Agent
 
 A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture.
 
@@ -18,13 +18,13 @@ User Command → TaskScope Derivation → Local Redaction Pipeline
 ## Key Components
 
 - **`main.py`** — FastAPI server + WebSocket terminal interface
-- **`pacca/agent.py`** — Agent orchestrator (ties all layers together)
-- **`pacca/models/`** — Core data models (TaskScope, ResolvedResource, CapabilityGrant, etc.)
-- **`pacca/security/`** — SafeResourceResolver, LocalTextRedactor, UsedGrantRegistry, GrantVerifier
-- **`pacca/pipeline/`** — CommandParser, PlanValidator, PolicyEngine, RiskEvaluator, RuntimeValidator
-- **`pacca/tools/`** — All 25 v1.0 tools across 6 modules (file, app, system, browser, document, git)
-- **`pacca/llm_client.py`** — Anthropic/OpenAI LLM client with retry + fallback
-- **`pacca/config.py`** — Configuration (loaded from `~/.pacca/config.json`)
+- **`arix/agent.py`** — Agent orchestrator (ties all layers together)
+- **`arix/models/`** — Core data models (TaskScope, ResolvedResource, CapabilityGrant, etc.)
+- **`arix/security/`** — SafeResourceResolver, LocalTextRedactor, UsedGrantRegistry, GrantVerifier
+- **`arix/pipeline/`** — CommandParser, PlanValidator, PolicyEngine, RiskEvaluator, RuntimeValidator
+- **`arix/tools/`** — All 25 v1.0 tools across 6 modules (file, app, system, browser, document, git)
+- **`arix/llm_client.py`** — Anthropic/OpenAI LLM client with retry + fallback
+- **`arix/config.py`** — Configuration (loaded from `~/.arix/config.json`)
 - **`templates/index.html`** — Web terminal UI (xterm.js)
 
 ## Configuration
@@ -33,9 +33,9 @@ Set one of these environment variables to enable full LLM planning:
 - `ANTHROPIC_API_KEY` — for Claude (default provider)
 - `OPENAI_API_KEY` — for GPT models
 
-Without an API key, PACCA runs in demo mode with a built-in heuristic planner.
+Without an API key, Arix runs in demo mode with a built-in heuristic planner.
 
-Config file: `~/.pacca/config.json` (created on first run)
+Config file: `~/.arix/config.json` (created on first run)
 
 ## Security Model (PRD v5.2)
 
@@ -47,7 +47,7 @@ Config file: `~/.pacca/config.json` (created on first run)
 6. **PlanValidator** — enforces tool allowlist, path scope, URL blocklist, step count
 7. **CumulativePlanRiskEvaluator** — scores full plan; gates execution on risk
 8. **RuntimeStepValidator** — re-validates + TOCTOU check immediately before each step
-9. **AuditLogger** — tamper-resistant, privacy-safe log at `~/.pacca/audit.log` (0600)
+9. **AuditLogger** — tamper-resistant, privacy-safe log at `~/.arix/audit.log` (0600)
 
 ## Tool Registry (25 tools)
 

@@ -1,4 +1,4 @@
-"""PACCA v8.0 — FastAPI application factory.
+"""Arix v8.0 — FastAPI application factory.
 
 Responsibilities of this file are intentionally narrow:
   - Create the FastAPI app
@@ -8,7 +8,7 @@ Responsibilities of this file are intentionally narrow:
   - Serve the root HTML page and favicon
 
 All route handlers live in the routers/ package; shared singletons live in
-pacca/app_state.py.
+arix/app_state.py.
 """
 from __future__ import annotations
 
@@ -23,8 +23,8 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
-from pacca.app_state import get_agent, set_workflow_manager
-from pacca.workflows.workflow_manager import WorkflowManager
+from arix.app_state import get_agent, set_workflow_manager
+from arix.workflows.workflow_manager import WorkflowManager
 
 from routers import (
     agent_api,
@@ -49,7 +49,7 @@ async def lifespan(app_: FastAPI):
     yield
     wm.stop_scheduler()
     try:
-        from pacca.tools.browser_tools import close_browser
+        from arix.tools.browser_tools import close_browser
         await close_browser()
     except Exception:
         pass
@@ -63,7 +63,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── Auth middleware ───────────────────────────────────────────────────────────
 
-_ADMIN_TOKEN: str = os.environ.get("PACCA_ADMIN_TOKEN", "")
+_ADMIN_TOKEN: str = os.environ.get("Arix_ADMIN_TOKEN", "")
 _PUBLIC_PATHS = frozenset({"/", "/favicon.ico", "/webhook/whatsapp"})
 
 
@@ -80,7 +80,7 @@ async def auth_middleware(request: Request, call_next):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer ") or auth[7:] != _ADMIN_TOKEN:
         return JSONResponse(
-            {"error": "Unauthorized — set Authorization: Bearer <PACCA_ADMIN_TOKEN>"},
+            {"error": "Unauthorized — set Authorization: Bearer <Arix_ADMIN_TOKEN>"},
             status_code=401,
         )
     return await call_next(request)

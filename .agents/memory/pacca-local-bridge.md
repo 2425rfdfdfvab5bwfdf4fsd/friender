@@ -1,5 +1,5 @@
 ---
-name: PACCA local bridge
+name: Arix local bridge
 description: Local bridge agent for native desktop control via pyautogui — architecture, tools, and wiring.
 ---
 
@@ -27,8 +27,8 @@ Requires ANTHROPIC_API_KEY or OPENAI_API_KEY; gracefully degrades if unavailable
 
 ## Security
 
-- PACCA_BRIDGE_TOKEN env var gates bridge WebSocket (optional but recommended)
-- Commands still go through PACCA's full security pipeline before reaching bridge
+- Arix_BRIDGE_TOKEN env var gates bridge WebSocket (optional but recommended)
+- Commands still go through Arix's full security pipeline before reaching bridge
 - pyautogui FAILSAFE=True: user can abort by moving mouse to top-left corner
 - Only one bridge connection at a time (new connection closes old one)
 

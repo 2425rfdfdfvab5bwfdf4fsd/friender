@@ -1,5 +1,5 @@
 ---
-name: PACCA Playwright Nix Setup
+name: Arix Playwright Nix Setup
 description: How browser tools are wired to the Nix-provided Chromium in Replit, bypassing version mismatch between pip playwright and nix playwright-browsers.
 ---
 

@@ -1,5 +1,5 @@
 ---
-name: PACCA router architecture
+name: Arix router architecture
 description: main.py was split into 9 FastAPI routers; shared singletons live in pacca/app_state.py
 ---
 
@@ -22,7 +22,7 @@ All new API routes go in the appropriate `routers/` file, never directly in `mai
 | `routers/ws.py` | /ws (main WebSocket + HELP_TEXT) |
 
 ## Shared state (pacca/app_state.py)
-- `get_agent()` — lazy PACCAAgent singleton
+- `get_agent()` — lazy ArixAgent singleton
 - `get_workflow_manager()` / `set_workflow_manager()` — set during lifespan startup
 - `reset_agent()` — call after settings change to force re-init
 - `reminders`, `todos`, `notes`, `projects`, `notifications`, `profile` — eager singletons

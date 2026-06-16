@@ -1,6 +1,6 @@
-# CHANGELOG — PACCA
+# CHANGELOG — Arix
 
-All notable changes to PACCA are documented here.
+All notable changes to Arix are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
@@ -8,10 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [8.0.0] — 2026-06-15
 
 ### Security
-- **SEC-01** Added HTTP Bearer-token authentication middleware (`PACCA_ADMIN_TOKEN` env var). All non-public REST endpoints return 401 when token is set and missing.
-- **SEC-01** Added WebSocket token authentication — first WS message must be `{"type":"auth","token":"..."}` within 10 s when `PACCA_ADMIN_TOKEN` is set.
-- **SEC-03** `UsedGrantRegistry` rewritten with SQLite persistence (`~/.pacca/used_grants.db`). Grant replay protection now survives server restarts.
-- **SEC-04/05** WebSocket origin validation added. Configurable via `PACCA_ALLOWED_ORIGINS` env var (comma-separated hostnames). Default allows all origins (required for Replit proxy).
+- **SEC-01** Added HTTP Bearer-token authentication middleware (`Arix_ADMIN_TOKEN` env var). All non-public REST endpoints return 401 when token is set and missing.
+- **SEC-01** Added WebSocket token authentication — first WS message must be `{"type":"auth","token":"..."}` within 10 s when `Arix_ADMIN_TOKEN` is set.
+- **SEC-03** `UsedGrantRegistry` rewritten with SQLite persistence (`~/.arix/used_grants.db`). Grant replay protection now survives server restarts.
+- **SEC-04/05** WebSocket origin validation added. Configurable via `Arix_ALLOWED_ORIGINS` env var (comma-separated hostnames). Default allows all origins (required for Replit proxy).
 - **SEC-07** URL blocklist extended:
   - `169.254.0.0/16` (AWS/GCP instance metadata) blocked
   - IPv6 loopback (`::1`), link-local (`fe80::`), unique-local (`fc::/7`, `fd::/7`) blocked
@@ -28,11 +28,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **REL-01** `MemoryManager` SQLite connection now opened with `PRAGMA journal_mode=WAL` and `PRAGMA synchronous=NORMAL` to prevent "database is locked" errors.
 - **REL-03** Every tool call wrapped with `asyncio.wait_for(timeout=tool_timeout_seconds)`. Default timeout 60 s. Configurable via `tool_timeout_seconds` config field.
 - **REL-04** Graceful Playwright browser shutdown on server exit — `close_browser()` called in FastAPI lifespan teardown.
-- **REL-05** `PACCAConfig.save()` now uses atomic write-then-rename (`tempfile.mkstemp` + `os.replace`). File permissions set to `0600` before rename.
+- **REL-05** `ArixConfig.save()` now uses atomic write-then-rename (`tempfile.mkstemp` + `os.replace`). File permissions set to `0600` before rename.
 - **REL-06** `run_code` added to `DOMAIN_TOOL_MAP["coding"]` (was silently failing task scope checks).
 
 ### Configuration
-- New fields in `PACCAConfig`:
+- New fields in `ArixConfig`:
   - `tool_timeout_seconds: int = 60`
   - `require_auth: bool = False`
   - `allowed_ws_origins: list[str] = []` — empty means allow all
@@ -104,7 +104,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Pre-7.0] — Legacy
 
-- Initial PACCA implementation with FastAPI + WebSocket terminal UI
+- Initial Arix implementation with FastAPI + WebSocket terminal UI
 - 9-layer security pipeline
 - HMAC capability grants
 - Path scoping, risk scoring, audit logging

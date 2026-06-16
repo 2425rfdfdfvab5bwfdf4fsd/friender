@@ -1,4 +1,4 @@
-# PACCA — World-Class AI Operating System: Complete Product Evolution Plan
+# Arix — World-Class AI Operating System: Complete Product Evolution Plan
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### Positioning Statement
 
-> *"PACCA is the AI layer that makes your computer work for you — not just answering questions, but autonomously executing multi-step goals, learning your workflows, and operating securely at the speed of thought."*
+> *"Arix is the AI layer that makes your computer work for you — not just answering questions, but autonomously executing multi-step goals, learning your workflows, and operating securely at the speed of thought."*
 
 ### Unique Angle vs. the Competition
 
@@ -26,7 +26,7 @@
 
 ## 2. Competitive Analysis
 
-| Product | Strength | Weakness | PACCA Opportunity |
+| Product | Strength | Weakness | Arix Opportunity |
 |---|---|---|---|
 | ChatGPT Desktop | Brand recognition, polish | Cloud-only, no real file execution, no audit | Local execution + security-native |
 | Claude Computer Use | Screen understanding, sophisticated reasoning | Requires remote execution, Anthropic-locked | Provider-agnostic, local-first |
@@ -37,7 +37,7 @@
 | Manus | Multi-agent, browser automation | Opaque, closed, cloud-only | Open, local, auditable |
 | GitHub Copilot | IDE integration | Autocomplete only, no agency | Full autonomous execution |
 
-### PACCA's Structural Advantages
+### Arix's Structural Advantages
 
 - The **only agent** with a production-grade cryptographic security pipeline (grants, redaction, audit log)
 - **Provider-agnostic** — Anthropic, OpenAI, Gemini, or local models
@@ -60,10 +60,10 @@
 ### Tier 1 — Must Build Next (3–6 months)
 
 #### 🧠 Persistent Memory System
-Without memory, every session starts from zero. Users must re-explain context every time. This is the **single biggest gap** between PACCA and tools like Devin or Cursor. Memory = compounding value over time.
+Without memory, every session starts from zero. Users must re-explain context every time. This is the **single biggest gap** between Arix and tools like Devin or Cursor. Memory = compounding value over time.
 
 #### 👁️ Screen Understanding (Vision)
-Claude Computer Use and Manus can see the screen. PACCA is blind to what's happening visually. Adding screenshot capture + vision LLM calls unlocks: *"click the Submit button," "what's on screen right now?", "fill this form."*
+Claude Computer Use and Manus can see the screen. Arix is blind to what's happening visually. Adding screenshot capture + vision LLM calls unlocks: *"click the Submit button," "what's on screen right now?", "fill this form."*
 
 #### 🌐 Browser Automation (Playwright)
 `browser_open_url` is primitive. Real automation means: fill forms, click elements, navigate SPAs, scrape structured data, log into services. This is table-stakes for any serious agent.
@@ -80,7 +80,7 @@ Whisper (STT) + ElevenLabs/Edge TTS = hands-free operation. Critical for power u
 *"Every morning at 9am, pull the latest git changes, run tests, and send me a Slack summary."* Cron-like triggers + persistent workflow definitions = massive productivity multiplier.
 
 #### 💻 Coding Agent
-Beyond git_status/add/commit — full code generation, test writing, refactoring, PR creation. Cursor proved this market. PACCA can do it with better security and cross-domain context.
+Beyond git_status/add/commit — full code generation, test writing, refactoring, PR creation. Cursor proved this market. Arix can do it with better security and cross-domain context.
 
 #### 📧 Email + Calendar Assistant
 Gmail/Outlook API integration. *"Schedule a meeting with John next Tuesday, draft the agenda, and email it to the team."* Enormous daily value.
@@ -175,7 +175,7 @@ Spawn specialized sub-agents (Researcher, Coder, Writer) that work in parallel a
 | Episodic memory | SQLite / JSON | Past tasks, outcomes, commands used | 90 days |
 | User preference memory | JSON profile | Preferred tools, paths, code style, tone | Permanent |
 | Project memory | Per-project SQLite | Codebase summary, architecture decisions, key files | Per project |
-| Workflow memory | YAML definitions | Saved multi-step workflows the user teaches PACCA | Permanent |
+| Workflow memory | YAML definitions | Saved multi-step workflows the user teaches Arix | Permanent |
 | Semantic memory | Vector DB (Chroma) | Concepts, docs, knowledge the agent has learned | Permanent |
 
 ### Recommended Stack
@@ -184,7 +184,7 @@ Spawn specialized sub-agents (Researcher, Coder, Writer) that work in parallel a
 - **SQLite** for structured memory (fast, zero-dependency)
 - **sentence-transformers** (local) or OpenAI embeddings for vectorization
 
-**Key capability unlocked:** *"Remember last time I deployed this project? Do it the same way."* PACCA retrieves the workflow from episodic + project memory and replays it.
+**Key capability unlocked:** *"Remember last time I deployed this project? Do it the same way."* Arix retrieves the workflow from episodic + project memory and replays it.
 
 ---
 
@@ -241,7 +241,7 @@ HMAC-signed capability grants, used-grant registry (replay prevention), LocalTex
 | Gap | Recommendation | Priority |
 |---|---|---|
 | No process sandboxing | Run tool execution in a restricted subprocess (seccomp/AppArmor on Linux, sandbox on macOS) | P0 |
-| No path whitelist UI | Let users explicitly approve which directories PACCA can touch | P0 |
+| No path whitelist UI | Let users explicitly approve which directories Arix can touch | P0 |
 | Code execution is uncontrolled | Any `create_file` + `open_known_app` could run arbitrary code — add a `code_execution` tool with explicit sandboxing | P1 |
 | Secrets in environment | Integrate with OS keychain (macOS Keychain, Windows Credential Manager, Linux Secret Service) instead of env vars | P1 |
 | No network egress policy | Browser tools can exfiltrate data — add a configurable URL allowlist/blocklist | P1 |
@@ -261,14 +261,14 @@ HMAC-signed capability grants, used-grant registry (replay prevention), LocalTex
 ### Natural Language Workflow Builder
 
 ```
-# User teaches PACCA a workflow:
+# User teaches Arix a workflow:
 "Every weekday at 9am:
   1. Check git status across all my projects
   2. Pull latest changes
   3. Run tests
   4. Send me a summary in Slack"
 
-# PACCA stores:
+# Arix stores:
 Workflow {
   name: "morning_standup",
   trigger: cron("0 9 * * 1-5"),
@@ -286,7 +286,7 @@ Workflow {
 
 | Component | Description |
 |---|---|
-| **WorkflowRegistry** | Stores YAML workflow definitions in `~/.pacca/workflows/` |
+| **WorkflowRegistry** | Stores YAML workflow definitions in `~/.arix/workflows/` |
 | **WorkflowScheduler** | APScheduler (in-process cron) + event triggers |
 | **WorkflowExecutor** | Reuses existing pipeline; each workflow step goes through the full security gate |
 | **Workflow Studio** | UI panel where users can view, edit, enable/disable saved workflows |
@@ -330,7 +330,7 @@ Workflow {
 ### Why This Works
 
 - **Free tier** creates adoption and word-of-mouth
-- **Pro** hooks daily users with memory (switching cost goes up over time — they've taught PACCA their preferences)
+- **Pro** hooks daily users with memory (switching cost goes up over time — they've taught Arix their preferences)
 - **Developer** tier unlocks the automation use cases that save hours per week — clear ROI
 - **Enterprise** is the real revenue engine — one 1,000-seat contract = $720K ARR
 
@@ -372,7 +372,7 @@ Workflow {
 
 ### Long-term Vision (18+ months)
 
-- PACCA as the default OS shell — replacing Finder/Explorer for AI-native workflows
+- Arix as the default OS shell — replacing Finder/Explorer for AI-native workflows
 - Cross-device sync (desktop ↔ mobile ↔ web)
 - Agent-to-agent marketplace (hire specialized agents)
 - Natural language system preferences (*"always save my work to Dropbox before committing"*)
@@ -409,7 +409,7 @@ Workflow {
 - ⬜ Team workspaces + enterprise features
 - ⬜ Agent marketplace
 - ⬜ Cross-device sync
-- ⬜ Proactive agent (PACCA notices you're working on X and suggests actions without being asked)
+- ⬜ Proactive agent (Arix notices you're working on X and suggests actions without being asked)
 
 ---
 
@@ -424,7 +424,7 @@ Workflow {
 
 ### For Business Users
 
-- **Goal bar** at the top: type a business goal in plain English, PACCA turns it into a task plan you approve with one click
+- **Goal bar** at the top: type a business goal in plain English, Arix turns it into a task plan you approve with one click
 - **Workflow dashboard**: see all scheduled automations, their last run status, and outputs
 - **Reports panel**: structured output from research tasks rendered as readable summaries
 
@@ -436,7 +436,7 @@ Workflow {
 
 ### For All Users
 
-- PACCA sidebar that lives permanently at the edge of the screen (like a mini Spotlight)
+- Arix sidebar that lives permanently at the edge of the screen (like a mini Spotlight)
 - Dark/light mode
 - Command palette (`Ctrl+K`) with semantic search across all past tasks and workflows
 - *"Undo last 5 actions"* with a single command
@@ -449,7 +449,7 @@ Workflow {
 |---|---|---|
 | LLM hallucination produces dangerous tool calls | **Critical** | Plan validator (already exists) + QA agent post-execution check |
 | Vision model misidentifies UI elements | **High** | Require explicit confirmation for all vision-triggered actions |
-| Memory poisoning (user tricks PACCA into storing malicious preferences) | **High** | Sanitize all memory writes; memory content never executed directly |
+| Memory poisoning (user tricks Arix into storing malicious preferences) | **High** | Sanitize all memory writes; memory content never executed directly |
 | Prompt injection via file content | **High** | Content gateway redaction (already exists) + strict input sanitization |
 | Runaway autonomous goal execution | **High** | Max-depth limit, timeout per goal, human checkpoint every N steps |
 | LLM API cost at scale | **Medium** | Token budget per session, local LLM fallback, response caching |
@@ -462,17 +462,17 @@ Workflow {
 
 ### Would I invest as a VC?
 
-**Yes — conditional.** The security architecture and clean pipeline design are legitimately differentiated. Most AI agents are demos; PACCA has production-grade bones. The condition: the team must ship memory + browser automation + autonomous goals within 90 days, or the window closes as Claude Computer Use and Manus mature.
+**Yes — conditional.** The security architecture and clean pipeline design are legitimately differentiated. Most AI agents are demos; Arix has production-grade bones. The condition: the team must ship memory + browser automation + autonomous goals within 90 days, or the window closes as Claude Computer Use and Manus mature.
 
 ### What Would Make It a Billion-Dollar Product?
 
-1. **Memory that compounds.** When PACCA knows your codebase, your preferences, your team's workflows better than any tool you've ever used — switching cost becomes enormous. This is the moat.
-2. **Be the platform, not a tool.** When developers build plugins for PACCA and users build workflows that others buy — you have a marketplace. That's the multiplier.
-3. **Win enterprises with air-gapped local execution.** Every bank, hospital, and government agency that wants AI but can't use the cloud is an underserved customer. PACCA's local-first architecture is already positioned for this.
+1. **Memory that compounds.** When Arix knows your codebase, your preferences, your team's workflows better than any tool you've ever used — switching cost becomes enormous. This is the moat.
+2. **Be the platform, not a tool.** When developers build plugins for Arix and users build workflows that others buy — you have a marketplace. That's the multiplier.
+3. **Win enterprises with air-gapped local execution.** Every bank, hospital, and government agency that wants AI but can't use the cloud is an underserved customer. Arix's local-first architecture is already positioned for this.
 
 ### What Would Prevent Adoption?
 
-- **No memory = no stickiness.** Without it, users will try PACCA once and return to their habits.
+- **No memory = no stickiness.** Without it, users will try Arix once and return to their habits.
 - **No screen understanding = limited autonomy.** *"Click the Submit button"* failing is a trust-killer.
 - **Single-action model.** Asking users to compose perfect natural-language commands is a UX failure waiting to happen. The goal-oriented *"I want X, figure it out"* model is what users actually want.
 
@@ -486,7 +486,7 @@ Workflow {
 | Sprint 5 | ⬜ Screen capture + vision |
 | Sprint 6 | ✅ Voice (Web Speech API) |
 
-That's roughly **6 sprints / 3 months** of focused engineering. After that, PACCA is demonstrably ahead of every open-source competitor.
+That's roughly **6 sprints / 3 months** of focused engineering. After that, Arix is demonstrably ahead of every open-source competitor.
 
 ### What Should Be Avoided?
 
@@ -497,7 +497,7 @@ That's roughly **6 sprints / 3 months** of focused engineering. After that, PACC
 
 ### The Honest One-Line Verdict
 
-> *"PACCA has better bones than 80% of the AI agents that have raised $50M+. The architecture is right. The execution gap is memory, vision, and autonomy. Ship those three, and you have something genuinely defensible."*
+> *"Arix has better bones than 80% of the AI agents that have raised $50M+. The architecture is right. The execution gap is memory, vision, and autonomy. Ship those three, and you have something genuinely defensible."*
 
 ---
 

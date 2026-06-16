@@ -1,8 +1,8 @@
-# PACCA v8.0 — Architecture Reference
+# Arix v8.0 — Architecture Reference
 
 ## Overview
 
-PACCA is a FastAPI server with a WebSocket terminal UI that accepts natural-language computer-control commands. Every command passes through a 9-layer security pipeline before any tool is executed.
+Arix is a FastAPI server with a WebSocket terminal UI that accepts natural-language computer-control commands. Every command passes through a 9-layer security pipeline before any tool is executed.
 
 ## Request Flow
 
@@ -20,7 +20,7 @@ User (browser / WhatsApp)
                     │
                     ▼
 ┌─────────────────────────────────────────────┐
-│  PACCAAgent.run_command() (agent.py)        │
+│  ArixAgent.run_command() (agent.py)        │
 └───────────────────┬─────────────────────────┘
                     │
         ┌───────────┴───────────────────────────┐
@@ -94,7 +94,7 @@ User (browser / WhatsApp)
 ```
 pacca/
 ├── agent.py                — Orchestrator tying all layers together
-├── config.py               — PACCAConfig dataclass; atomic save()
+├── config.py               — ArixConfig dataclass; atomic save()
 ├── llm_client.py           — Anthropic/OpenAI/Gemini client + fallback
 ├── cli.py                  — CLI: serve, doctor, init, version
 │
@@ -198,7 +198,7 @@ Each tool call requires a `CapabilityGrant`:
 
 | File | Contents | Access |
 |------|----------|--------|
-| `~/.pacca/memory.db` | Episodic history, semantic memory, preferences, skills | SQLite, WAL mode |
-| `~/.pacca/used_grants.db` | Consumed grant IDs (replay prevention) | SQLite, WAL mode |
-| `~/.pacca/config.json` | Configuration | 0600, atomic writes |
-| `~/.pacca/audit.log` | Tamper-evident audit chain | 0600, append-only |
+| `~/.arix/memory.db` | Episodic history, semantic memory, preferences, skills | SQLite, WAL mode |
+| `~/.arix/used_grants.db` | Consumed grant IDs (replay prevention) | SQLite, WAL mode |
+| `~/.arix/config.json` | Configuration | 0600, atomic writes |
+| `~/.arix/audit.log` | Tamper-evident audit chain | 0600, append-only |

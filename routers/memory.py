@@ -6,7 +6,7 @@ import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
-from pacca.app_state import get_agent
+from arix.app_state import get_agent
 
 router = APIRouter(prefix="/api/memory", tags=["memory"])
 

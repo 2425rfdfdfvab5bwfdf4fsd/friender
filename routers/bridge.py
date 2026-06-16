@@ -7,7 +7,7 @@ import os
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from pacca.bridge_manager import get_bridge
+from arix.bridge_manager import get_bridge
 
 router = APIRouter(tags=["bridge"])
 
@@ -22,7 +22,7 @@ async def bridge_websocket(ws: WebSocket):
     """WebSocket endpoint for the local desktop bridge agent."""
     await ws.accept()
 
-    bridge_token = os.environ.get("PACCA_BRIDGE_TOKEN", "")
+    bridge_token = os.environ.get("Arix_BRIDGE_TOKEN", "")
     if bridge_token and ws.headers.get("X-Bridge-Token", "") != bridge_token:
         await ws.send_text(json.dumps({"type": "error", "message": "Unauthorized"}))
         await ws.close(code=4401)

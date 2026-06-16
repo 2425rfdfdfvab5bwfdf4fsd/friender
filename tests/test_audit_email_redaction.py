@@ -1,6 +1,6 @@
 """Tests for email redaction in AuditLogger (SEC-08)."""
 import pytest
-from pacca.models.audit_log import AuditLogger, _redact_email
+from arix.models.audit_log import AuditLogger, _redact_email
 
 _MARKER = "[REDACTED:email]"
 

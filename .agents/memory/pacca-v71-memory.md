@@ -1,5 +1,5 @@
 ---
-name: PACCA v7.1 memory features
+name: Arix v7.1 memory features
 description: Reports panel, weekly summary, NL preferences, memory context injection, IDF search, skill library, trace store, plan editor
 ---
 
@@ -23,4 +23,4 @@ description: Reports panel, weekly summary, NL preferences, memory context injec
 - `onSubtaskReflected`, `onGoalRollback`, `onSkillSaved` handlers added
 - Dispatch cases: `subtask_reflected`, `goal_rollback`, `skill_saved`
 
-**Why:** 12-gap research session completing all identified improvements to PACCA's security, memory, browser automation, and UX.
+**Why:** 12-gap research session completing all identified improvements to Arix's security, memory, browser automation, and UX.

@@ -1,8 +1,8 @@
 """Tests for PlanValidator URL blocklist (SEC-07 additions)."""
 import pytest
 from unittest.mock import MagicMock
-from pacca.pipeline.plan_validator import PlanValidator, PlanValidationError
-from pacca.models.task_scope import TaskScope
+from arix.pipeline.plan_validator import PlanValidator, PlanValidationError
+from arix.models.task_scope import TaskScope
 
 
 def _make_validator() -> PlanValidator:
@@ -63,6 +63,6 @@ def test_blocked_url_in_plan(url):
 
 
 def _is_dangerous(url: str) -> bool:
-    from pacca.tools.browser_tools import _check_url_safety
+    from arix.tools.browser_tools import _check_url_safety
     safe, _ = _check_url_safety(url)
     return not safe

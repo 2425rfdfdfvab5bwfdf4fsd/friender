@@ -1,6 +1,6 @@
 """Tests for run_code in DOMAIN_TOOL_MAP (REL-06)."""
 import pytest
-from pacca.models.task_scope import DOMAIN_TOOL_MAP
+from arix.models.task_scope import DOMAIN_TOOL_MAP
 
 
 def test_run_code_in_coding_domain():

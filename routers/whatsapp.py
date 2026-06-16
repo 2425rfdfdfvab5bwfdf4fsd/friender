@@ -10,7 +10,7 @@ import os
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
 
-from pacca.app_state import get_agent
+from arix.app_state import get_agent
 
 router = APIRouter(tags=["whatsapp"])
 
@@ -46,7 +46,7 @@ def _wa_verify_signature(body: bytes, signature: str) -> bool:
 
 
 async def _wa_send_reply(to: str, text: str) -> None:
-    from pacca.tools.whatsapp_tools import send_whatsapp_message
+    from arix.tools.whatsapp_tools import send_whatsapp_message
     await asyncio.to_thread(send_whatsapp_message, to=to, message=text)
 
 
@@ -157,7 +157,7 @@ async def whatsapp_receive(request: Request):
 @router.get("/api/whatsapp-test")
 async def whatsapp_test():
     """Test the WhatsApp API connection using the configured credentials."""
-    from pacca.tools.whatsapp_tools import wa_token, wa_phone_id, wa_is_configured, WA_API_BASE
+    from arix.tools.whatsapp_tools import wa_token, wa_phone_id, wa_is_configured, WA_API_BASE
     if not wa_is_configured():
         return {"ok": False, "error": "Not configured — set WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID"}
     try:

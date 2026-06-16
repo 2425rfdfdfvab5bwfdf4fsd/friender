@@ -8,10 +8,10 @@ import time
 import pytest
 from unittest.mock import MagicMock
 
-from pacca.models.capability_grant import CapabilityGrant, CapabilityViolation
-from pacca.pipeline.policy_engine import PolicyEngine
-from pacca.security.grant_verifier import GrantVerifier, _canonical_args_hash
-from pacca.security.used_grant_registry import UsedGrantRegistry
+from arix.models.capability_grant import CapabilityGrant, CapabilityViolation
+from arix.pipeline.policy_engine import PolicyEngine
+from arix.security.grant_verifier import GrantVerifier, _canonical_args_hash
+from arix.security.used_grant_registry import UsedGrantRegistry
 
 SECRET = b"test-secret-key-32-bytes-padded!!"
 
@@ -109,7 +109,7 @@ class TestGrantExpiry:
         verifier = _make_verifier()
         # Mock time.monotonic to return a time past the grant's expiry
         future = grant.expires_monotonic + 10
-        with mock.patch("pacca.security.grant_verifier.time.monotonic", return_value=future):
+        with mock.patch("arix.security.grant_verifier.time.monotonic", return_value=future):
             with pytest.raises(CapabilityViolation):
                 verifier.verify(grant, tool_name="list_directory", args={},
                                 resources=[], task_scope=None)

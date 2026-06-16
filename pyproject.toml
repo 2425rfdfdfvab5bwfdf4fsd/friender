@@ -3,9 +3,9 @@ requires = ["setuptools>=70", "wheel"]
 build-backend = "setuptools.backends.legacy:build"
 
 [project]
-name = "pacca"
+name = "arix"
 version = "8.0.0"
-description = "Personal AI Computer-Control Agent — secure LLM-powered computer-control"
+description = "Arix — Personal AI Agent, secure LLM-powered computer-control"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.11"
@@ -38,11 +38,11 @@ dev = [
 ]
 
 [project.scripts]
-pacca = "pacca.cli:main"
+arix = "arix.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["pacca*"]
+include = ["arix*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -2,8 +2,8 @@
 import time
 import pytest
 from unittest.mock import MagicMock
-from pacca.security.used_grant_registry import UsedGrantRegistry
-from pacca.models.capability_grant import CapabilityViolation
+from arix.security.used_grant_registry import UsedGrantRegistry
+from arix.models.capability_grant import CapabilityViolation
 
 
 def _make_grant(grant_id: str = "grant-001", expires_at: float | None = None) -> MagicMock:
@@ -32,10 +32,10 @@ def test_replay_raises():
 
 def test_persistence_across_instances(tmp_path, monkeypatch):
     """Grant consumed in one registry instance is blocked in a new instance."""
-    import pacca.security.used_grant_registry as ugr_module
+    import arix.security.used_grant_registry as ugr_module
     db_path = tmp_path / "grants.db"
     monkeypatch.setattr(ugr_module, "_GRANTS_DB", db_path)
-    monkeypatch.setattr(ugr_module, "PACCA_DIR", tmp_path)
+    monkeypatch.setattr(ugr_module, "Arix_DIR", tmp_path)
 
     grant = _make_grant("test-persist-001")
 

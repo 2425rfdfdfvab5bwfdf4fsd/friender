@@ -1,6 +1,6 @@
 """Tests for LocalTextRedactor — ensures secrets are stripped before LLM egress."""
 import pytest
-from pacca.security.local_text_redactor import LocalTextRedactor, REDACTION_PATTERNS
+from arix.security.local_text_redactor import LocalTextRedactor, REDACTION_PATTERNS
 
 
 @pytest.fixture

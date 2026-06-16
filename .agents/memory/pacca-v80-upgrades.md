@@ -1,10 +1,10 @@
 ---
-name: PACCA v8.0 security & reliability upgrades
+name: Arix v8.0 security & reliability upgrades
 description: All SEC/REL hardening, rate limiting, memory APIs, CLI, 98-test suite, and docs added in v8.0
 ---
 
 ## Security fixes (Sprint 1)
-- **SEC-01**: `auth_middleware` checks `Authorization: Bearer <token>` on non-public routes when `PACCA_ADMIN_TOKEN` is set. Public paths: `/`, `/favicon.ico`, `/webhook/whatsapp`, `/static/`.
+- **SEC-01**: `auth_middleware` checks `Authorization: Bearer <token>` on non-public routes when `Arix_ADMIN_TOKEN` is set. Public paths: `/`, `/favicon.ico`, `/webhook/whatsapp`, `/static/`.
 - **SEC-04/05**: WS origin validation; **default empty list = allow all** (Replit proxy uses 10.60.x.x).
 - **SEC-07**: `_check_url_safety` uses `parsed.hostname` (handles IPv6 brackets); `PRIVATE_IPV6_RE`; blocks `data:`, `javascript:`, `vbscript:`, `@`-credential URLs, `169.254.`.
 - **SEC-08**: Email redaction in audit logs → `[REDACTED:email_address]` (not `[EMAIL]`).
@@ -37,7 +37,7 @@ Key quirks to remember:
 - `check_toctou()` returns `(bool, reason_str)` tuple, not bare bool
 - `PlanValidator(resolver, tool_registry)` requires two positional args — use `MagicMock()`
 
-## New config fields (PACCAConfig)
+## New config fields (ArixConfig)
 - `tool_timeout_seconds: int = 60`
 - `require_auth: bool = False`
 - `allowed_ws_origins: list[str] = []`

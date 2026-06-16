@@ -293,7 +293,7 @@ For critical actions (like bulk file deletion), you must type **YES** before it 
 
 ## Configuration
 
-Arix stores its config at `~/.pacca/config.json`. You can edit this file directly or change settings through the **Settings** panel in the UI.
+Arix stores its config at `~/.arix/config.json`. You can edit this file directly or change settings through the **Settings** panel in the UI.
 
 ### Key settings
 
@@ -360,7 +360,7 @@ lsof -ti:5000 | xargs kill -9
 ### AI features not working (responses are generic)
 - Check your API key is set correctly: `echo $ANTHROPIC_API_KEY` (macOS/Linux) or `echo %ANTHROPIC_API_KEY%` (Windows)
 - Make sure you have credits/quota on your API account
-- Try running in demo mode first: set `offline_mode: true` in `~/.pacca/config.json`
+- Try running in demo mode first: set `offline_mode: true` in `~/.arix/config.json`
 
 ### Desktop automation not working (click/type commands fail)
 - The local bridge must be running

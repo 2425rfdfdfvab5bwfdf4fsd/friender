@@ -1,4 +1,4 @@
-# Security Policy — PACCA v8.0
+# Security Policy — Arix v8.0
 
 ## Supported Versions
 
@@ -23,7 +23,7 @@ You will receive an acknowledgement within **48 hours** and a status update with
 
 ## Security Model
 
-PACCA uses a layered defense-in-depth architecture:
+Arix uses a layered defense-in-depth architecture:
 
 | Layer | Component | Purpose |
 |-------|-----------|---------|
@@ -41,14 +41,14 @@ PACCA uses a layered defense-in-depth architecture:
 
 - **No sandbox isolation**: `run_code` executes in the host Python process via `exec()`.  
   Mitigation: `run_code` is locked behind `coding` TaskScope; grant requires explicit HIGH-risk confirmation.
-- **WebSocket auth** requires `PACCA_ADMIN_TOKEN` to be set. Without it the WS is unauthenticated.  
-  Recommended: always set `PACCA_ADMIN_TOKEN` in production.
+- **WebSocket auth** requires `Arix_ADMIN_TOKEN` to be set. Without it the WS is unauthenticated.  
+  Recommended: always set `Arix_ADMIN_TOKEN` in production.
 
 ## Security Checklist for Deployment
 
-- [ ] Set `PACCA_ADMIN_TOKEN` to a cryptographically random value (≥32 bytes)
-- [ ] Set `PACCA_ALLOWED_ORIGINS` to only your frontend's domain
+- [ ] Set `Arix_ADMIN_TOKEN` to a cryptographically random value (≥32 bytes)
+- [ ] Set `Arix_ALLOWED_ORIGINS` to only your frontend's domain
 - [ ] Serve behind TLS (HTTPS/WSS) — never expose plain HTTP
-- [ ] Keep `~/.pacca/audit.log` (mode 0600) on a persistent volume
+- [ ] Keep `~/.arix/audit.log` (mode 0600) on a persistent volume
 - [ ] Rotate `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` if exposed
-- [ ] Review `~/.pacca/audit.log` regularly for anomalous patterns
+- [ ] Review `~/.arix/audit.log` regularly for anomalous patterns

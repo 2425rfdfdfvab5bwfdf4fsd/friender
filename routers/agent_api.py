@@ -7,10 +7,10 @@ from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 
-from pacca.app_state import get_agent, get_workflow_manager, reset_agent
-from pacca.config import PACCAConfig
-from pacca.tools.registry import TOOL_REGISTRY
-from pacca.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete, complete_onboarding
+from arix.app_state import get_agent, get_workflow_manager, reset_agent
+from arix.config import ArixConfig
+from arix.tools.registry import TOOL_REGISTRY
+from arix.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete, complete_onboarding
 
 router = APIRouter(tags=["agent"])
 
@@ -89,7 +89,7 @@ async def get_disclosure():
 @router.get("/api/sysmon")
 async def get_sysmon():
     try:
-        from pacca.tools.system_tools import system_monitor
+        from arix.tools.system_tools import system_monitor
         return await asyncio.to_thread(system_monitor, include_processes=True, top_n_processes=10)
     except Exception as e:
         return {"error": str(e)}
@@ -170,7 +170,7 @@ async def get_audit_log(n: int = 50):
 
 @router.get("/api/audit/verify")
 async def verify_audit_chain():
-    from pacca.models.audit_log import AuditLogger
+    from arix.models.audit_log import AuditLogger
     return AuditLogger().verify_chain()
 
 
@@ -246,7 +246,7 @@ async def onboard(body: dict):
 @router.post("/api/settings")
 async def update_settings(body: dict):
     """Update runtime config. Resets the agent so it picks up new settings on next request."""
-    cfg = PACCAConfig.load()
+    cfg = ArixConfig.load()
     field_map = {
         "provider": str,
         "model": str,

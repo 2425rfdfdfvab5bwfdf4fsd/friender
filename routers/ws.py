@@ -10,14 +10,14 @@ from pathlib import Path
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
-from pacca.app_state import get_agent, get_workflow_manager, todos, reminders
-from pacca.tools.registry import TOOL_REGISTRY
-from pacca.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete
+from arix.app_state import get_agent, get_workflow_manager, todos, reminders
+from arix.tools.registry import TOOL_REGISTRY
+from arix.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete
 
 router = APIRouter(tags=["websocket"])
 
 # Imported at module level so it's visible before the handler runs
-_ADMIN_TOKEN: str = os.environ.get("PACCA_ADMIN_TOKEN", "")
+_ADMIN_TOKEN: str = os.environ.get("Arix_ADMIN_TOKEN", "")
 
 HELP_TEXT = """
 Arix — Personal AI Digital Employee
@@ -97,7 +97,7 @@ SECURITY:
   • Credential paths (.ssh, .aws, etc.) always blocked
   • Commands redacted locally before any LLM call
   • Every tool call requires a single-use cryptographic grant
-  • Audit log: ~/.pacca/audit.log (owner-only, 0600)
+  • Audit log: ~/.arix/audit.log (owner-only, 0600)
 
 DOMAINS: file | app | system | browser | document | git | messaging | advisor
 """
@@ -167,7 +167,7 @@ async def _handle_command(
 
     # ── Personal assistant shortcuts ──────────────────────────────────────────
     if low.startswith("remind me") or low.startswith("set reminder"):
-        from pacca.personal.reminders import parse_reminder_command
+        from arix.personal.reminders import parse_reminder_command
         parsed = parse_reminder_command(command)
         if parsed:
             what, when_str = parsed
@@ -179,7 +179,7 @@ async def _handle_command(
             return
 
     if low.startswith("add todo") or low.startswith("todo:") or low.startswith("add task"):
-        from pacca.personal.todos import parse_todo_command
+        from arix.personal.todos import parse_todo_command
         normalised = re.sub(r"^add task", "add todo", command.strip(), flags=re.IGNORECASE)
         parsed = parse_todo_command(normalised)
         if parsed:
@@ -213,7 +213,7 @@ async def _handle_command(
             await put("workflow_list", {"workflows": wm.list_workflows()})
             return
         if sub == "save":
-            from pacca.workflows.workflow_manager import parse_workflow_from_command
+            from arix.workflows.workflow_manager import parse_workflow_from_command
             wf = parse_workflow_from_command(command)
             if wf:
                 wm.save_workflow(wf)
@@ -287,7 +287,7 @@ async def websocket_endpoint(ws: WebSocket):
     origin = ws.headers.get("origin", "")
     cfg = get_agent().config
     allowed_origins: list[str] = getattr(cfg, "allowed_ws_origins", []) or []
-    env_origins = os.environ.get("PACCA_ALLOWED_ORIGINS", "")
+    env_origins = os.environ.get("Arix_ALLOWED_ORIGINS", "")
     if env_origins:
         allowed_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
     if allowed_origins and origin:
@@ -303,7 +303,7 @@ async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
     agent = get_agent()
 
-    # ── Token auth (when PACCA_ADMIN_TOKEN is set) ────────────────────────────
+    # ── Token auth (when Arix_ADMIN_TOKEN is set) ────────────────────────────
     if _ADMIN_TOKEN:
         try:
             raw_auth = await asyncio.wait_for(ws.receive_text(), timeout=10.0)

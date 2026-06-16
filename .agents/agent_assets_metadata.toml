@@ -3,18 +3,18 @@ generated = []
 
 [[outputs]]
 id = "pGJuJBmPS9vjVgMLrCqQ6"
-uri = "file://PACCA_PRODUCT_EVOLUTION_PLAN.md"
+uri = "file://Arix_PRODUCT_EVOLUTION_PLAN.md"
 type = "text"
-title = "PACCA Product Evolution Plan"
+title = "Arix Product Evolution Plan"
 
 [[outputs]]
 id = "7tsmDhCdOsx3E6EOpGlQm"
-uri = "file://PACCA_Product_Evolution_Plan.md"
+uri = "file://Arix_Product_Evolution_Plan.md"
 type = "text"
-title = "PACCA — World-Class AI Operating System: Complete Product Evolution Plan"
+title = "Arix — World-Class AI Operating System: Complete Product Evolution Plan"
 
 [[outputs]]
 id = "7LtdAlLE0vbkQVNyTB4Kr"
 uri = "file://SETUP_GUIDE.md"
 type = "text"
-title = "PACCA Setup Guide"
+title = "Arix Setup Guide"

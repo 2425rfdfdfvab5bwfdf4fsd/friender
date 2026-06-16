@@ -1,5 +1,5 @@
 ---
-name: PACCA v8.1 Smarter AI upgrades
+name: Arix v8.1 Smarter AI upgrades
 description: Chain-of-thought planning, progressive retry escalation, self-healing, adaptive goal re-planning, memory-augmented few-shot context
 ---
 

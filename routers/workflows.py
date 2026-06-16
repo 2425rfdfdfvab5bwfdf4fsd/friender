@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from pacca.workflows.workflow_manager import parse_workflow_from_command
-from pacca.app_state import get_workflow_manager
+from arix.workflows.workflow_manager import parse_workflow_from_command
+from arix.app_state import get_workflow_manager
 
 router = APIRouter(prefix="/api/workflows", tags=["workflows"])
 

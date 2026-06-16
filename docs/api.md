@@ -1,11 +1,11 @@
-# PACCA v8.0 — REST API Reference
+# Arix v8.0 — REST API Reference
 
 ## Authentication
 
-When `PACCA_ADMIN_TOKEN` is set, all endpoints (except `GET /` and `POST /webhook/whatsapp`) require:
+When `Arix_ADMIN_TOKEN` is set, all endpoints (except `GET /` and `POST /webhook/whatsapp`) require:
 
 ```
-Authorization: Bearer <PACCA_ADMIN_TOKEN>
+Authorization: Bearer <Arix_ADMIN_TOKEN>
 ```
 
 Returns `401 Unauthorized` if missing or wrong.
@@ -204,9 +204,9 @@ Trigger a workflow immediately.
 
 Connect to the terminal interface.
 
-**If `PACCA_ADMIN_TOKEN` is set**, send auth as first message:
+**If `Arix_ADMIN_TOKEN` is set**, send auth as first message:
 ```json
-{"type": "auth", "token": "<PACCA_ADMIN_TOKEN>"}
+{"type": "auth", "token": "<Arix_ADMIN_TOKEN>"}
 ```
 
 **Incoming message types:**

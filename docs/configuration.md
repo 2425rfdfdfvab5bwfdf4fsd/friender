@@ -1,6 +1,6 @@
-# PACCA Configuration Reference
+# Arix Configuration Reference
 
-PACCA stores its configuration in `~/.pacca/config.json` (mode 0600). The file is created on first run with safe defaults.
+Arix stores its configuration in `~/.arix/config.json` (mode 0600). The file is created on first run with safe defaults.
 
 ## Environment Variables
 
@@ -12,15 +12,15 @@ These take priority over config file values.
 | `OPENAI_API_KEY` | OpenAI API key | — |
 | `GEMINI_API_KEY` | Google Gemini API key | — |
 | `AI_INTEGRATIONS_ANTHROPIC_API_KEY` | Replit-managed Anthropic key (auto-set) | — |
-| `PACCA_ADMIN_TOKEN` | Bearer token for API auth. When set, all REST + WS require it. | — (disabled) |
-| `PACCA_ALLOWED_ORIGINS` | Comma-separated WebSocket origin hostnames | — (allow all) |
+| `Arix_ADMIN_TOKEN` | Bearer token for API auth. When set, all REST + WS require it. | — (disabled) |
+| `Arix_ALLOWED_ORIGINS` | Comma-separated WebSocket origin hostnames | — (allow all) |
 | `WHATSAPP_WEBHOOK_SECRET` | HMAC secret for Twilio WhatsApp webhook signatures | — |
 | `TWILIO_ACCOUNT_SID` | Twilio account SID (WhatsApp integration) | — |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token | — |
 | `TWILIO_WHATSAPP_FROM` | Your Twilio WhatsApp number (`whatsapp:+1...`) | — |
 | `WHATSAPP_ALLOWED_NUMBERS` | Comma-separated E.164 numbers allowed to send commands | — |
 
-## Config File Fields (`~/.pacca/config.json`)
+## Config File Fields (`~/.arix/config.json`)
 
 ### LLM
 
@@ -38,7 +38,7 @@ These take priority over config file values.
 |-------|------|---------|-------------|
 | `allowed_path_prefixes` | `list[str]` | `[$HOME, $CWD, /tmp]` | Absolute paths tools are allowed to access |
 | `grant_ttl_seconds` | `int` | `300` | Capability grant time-to-live (seconds) |
-| `require_auth` | `bool` | `false` | Require `PACCA_ADMIN_TOKEN` for all requests |
+| `require_auth` | `bool` | `false` | Require `Arix_ADMIN_TOKEN` for all requests |
 | `allowed_ws_origins` | `list[str]` | `[]` | Allowed WS origin hostnames. Empty = allow all |
 | `api_rate_limit_per_minute` | `int` | `120` | Max HTTP API requests per IP per minute |
 | `ws_command_rate_limit_per_minute` | `int` | `20` | Max WS commands per connection per minute |
@@ -86,7 +86,7 @@ These take priority over config file values.
 
 ## Editing Config
 
-Via PACCA web UI: open **Settings** panel.
+Via Arix web UI: open **Settings** panel.
 
 Via CLI:
 ```bash
@@ -95,18 +95,18 @@ pacca init          # interactive wizard
 
 Via file (be careful with JSON syntax):
 ```bash
-nano ~/.pacca/config.json
-chmod 600 ~/.pacca/config.json
+nano ~/.arix/config.json
+chmod 600 ~/.arix/config.json
 ```
 
 ## Safe Deployment Checklist
 
 ```bash
 # 1. Set a strong auth token
-export PACCA_ADMIN_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+export Arix_ADMIN_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
 
 # 2. Restrict WebSocket origins to your domain
-export PACCA_ALLOWED_ORIGINS=yourdomain.com
+export Arix_ALLOWED_ORIGINS=yourdomain.com
 
 # 3. Verify setup
 pacca doctor

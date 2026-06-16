@@ -1,6 +1,6 @@
 ---
-name: PACCA architecture
-description: Key decisions for PACCA v5.2 implementation in this project
+name: Arix architecture
+description: Key decisions for Arix v5.2 implementation in this project
 ---
 
 **Tech stack:** Python 3.11, FastAPI + uvicorn, WebSockets, xterm.js web terminal, port 5000 (webview).
@@ -35,13 +35,13 @@ description: Key decisions for PACCA v5.2 implementation in this project
 
 **New files added in completion pass:**
 - `pacca/undo_manager.py` — UndoManager with create/move undo support
-- `pacca/task_history.py` — TaskHistory persisted to ~/.pacca/task_history.json
+- `pacca/task_history.py` — TaskHistory persisted to ~/.arix/task_history.json
 - `pacca/heuristic_planner.py` — HeuristicPlanner (multi-step, path extraction, 6 domains)
 - `pacca/llm_client.py` — Added CircuitBreaker (3 failures → OPEN, 60s reset)
 
 **API endpoints added:**
 - GET /api/task-history — recent completed tasks
-- GET /api/audit-log — last N lines of ~/.pacca/audit.log as JSON
+- GET /api/audit-log — last N lines of ~/.arix/audit.log as JSON
 - GET /api/undo-history — undo stack contents
 - POST /api/settings — update provider/model/thresholds, restarts agent
 - POST /api/undo — trigger undo last action

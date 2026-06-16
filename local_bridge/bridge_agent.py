@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""PACCA Local Bridge Agent — run this on YOUR computer.
+"""Arix Local Bridge Agent — run this on YOUR computer.
 
-This script connects to your PACCA server and lets it control your local
+This script connects to your Arix server and lets it control your local
 desktop: mouse clicks, keyboard input, screenshots, keyboard shortcuts.
 
 Requirements (install once):
     pip install pyautogui pillow websockets
 
 Usage:
-    python bridge_agent.py --server wss://your-pacca-url/ws/bridge --token YOUR_TOKEN
+    python bridge_agent.py --server wss://your-arix-url/ws/bridge --token YOUR_TOKEN
 
     Or set environment variables:
-        PACCA_SERVER=wss://your-pacca-url
-        PACCA_BRIDGE_TOKEN=YOUR_TOKEN
+        Arix_SERVER=wss://your-arix-url
+        Arix_BRIDGE_TOKEN=YOUR_TOKEN
     then just run:
         python bridge_agent.py
 
 Safety:
-  - The bridge only executes commands when connected to your PACCA server.
-  - All commands go through PACCA's security pipeline first.
+  - The bridge only executes commands when connected to your Arix server.
+  - All commands go through Arix's security pipeline first.
   - Stop the script at any time with Ctrl+C to cut the connection.
 """
 from __future__ import annotations
@@ -236,21 +236,21 @@ async def run_bridge(server_url: str, token: str):
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="PACCA Local Bridge Agent")
+    parser = argparse.ArgumentParser(description="Arix Local Bridge Agent")
     parser.add_argument(
         "--server",
-        default=os.environ.get("PACCA_SERVER", ""),
-        help="PACCA server WebSocket URL, e.g. wss://myapp.replit.app/ws/bridge",
+        default=os.environ.get("Arix_SERVER", ""),
+        help="Arix server WebSocket URL, e.g. wss://myapp.replit.app/ws/bridge",
     )
     parser.add_argument(
         "--token",
-        default=os.environ.get("PACCA_BRIDGE_TOKEN", ""),
-        help="Bridge authentication token (set PACCA_BRIDGE_TOKEN env var)",
+        default=os.environ.get("Arix_BRIDGE_TOKEN", ""),
+        help="Bridge authentication token (set Arix_BRIDGE_TOKEN env var)",
     )
     args = parser.parse_args()
 
     if not args.server:
-        print("❌ --server is required (or set PACCA_SERVER env var)")
+        print("❌ --server is required (or set Arix_SERVER env var)")
         print("\nExample:")
         print("  python bridge_agent.py --server wss://myapp.replit.app/ws/bridge --token abc123")
         sys.exit(1)
@@ -261,7 +261,7 @@ def main():
 
     print(f"""
 ╔══════════════════════════════════════════════╗
-║     PACCA Local Bridge Agent                 ║
+║     Arix Local Bridge Agent                 ║
 ╠══════════════════════════════════════════════╣
 ║  Server : {server_url:<35} ║
 ║  Token  : {"(set)" if args.token else "(none)":<35} ║
