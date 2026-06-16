@@ -561,3 +561,319 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 300);
   }, 300);
 })();
+
+// ── Notion Panel ─────────────────────────────────────────────────────────────
+
+async function loadNotion() {
+  const res = await fetch('/api/notion/status');
+  const data = await res.json();
+  document.getElementById('notion-setup').style.display = data.configured ? 'none' : 'block';
+  if (data.configured) searchNotion('');
+}
+
+async function searchNotion(q) {
+  document.getElementById('notion-list').innerHTML = '<div class="panel-empty">Loading…</div>';
+  const res = await fetch(`/api/notion/search?q=${encodeURIComponent(q)}&limit=20`);
+  const data = await res.json();
+  const el = document.getElementById('notion-list');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  if (!data.results.length) { el.innerHTML = '<div class="panel-empty">No pages found.</div>'; return; }
+  el.innerHTML = data.results.map(p => `
+    <div class="email-item" onclick="openNotionPage('${p.id}','${escJS(p.title)}')" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:14px">${p.type==='database'?'🗄️':'📄'}</span>
+        <div style="flex:1;min-width:0">
+          <div class="email-subject">${esc(p.title)}</div>
+          <div class="email-from" style="font-size:10px">${p.edited ? new Date(p.edited).toLocaleDateString() : ''}</div>
+        </div>
+        <a href="${p.url}" target="_blank" class="panel-btn" style="flex:0;font-size:10px;padding:2px 6px" onclick="event.stopPropagation()">↗</a>
+      </div>
+    </div>`).join('');
+}
+
+async function openNotionPage(pageId, title) {
+  const el = document.getElementById('notion-list');
+  el.innerHTML = `<div class="panel-empty">Loading "${title}"…</div>`;
+  const res = await fetch(`/api/notion/page/${pageId}`);
+  const data = await res.json();
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <button class="panel-btn" onclick="searchNotion('')" style="flex:0">← Back</button>
+        <strong style="flex:1;font-size:13px;color:var(--text)">${esc(data.title)}</strong>
+        <a href="${data.url}" target="_blank" class="panel-btn" style="flex:0;font-size:10px;padding:2px 6px">Open ↗</a>
+      </div>
+      <pre style="white-space:pre-wrap;font-family:var(--font);font-size:11px;color:var(--text-dim);max-height:300px;overflow-y:auto">${esc(data.content||'(empty page)')}</pre>
+    </div>`;
+}
+
+function showNotionCreateForm() {
+  document.getElementById('notion-create-form').style.display = 'block';
+  document.getElementById('notion-new-title').focus();
+}
+
+async function createNotionPage() {
+  const title = document.getElementById('notion-new-title').value.trim();
+  const content = document.getElementById('notion-new-content').value.trim();
+  if (!title) return;
+  const res = await fetch('/api/notion/page', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title, content}) });
+  const data = await res.json();
+  if (data.ok) {
+    document.getElementById('notion-create-form').style.display = 'none';
+    document.getElementById('notion-new-title').value = '';
+    document.getElementById('notion-new-content').value = '';
+    searchNotion('');
+  } else {
+    alert('Error: ' + data.error);
+  }
+}
+
+// ── Slack Panel ───────────────────────────────────────────────────────────────
+
+let _slackChannels = [];
+
+async function loadSlackChannels() {
+  const statusRes = await fetch('/api/slack/status');
+  const status = await statusRes.json();
+  document.getElementById('slack-setup').style.display = status.configured ? 'none' : 'block';
+  if (!status.configured) { document.getElementById('slack-channels-list').innerHTML = ''; return; }
+
+  const res = await fetch('/api/slack/channels?limit=30');
+  const data = await res.json();
+  const el = document.getElementById('slack-channels-list');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  _slackChannels = data.channels || [];
+
+  // Populate compose dropdown
+  const sel = document.getElementById('slack-compose-channel');
+  sel.innerHTML = _slackChannels.map(c => `<option value="${c.id}">#${esc(c.name)}</option>`).join('');
+
+  el.innerHTML = _slackChannels.map(c => `
+    <div class="email-item" onclick="loadSlackMessages('${c.id}','${escJS(c.name)}')" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:13px">${c.is_private?'🔒':'#'}</span>
+        <div style="flex:1">
+          <div class="email-subject">#${esc(c.name)}</div>
+          <div class="email-from">${c.members} members${c.topic?' · '+esc(c.topic.slice(0,40)):''}</div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function loadSlackMessages(channelId, channelName) {
+  const el = document.getElementById('slack-messages-list');
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><button class="panel-btn" onclick="loadSlackChannels()" style="flex:0">← Back</button><strong style="font-size:12px;color:var(--text)">#${esc(channelName)}</strong></div><div class="panel-empty">Loading…</div>`;
+  document.getElementById('slack-channels-list').innerHTML = '';
+  const res = await fetch(`/api/slack/messages?channel=${channelId}&limit=20`);
+  const data = await res.json();
+  if (!data.ok) { el.innerHTML += `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  const msgs = (data.messages||[]).reverse();
+  const msgsHtml = msgs.map(m => `
+    <div style="padding:6px 0;border-bottom:1px solid var(--border-subtle)">
+      <div style="font-size:11px;color:var(--accent);margin-bottom:2px">${esc(m.user)}</div>
+      <div style="font-size:12px;color:var(--text)">${esc(m.text)}</div>
+    </div>`).join('') || '<div class="panel-empty">No messages.</div>';
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><button class="panel-btn" onclick="loadSlackChannels();document.getElementById('slack-messages-list').innerHTML=''" style="flex:0">← Back</button><strong style="font-size:12px;color:var(--text)">#${esc(channelName)}</strong></div>${msgsHtml}`;
+}
+
+async function searchSlack(q) {
+  if (!q.trim()) return;
+  document.getElementById('slack-messages-list').innerHTML = '<div class="panel-empty">Searching…</div>';
+  document.getElementById('slack-channels-list').innerHTML = '';
+  const res = await fetch(`/api/slack/search?q=${encodeURIComponent(q)}&count=15`);
+  const data = await res.json();
+  const el = document.getElementById('slack-messages-list');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  const results = data.results || [];
+  el.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px"><button class="panel-btn" onclick="loadSlackChannels();document.getElementById('slack-messages-list').innerHTML=''" style="flex:0">← Back</button><strong style="font-size:12px;color:var(--text)">Results for "${esc(q)}"</strong></div>`
+    + (results.map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--border-subtle)"><div style="font-size:10px;color:var(--accent)">#${esc(r.channel)} · ${esc(r.user)}</div><div style="font-size:12px;color:var(--text)">${esc(r.text)}</div></div>`).join('') || '<div class="panel-empty">No results.</div>');
+}
+
+function showSlackCompose() {
+  document.getElementById('slack-compose').style.display = 'block';
+  document.getElementById('slack-compose-text').focus();
+}
+
+async function sendSlackMessage() {
+  const channel = document.getElementById('slack-compose-channel').value;
+  const text = document.getElementById('slack-compose-text').value.trim();
+  if (!channel || !text) return;
+  const res = await fetch('/api/slack/send', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({channel, text}) });
+  const data = await res.json();
+  if (data.ok) {
+    document.getElementById('slack-compose').style.display = 'none';
+    document.getElementById('slack-compose-text').value = '';
+  } else {
+    alert('Error: ' + data.error);
+  }
+}
+
+// ── Trello Panel ──────────────────────────────────────────────────────────────
+
+let _trelloCurrentBoard = null;
+let _trelloLists = [];
+
+async function loadTrelloBoards() {
+  const statusRes = await fetch('/api/trello/status');
+  const status = await statusRes.json();
+  document.getElementById('trello-setup').style.display = status.configured ? 'none' : 'block';
+  if (!status.configured) { document.getElementById('trello-boards-list').innerHTML = ''; return; }
+
+  const res = await fetch('/api/trello/boards');
+  const data = await res.json();
+  const el = document.getElementById('trello-boards-list');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  el.innerHTML = (data.boards||[]).map(b => `
+    <div class="email-item" onclick="loadTrelloBoard('${b.id}','${escJS(b.name)}')" style="cursor:pointer">
+      <div class="email-subject">📋 ${esc(b.name)}</div>
+      ${b.desc ? `<div class="email-from">${esc(b.desc.slice(0,60))}</div>` : ''}
+    </div>`).join('') || '<div class="panel-empty">No boards found.</div>';
+}
+
+async function loadTrelloBoard(boardId, boardName) {
+  _trelloCurrentBoard = {id: boardId, name: boardName};
+  document.getElementById('trello-boards-list').style.display = 'none';
+  document.getElementById('trello-board-detail').style.display = 'block';
+  document.getElementById('trello-board-name').textContent = boardName;
+  document.getElementById('trello-cards-list').innerHTML = '<div class="panel-empty">Loading…</div>';
+
+  const [listsRes, cardsRes] = await Promise.all([
+    fetch(`/api/trello/boards/${boardId}/lists`),
+    fetch(`/api/trello/boards/${boardId}/cards`)
+  ]);
+  const listsData = await listsRes.json();
+  const cardsData = await cardsRes.json();
+
+  _trelloLists = listsData.ok ? listsData.lists : [];
+  const listMap = Object.fromEntries(_trelloLists.map(l => [l.id, l.name]));
+
+  // Populate add-card list dropdown
+  const sel = document.getElementById('trello-card-list');
+  sel.innerHTML = _trelloLists.map(l => `<option value="${l.id}">${esc(l.name)}</option>`).join('');
+
+  if (!cardsData.ok) { document.getElementById('trello-cards-list').innerHTML = `<div class="panel-empty" style="color:#f87171">${cardsData.error}</div>`; return; }
+  const byList = {};
+  (cardsData.cards||[]).forEach(c => { (byList[c.list_id] = byList[c.list_id]||[]).push(c); });
+  document.getElementById('trello-cards-list').innerHTML = _trelloLists.map(l => `
+    <div style="margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:4px;text-transform:uppercase">${esc(l.name)}</div>
+      ${(byList[l.id]||[]).map(c=>`<div class="email-item" style="cursor:default;margin-bottom:4px"><div class="email-subject">${esc(c.name)}</div>${c.due?`<div class="email-from">Due: ${new Date(c.due).toLocaleDateString()}</div>`:''}${c.labels.length?`<div class="email-from">${c.labels.map(l=>`<span style="background:#3b82f6;color:#fff;border-radius:3px;padding:0 4px;font-size:9px">${esc(l)}</span>`).join(' ')}</div>`:''}</div>`).join('')}
+      ${(byList[l.id]||[]).length===0?'<div class="panel-empty" style="font-size:11px;padding:4px 0">No cards</div>':''}
+    </div>`).join('');
+}
+
+function showTrelloBoards() {
+  document.getElementById('trello-boards-list').style.display = '';
+  document.getElementById('trello-board-detail').style.display = 'none';
+  document.getElementById('trello-add-card-form').style.display = 'none';
+}
+
+function showTrelloAddCard() {
+  document.getElementById('trello-add-card-form').style.display = 'block';
+  document.getElementById('trello-card-name').focus();
+}
+
+async function addTrelloCard() {
+  const name = document.getElementById('trello-card-name').value.trim();
+  const desc = document.getElementById('trello-card-desc').value.trim();
+  const listId = document.getElementById('trello-card-list').value;
+  if (!name || !listId) return;
+  const res = await fetch('/api/trello/cards', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({list_id:listId, name, desc}) });
+  const data = await res.json();
+  if (data.ok) {
+    document.getElementById('trello-add-card-form').style.display = 'none';
+    document.getElementById('trello-card-name').value = '';
+    document.getElementById('trello-card-desc').value = '';
+    if (_trelloCurrentBoard) loadTrelloBoard(_trelloCurrentBoard.id, _trelloCurrentBoard.name);
+  } else { alert('Error: ' + data.error); }
+}
+
+// ── Spotify Panel ─────────────────────────────────────────────────────────────
+
+async function loadSpotifyNowPlaying() {
+  const statusRes = await fetch('/api/spotify/status');
+  const status = await statusRes.json();
+  document.getElementById('spotify-setup').style.display = status.configured ? 'none' : 'block';
+  if (!status.configured) return;
+  const res = await fetch('/api/spotify/current');
+  const data = await res.json();
+  const npEl = document.getElementById('spotify-now-playing');
+  if (data.ok && data.playing) {
+    npEl.style.display = 'block';
+    document.getElementById('spotify-track-name').textContent = data.track || '';
+    document.getElementById('spotify-track-artist').textContent = data.artist || '';
+  } else {
+    npEl.style.display = 'none';
+  }
+}
+
+async function searchSpotify(q) {
+  if (!q.trim()) return;
+  document.getElementById('spotify-results').innerHTML = '<div class="panel-empty">Searching…</div>';
+  const res = await fetch(`/api/spotify/search?q=${encodeURIComponent(q)}&limit=15`);
+  const data = await res.json();
+  const el = document.getElementById('spotify-results');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  el.innerHTML = (data.tracks||[]).map(t => `
+    <div class="email-item" style="cursor:default">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:18px">🎵</span>
+        <div style="flex:1;min-width:0">
+          <div class="email-subject">${esc(t.name)}</div>
+          <div class="email-from">${esc(t.artist)} · ${esc(t.album)}</div>
+        </div>
+        ${t.url?`<a href="${t.url}" target="_blank" class="panel-btn" style="flex:0;font-size:10px;padding:2px 6px">▶ Open</a>`:''}
+      </div>
+    </div>`).join('') || '<div class="panel-empty">No results.</div>';
+}
+
+async function spotifyPlayPause(play) {
+  const endpoint = play ? '/api/spotify/play' : '/api/spotify/pause';
+  const res = await fetch(endpoint, {method:'POST'});
+  const data = await res.json();
+  if (!data.ok) alert('Playback control requires SPOTIFY_ACCESS_TOKEN in Secrets.');
+  else setTimeout(loadSpotifyNowPlaying, 800);
+}
+
+// ── YouTube Panel ─────────────────────────────────────────────────────────────
+
+async function loadYouTube() {
+  const statusRes = await fetch('/api/youtube/status');
+  const status = await statusRes.json();
+  document.getElementById('youtube-setup').style.display = status.configured ? 'none' : 'block';
+}
+
+async function searchYouTube(q) {
+  if (!q.trim()) return;
+  document.getElementById('youtube-results').innerHTML = '<div class="panel-empty">Searching…</div>';
+  const res = await fetch(`/api/youtube/search?q=${encodeURIComponent(q)}&max_results=12`);
+  const data = await res.json();
+  const el = document.getElementById('youtube-results');
+  if (!data.ok) { el.innerHTML = `<div class="panel-empty" style="color:#f87171">${data.error}</div>`; return; }
+  el.innerHTML = (data.videos||[]).map(v => `
+    <div class="email-item" style="cursor:pointer" onclick="window.open('${v.url}','_blank')">
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        ${v.thumbnail ? `<img src="${v.thumbnail}" style="width:80px;height:45px;border-radius:4px;object-fit:cover;flex-shrink:0">` : '<span style="font-size:24px;flex-shrink:0">▶️</span>'}
+        <div style="flex:1;min-width:0">
+          <div class="email-subject" style="white-space:normal;line-height:1.3">${esc(v.title)}</div>
+          <div class="email-from">${esc(v.channel)} · ${v.published?new Date(v.published).toLocaleDateString():''}</div>
+        </div>
+      </div>
+    </div>`).join('') || '<div class="panel-empty">No videos found.</div>';
+}
+
+// ── Panel auto-load hooks ─────────────────────────────────────────────────────
+
+(function patchSwitchPanel() {
+  const orig = window.switchPanel;
+  if (typeof orig !== 'function') { setTimeout(patchSwitchPanel, 400); return; }
+  window.switchPanel = function(name) {
+    orig(name);
+    if (name === 'notion') loadNotion();
+    else if (name === 'slack') loadSlackChannels();
+    else if (name === 'trello') loadTrelloBoards();
+    else if (name === 'spotify') loadSpotifyNowPlaying();
+    else if (name === 'youtube') loadYouTube();
+  };
+})();

@@ -50,6 +50,11 @@ import arix.tools.desktop_tools as desktop_tools
 import arix.tools.webapp_tools as webapp_tools
 import arix.tools.gmail_tools as gmail_tools
 import arix.tools.drive_tools as drive_tools
+import arix.tools.notion_tools as notion_tools
+import arix.tools.slack_tools as slack_tools
+import arix.tools.trello_tools as trello_tools
+import arix.tools.spotify_tools as spotify_tools
+import arix.tools.youtube_tools as youtube_tools
 
 
 @dataclass
@@ -132,6 +137,29 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "drive_search_files": lambda args: drive_tools.drive_search_files(**_clean(args)),
     "drive_read_file": lambda args: drive_tools.drive_read_file(**_clean(args)),
     "drive_upload_file": lambda args: drive_tools.drive_upload_file(**_clean(args)),
+    # Notion tools
+    "notion_search": lambda args: notion_tools.notion_search(**_clean(args)),
+    "notion_read_page": lambda args: notion_tools.notion_read_page(**_clean(args)),
+    "notion_create_page": lambda args: notion_tools.notion_create_page(**_clean(args)),
+    "notion_append_to_page": lambda args: notion_tools.notion_append_to_page(**_clean(args)),
+    # Slack tools
+    "slack_list_channels": lambda args: slack_tools.slack_list_channels(**_clean(args)),
+    "slack_send_message": lambda args: slack_tools.slack_send_message(**_clean(args)),
+    "slack_get_messages": lambda args: slack_tools.slack_get_messages(**_clean(args)),
+    "slack_search": lambda args: slack_tools.slack_search(**_clean(args)),
+    # Trello tools
+    "trello_list_boards": lambda args: trello_tools.trello_list_boards(**_clean(args)),
+    "trello_list_cards": lambda args: trello_tools.trello_list_cards(**_clean(args)),
+    "trello_create_card": lambda args: trello_tools.trello_create_card(**_clean(args)),
+    "trello_get_lists": lambda args: trello_tools.trello_get_lists(**_clean(args)),
+    # Spotify tools
+    "spotify_search": lambda args: spotify_tools.spotify_search(**_clean(args)),
+    "spotify_current_track": lambda args: spotify_tools.spotify_current_track(**_clean(args)),
+    "spotify_play_pause": lambda args: spotify_tools.spotify_play_pause(**_clean(args)),
+    # YouTube tools
+    "youtube_search": lambda args: youtube_tools.youtube_search(**_clean(args)),
+    "youtube_get_video": lambda args: youtube_tools.youtube_get_video(**_clean(args)),
+    "youtube_search_channels": lambda args: youtube_tools.youtube_search_channels(**_clean(args)),
     # Desktop tools (via local bridge agent)
     "desktop_screenshot": lambda args: desktop_tools.desktop_screenshot(**_clean(args)),
     "desktop_click": lambda args: desktop_tools.desktop_click(**_clean(args)),

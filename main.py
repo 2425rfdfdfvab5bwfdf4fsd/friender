@@ -34,11 +34,16 @@ from routers import (
     gmail,
     intelligence,
     memory,
+    notion,
     personal,
     plugins,
+    slack,
+    spotify,
+    trello,
     whatsapp,
     workflows,
     ws,
+    youtube,
 )
 
 
@@ -149,11 +154,16 @@ app.include_router(drive.router)
 app.include_router(gmail.router)
 app.include_router(intelligence.router)
 app.include_router(memory.router)
+app.include_router(notion.router)
 app.include_router(personal.router)
 app.include_router(plugins.router)
+app.include_router(slack.router)
+app.include_router(spotify.router)
+app.include_router(trello.router)
 app.include_router(whatsapp.router)
 app.include_router(workflows.router)
 app.include_router(ws.router)
+app.include_router(youtube.router)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

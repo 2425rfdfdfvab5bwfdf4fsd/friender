@@ -90,6 +90,11 @@
       <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="gmail" onclick="switchPanel('gmail')"><span class="snav-icon">📧</span>Gmail<span class="snav-badge" id="badge-gmail" style="display:none">0</span></button>
       <button class="snav-btn" data-panel="drive" onclick="switchPanel('drive')"><span class="snav-icon">📁</span>Drive</button>
+      <button class="snav-btn" data-panel="notion" onclick="switchPanel('notion')"><span class="snav-icon">📒</span>Notion</button>
+      <button class="snav-btn" data-panel="slack" onclick="switchPanel('slack')"><span class="snav-icon">💬</span>Slack</button>
+      <button class="snav-btn" data-panel="trello" onclick="switchPanel('trello')"><span class="snav-icon">📋</span>Trello</button>
+      <button class="snav-btn" data-panel="spotify" onclick="switchPanel('spotify')"><span class="snav-icon">🎵</span>Spotify</button>
+      <button class="snav-btn" data-panel="youtube" onclick="switchPanel('youtube')"><span class="snav-icon">▶️</span>YouTube</button>
       <button class="snav-btn" data-panel="plugins" onclick="switchPanel('plugins')"><span class="snav-icon">🔌</span>Plugins<span class="snav-badge" id="badge-plugins" style="display:none">0</span></button>
       <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="settings" onclick="switchPanel('settings')"><span class="snav-icon">⚙️</span>Settings</button>
@@ -320,6 +325,156 @@
         </div>
         <div id="plugin-list"><div class="panel-empty">No plugins yet. Create your first plugin above.</div></div>
       </div>
+
+      <!-- Notion panel -->
+      <div id="panel-notion" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📒</span>
+          <span class="intg-title">Notion</span>
+          <button class="panel-btn" onclick="loadNotion()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="notion-setup" class="intg-setup" style="display:none">
+          <div class="intg-setup-title">Connect Notion</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to notion.so/my-integrations → create a new integration</div>
+            <div>2. Copy the Internal Integration Token</div>
+            <div>3. Add <code>NOTION_API_KEY</code> to Secrets</div>
+            <div>4. Share Notion pages/databases with your integration</div>
+          </div>
+        </div>
+        <input class="panel-search" id="notion-search-input" placeholder="Search pages…" onkeydown="if(event.key==='Enter')searchNotion(this.value)" style="margin-bottom:8px">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="panel-btn primary" onclick="showNotionCreateForm()" style="flex:1">+ New Page</button>
+          <button class="panel-btn" onclick="searchNotion(document.getElementById('notion-search-input').value)" style="flex:0;white-space:nowrap">🔍</button>
+        </div>
+        <div id="notion-create-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
+          <input class="panel-input" id="notion-new-title" placeholder="Page title" style="margin-bottom:5px">
+          <textarea class="panel-textarea" id="notion-new-content" placeholder="Page content (optional)" rows="3" style="margin-bottom:8px"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="panel-btn primary" onclick="createNotionPage()" style="flex:1">Create</button>
+            <button class="panel-btn" onclick="document.getElementById('notion-create-form').style.display='none'" style="flex:0;white-space:nowrap">Cancel</button>
+          </div>
+        </div>
+        <div id="notion-list"><div class="panel-empty">Search or browse your Notion workspace.</div></div>
+      </div>
+
+      <!-- Slack panel -->
+      <div id="panel-slack" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">💬</span>
+          <span class="intg-title">Slack</span>
+          <button class="panel-btn" onclick="loadSlackChannels()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="slack-setup" class="intg-setup" style="display:none">
+          <div class="intg-setup-title">Connect Slack</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to api.slack.com/apps → create a new app</div>
+            <div>2. Add scopes: channels:read, chat:write, channels:history, search:read</div>
+            <div>3. Install app to workspace → copy Bot User OAuth Token</div>
+            <div>4. Add <code>SLACK_BOT_TOKEN</code> to Secrets</div>
+          </div>
+        </div>
+        <input class="panel-search" id="slack-search-input" placeholder="Search messages…" onkeydown="if(event.key==='Enter')searchSlack(this.value)" style="margin-bottom:8px">
+        <div id="slack-compose" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
+          <select id="slack-compose-channel" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-size:11px;width:100%;margin-bottom:5px"></select>
+          <textarea class="panel-textarea" id="slack-compose-text" placeholder="Message…" rows="3" style="margin-bottom:8px"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="panel-btn primary" onclick="sendSlackMessage()" style="flex:1">Send</button>
+            <button class="panel-btn" onclick="document.getElementById('slack-compose').style.display='none'" style="flex:0;white-space:nowrap">Cancel</button>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button class="panel-btn primary" onclick="showSlackCompose()" style="flex:1">+ New Message</button>
+          <button class="panel-btn" onclick="searchSlack(document.getElementById('slack-search-input').value)" style="flex:0;white-space:nowrap">🔍</button>
+        </div>
+        <div id="slack-channels-list"></div>
+        <div id="slack-messages-list"></div>
+      </div>
+
+      <!-- Trello panel -->
+      <div id="panel-trello" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📋</span>
+          <span class="intg-title">Trello</span>
+          <button class="panel-btn" onclick="loadTrelloBoards()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="trello-setup" class="intg-setup" style="display:none">
+          <div class="intg-setup-title">Connect Trello</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to trello.com/app-key → copy your API key</div>
+            <div>2. Click "Generate a Token" on the same page</div>
+            <div>3. Add <code>TRELLO_API_KEY</code> and <code>TRELLO_API_TOKEN</code> to Secrets</div>
+          </div>
+        </div>
+        <div id="trello-add-card-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px">
+          <input class="panel-input" id="trello-card-name" placeholder="Card name" style="margin-bottom:5px">
+          <input class="panel-input" id="trello-card-desc" placeholder="Description (optional)" style="margin-bottom:5px">
+          <select id="trello-card-list" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-size:11px;width:100%;margin-bottom:8px"></select>
+          <div style="display:flex;gap:6px">
+            <button class="panel-btn primary" onclick="addTrelloCard()" style="flex:1">Add Card</button>
+            <button class="panel-btn" onclick="document.getElementById('trello-add-card-form').style.display='none'" style="flex:0;white-space:nowrap">Cancel</button>
+          </div>
+        </div>
+        <div id="trello-boards-list"></div>
+        <div id="trello-board-detail" style="display:none">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <button class="panel-btn" onclick="showTrelloBoards()" style="flex:0">← Boards</button>
+            <span id="trello-board-name" style="font-size:13px;font-weight:600;color:var(--text);flex:1"></span>
+            <button class="panel-btn primary" onclick="showTrelloAddCard()" style="flex:0;white-space:nowrap">+ Card</button>
+          </div>
+          <div id="trello-cards-list"></div>
+        </div>
+      </div>
+
+      <!-- Spotify panel -->
+      <div id="panel-spotify" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🎵</span>
+          <span class="intg-title">Spotify</span>
+          <button class="panel-btn" onclick="loadSpotifyNowPlaying()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="spotify-setup" class="intg-setup" style="display:none">
+          <div class="intg-setup-title">Connect Spotify</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to developer.spotify.com/dashboard → create an app</div>
+            <div>2. Copy Client ID and Client Secret</div>
+            <div>3. Add <code>SPOTIFY_CLIENT_ID</code> and <code>SPOTIFY_CLIENT_SECRET</code> to Secrets</div>
+            <div style="margin-top:4px;opacity:0.7">For playback control also add <code>SPOTIFY_ACCESS_TOKEN</code></div>
+          </div>
+        </div>
+        <div id="spotify-now-playing" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px">NOW PLAYING</div>
+          <div id="spotify-track-name" style="font-size:14px;font-weight:600;color:var(--text)"></div>
+          <div id="spotify-track-artist" style="font-size:12px;color:var(--muted);margin-bottom:8px"></div>
+          <div style="display:flex;gap:6px">
+            <button class="panel-btn" onclick="spotifyPlayPause(false)" style="flex:1">⏸ Pause</button>
+            <button class="panel-btn primary" onclick="spotifyPlayPause(true)" style="flex:1">▶ Play</button>
+          </div>
+        </div>
+        <input class="panel-search" id="spotify-search-input" placeholder="Search tracks, artists, albums…" onkeydown="if(event.key==='Enter')searchSpotify(this.value)" style="margin-bottom:8px">
+        <button class="panel-btn" onclick="searchSpotify(document.getElementById('spotify-search-input').value)" style="width:100%;margin-bottom:8px">🔍 Search</button>
+        <div id="spotify-results"><div class="panel-empty">Search for a song or artist to get started.</div></div>
+      </div>
+
+      <!-- YouTube panel -->
+      <div id="panel-youtube" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">▶️</span>
+          <span class="intg-title">YouTube</span>
+        </div>
+        <div id="youtube-setup" class="intg-setup" style="display:none">
+          <div class="intg-setup-title">Connect YouTube</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to console.cloud.google.com → enable "YouTube Data API v3"</div>
+            <div>2. Create an API key under Credentials</div>
+            <div>3. Add <code>YOUTUBE_API_KEY</code> to Secrets</div>
+          </div>
+        </div>
+        <input class="panel-search" id="youtube-search-input" placeholder="Search YouTube videos…" onkeydown="if(event.key==='Enter')searchYouTube(this.value)" style="margin-bottom:8px">
+        <button class="panel-btn primary" onclick="searchYouTube(document.getElementById('youtube-search-input').value)" style="width:100%;margin-bottom:8px">🔍 Search</button>
+        <div id="youtube-results"><div class="panel-empty">Search for videos to get started.</div></div>
+      </div>
+
     </div>
   </aside>
 
