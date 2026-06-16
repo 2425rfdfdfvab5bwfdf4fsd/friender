@@ -115,7 +115,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .snav-sep{height:1px;background:var(--border);margin:4px 4px;opacity:.6;grid-column:1/-1}
 
 /* ── Detail Sidebar — Panel content ────────────────────────────────────── */
-#detail-sidebar{order:-1;width:280px;display:flex;flex-direction:column;background:var(--surface2);border-right:1px solid var(--border);flex-shrink:0;transition:width .22s ease,opacity .22s ease;overflow:hidden;z-index:24;position:relative}
+#detail-sidebar{order:10;width:280px;display:flex;flex-direction:column;background:var(--surface2);border-right:1px solid var(--border);flex-shrink:0;transition:width .22s ease,opacity .22s ease;overflow:hidden;z-index:24;position:relative}
 #detail-sidebar.dsb-collapsed{width:0;opacity:0;pointer-events:none}
 #dsb-header{display:flex;align-items:center;gap:8px;padding:13px 14px 11px;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(180deg,rgba(var(--accent-rgb),.04) 0%,transparent 100%)}
 #dsb-panel-title{font-size:12.5px;font-weight:700;color:var(--text);flex:1;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
