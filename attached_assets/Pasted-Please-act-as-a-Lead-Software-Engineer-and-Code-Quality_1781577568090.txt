@@ -1,0 +1,44 @@
+Please act as a Lead Software Engineer and Code Quality Architect.
+
+First, scan and understand the entire project codebase, including all files, folders, components, modules, services, utilities, APIs, configuration files, and dependencies.
+
+Your goal is to improve the code quality across the whole project so that it is clean, readable, maintainable, and easy to understand for Intermediate, Senior, and Expert/Lead developers.
+
+Focus on:
+
+- Clean and consistent code structure
+- Clear file and folder organization
+- Better naming for variables, functions, components, classes, and files
+- Removing duplicate, unused, or unnecessary code
+- Simplifying complex logic without changing behavior
+- Improving readability and maintainability
+- Adding helpful comments only where needed
+- Improving type safety and error handling
+- Following best practices for the framework/language used
+- Applying DRY, SOLID, and separation-of-concerns principles where appropriate
+- Making the code easier to debug, extend, and scale
+- Keeping formatting, imports, and style consistent across all files
+
+Important rules:
+
+- Do not change the existing design, UI, features, business logic, or user experience unless absolutely necessary.
+- Do not remove any working functionality.
+- Do not over-engineer the code.
+- Make changes safely and incrementally.
+- If something is unclear, explain it before changing it.
+- Preserve existing APIs, routes, components, and database behavior unless improvement is clearly needed.
+
+Please provide:
+
+1. A full code quality review of the project
+2. A list of messy, duplicated, confusing, or hard-to-maintain areas
+3. A prioritized refactoring plan
+4. Specific files that need improvement
+5. Clean code improvements with explanations
+6. Suggested folder/file structure improvements if needed
+7. Recommended naming improvements
+8. Any missing error handling, validation, or type safety improvements
+9. Final refactored code changes
+10. A summary of what was improved and why
+
+After refactoring, make sure the project still works exactly the same, but the code should look cleaner, more professional, and easier for Intermediate, Senior, and Lead developers to understand and maintain.

@@ -12,7 +12,7 @@ from typing import AsyncIterator, Callable, Any
 
 from pacca.config import PACCAConfig, get_grant_secret_key
 from pacca.personal.profile import UserProfile
-from pacca.heuristic_planner import HeuristicPlanner
+from pacca.pipeline.heuristic_planner import HeuristicPlanner
 from pacca.models.audit_log import AuditLogger
 from pacca.models.provider_consent import ConsentStore
 from pacca.models.task_scope import TaskScope
@@ -27,13 +27,13 @@ from pacca.security.grant_verifier import GrantVerifier
 from pacca.security.local_text_redactor import LocalTextRedactor
 from pacca.security.safe_resource_resolver import SafeResourceResolver
 from pacca.security.used_grant_registry import UsedGrantRegistry
-from pacca.task_history import TaskHistory
+from pacca.memory.task_history import TaskHistory
 from pacca.tools.registry import TOOL_REGISTRY, policy_version
-from pacca.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
-from pacca.advisor import AdvisoryIntentDetector, is_chitchat
+from pacca.memory.undo_manager import UndoManager, make_move_undo, make_create_undo, make_create_folder_undo
+from pacca.intelligence.advisor import AdvisoryIntentDetector, is_chitchat
 from pacca.llm_client import LLMClient
 from pacca.memory.memory_manager import MemoryManager
-from pacca.supervisor import GoalSupervisor, is_multi_step_goal
+from pacca.intelligence.supervisor import GoalSupervisor, is_multi_step_goal
 
 import pacca.tools.file_tools as file_tools
 import pacca.tools.app_tools as app_tools

@@ -1,0 +1,80 @@
+You are a senior software architect. Analyze the following project and restructure 
+its folder layout to be professional, clean, and scalable.
+
+PROJECT TYPE: [e.g. React + Node.js fullstack / Python Flask API / Next.js / etc.]
+CURRENT STRUCTURE: [paste your current folder tree here]
+TECH STACK: [e.g. React, TypeScript, Tailwind, Firestore, Express]
+TEAM SIZE: [solo / small team / large team]
+DEPLOYMENT TARGET: [Vercel / AWS / Docker / Replit / etc.]
+
+────────────────────────────────────────────
+REQUIREMENTS:
+────────────────────────────────────────────
+
+1. NAMING CONVENTIONS
+   - Use kebab-case for folders and files (my-component.tsx)
+   - Use PascalCase only for React component files (MyComponent.tsx)
+   - Use camelCase for utility/helper files (formatDate.ts)
+   - Be consistent — pick one style and apply it everywhere
+
+2. SEPARATION OF CONCERNS
+   - Separate pages, components, hooks, utils, types, context, and services
+   - No business logic inside UI components
+   - No direct API calls inside page components — use a service/hook layer
+   - Config and constants must live in their own files
+
+3. COLOCATION RULE
+   - If a component, hook, or util is used by only ONE page/feature → place it 
+     inside that feature's folder
+   - If it's shared by 2+ → move it to the global shared/ or components/ folder
+
+4. SCALABILITY
+   - Use feature-based folder structure for large apps:
+     src/features/auth/, src/features/dashboard/, src/features/settings/
+   - Each feature folder should contain: components/, hooks/, types/, utils/, api/
+   - For small apps, a flat structure is fine: src/components/, src/hooks/, etc.
+
+5. MUST-HAVE TOP-LEVEL FILES
+   - README.md           → project overview, setup, env vars
+   - .env.example        → template for required environment variables
+   - .gitignore          → exclude node_modules, .env, dist, .DS_Store
+   - tsconfig.json       → TypeScript config (if applicable)
+   - package.json        → scripts: dev, build, lint, test, typecheck
+
+6. FORBIDDEN PATTERNS (remove or fix these)
+   - ❌ index.js files everywhere (only allow barrel exports where truly needed)
+   - ❌ Components named "Component1.tsx", "NewFile.tsx", "Test.tsx"
+   - ❌ Unused files or folders
+   - ❌ Secrets or API keys hardcoded anywhere
+   - ❌ CSS/styles mixed directly inside component logic files
+   - ❌ All files dumped in the root — must be organized into subfolders
+
+────────────────────────────────────────────
+DELIVERABLES:
+────────────────────────────────────────────
+
+1. Show the BEFORE structure (current state)
+2. Show the AFTER structure (proposed clean structure) as a folder tree
+3. List every change made and WHY
+4. Highlight which files need to be renamed, moved, merged, or deleted
+5. Show the recommended path aliases (e.g. @/components, @/hooks, @/lib)
+6. If any file contains mixed concerns, show how to split it
+
+Use this tree format for folder output:
+src/
+├── components/
+│   ├── ui/
+│   │   └── Button.tsx
+│   └── layout/
+│       └── Header.tsx
+├── pages/
+│   ├── Home.tsx
+│   └── About.tsx
+├── hooks/
+│   └── useAuth.ts
+├── lib/
+│   └── firebase.ts
+├── types/
+│   └── index.ts
+└── utils/
+    └── formatDate.ts

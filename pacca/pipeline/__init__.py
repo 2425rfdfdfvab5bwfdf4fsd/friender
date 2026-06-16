@@ -5,6 +5,7 @@ from .policy_engine import PolicyEngine
 from .runtime_validator import RuntimeStepValidator
 from .task_state_machine import TaskStateMachine, TaskState
 from .content_gateway import ContentDataGateway
+from .heuristic_planner import HeuristicPlanner
 
 __all__ = [
     "CommandParser",
@@ -14,4 +15,5 @@ __all__ = [
     "RuntimeStepValidator",
     "TaskStateMachine", "TaskState",
     "ContentDataGateway",
+    "HeuristicPlanner",
 ]
