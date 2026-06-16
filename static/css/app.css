@@ -919,6 +919,19 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 #vision-btn.active{color:var(--accent2);background:rgba(100,255,218,.1)}
 #vision-btn:hover{background:rgba(100,255,218,.08)}
 
+/* ── Tasks Sidebar (second left panel) ──────────────────────────────────── */
+#tasks-sidebar{width:236px;display:flex;flex-direction:column;background:var(--surface);border-right:1px solid var(--border);flex-shrink:0;transition:width .22s ease,opacity .22s ease;overflow:hidden;z-index:25;position:relative}
+#tasks-sidebar.tsb-collapsed{width:0;opacity:0;pointer-events:none}
+#tsb-header{display:flex;align-items:center;padding:13px 14px 11px;border-bottom:1px solid var(--border);flex-shrink:0;background:linear-gradient(180deg,rgba(18,194,133,.04) 0%,transparent 100%)}
+#tsb-title{font-size:12.5px;font-weight:700;color:var(--text);flex:1;letter-spacing:.01em}
+#tsb-close-btn{background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px 6px;border-radius:var(--radius-sm);transition:color .15s,background .15s;line-height:1}
+#tsb-close-btn:hover{color:var(--text);background:rgba(var(--success-rgb),.08)}
+#tsb-body{flex:1;overflow-y:auto;padding:12px 10px 20px}
+#tsb-body::-webkit-scrollbar{width:4px}
+#tsb-body::-webkit-scrollbar-track{background:transparent}
+#tsb-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+#tsb-toggle-btn.active{color:var(--success);background:rgba(var(--success-rgb),.12)}
+
 /* ── Right Sidebar ───────────────────────────────────────────────────────── */
 #right-sidebar{width:248px;display:flex;flex-direction:column;background:var(--surface);border-left:1px solid var(--border);flex-shrink:0;transition:width .22s ease,opacity .22s ease;overflow:hidden;z-index:26;position:relative}
 #right-sidebar.rsb-collapsed{width:0;opacity:0;pointer-events:none}

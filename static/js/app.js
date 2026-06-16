@@ -1074,6 +1074,107 @@ function closeSidebarMobile() {
   }
 }
 
+// ── Tasks Sidebar (second left panel) ────────────────────────────────────────
+function toggleTasksSidebar() {
+  const tsb = document.getElementById('tasks-sidebar');
+  const btn = document.getElementById('tsb-toggle-btn');
+  const isOpen = !tsb.classList.contains('tsb-collapsed');
+  tsb.classList.toggle('tsb-collapsed', isOpen);
+  btn && btn.classList.toggle('active', !isOpen);
+  if (!isOpen) loadTsbPanel();
+  if (S.termMode && S.fit) setTimeout(() => S.fit.fit(), 230);
+}
+
+async function loadTsbPanel() {
+  try {
+    const [todosRes, remsRes] = await Promise.all([
+      fetch('/api/todos?include_done=false'),
+      fetch('/api/reminders')
+    ]);
+    const todosData = await todosRes.json();
+    const remsData  = await remsRes.json();
+    renderTsbTodoList(todosData.todos || []);
+    renderTsbRemList(remsData.reminders || []);
+  } catch(e) {}
+}
+
+function renderTsbTodoList(todos) {
+  const el = document.getElementById('tsb-todo-list');
+  if (!el) return;
+  if (!todos.length) { el.innerHTML = '<div class="panel-empty">No tasks yet — add one above!</div>'; return; }
+  el.innerHTML = todos.map(t => `
+    <div class="asst-todo-item">
+      <input type="checkbox" class="asst-todo-check" ${t.done?'checked':''} onchange="toggleTodoDoneTsb('${esc(t.id)}',this.checked)">
+      <span class="asst-todo-text ${t.done?'done':''}">${esc(t.text)}</span>
+      <span class="asst-todo-pri ptask-pri ${esc(t.priority)}">${esc(t.priority)}</span>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="deleteTodoTsb('${esc(t.id)}')">✕</button>
+    </div>`).join('');
+}
+
+function renderTsbRemList(rems) {
+  const el = document.getElementById('tsb-rem-list');
+  if (!el) return;
+  const now = new Date();
+  const active = rems.filter(r => !r.done);
+  if (!active.length) { el.innerHTML = '<div class="panel-empty">No reminders set.</div>'; return; }
+  el.innerHTML = active.map(r => {
+    const due = new Date(r.due);
+    const overdue = due < now;
+    const dueStr = due.toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    return `<div class="asst-rem-item">
+      <div style="flex:1">
+        <div class="asst-rem-text">${esc(r.text)}</div>
+        <div class="asst-rem-when ${overdue?'overdue':''}">${overdue?'⚠ Overdue — ':''}${dueStr}</div>
+      </div>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="doneReminderTsb('${esc(r.id)}')">✓</button>
+      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="deleteReminderTsb('${esc(r.id)}')">✕</button>
+    </div>`;
+  }).join('');
+}
+
+async function addTsbTodo() {
+  const inp = document.getElementById('tsb-todo-input');
+  const pri = document.getElementById('tsb-todo-pri');
+  const text = inp.value.trim();
+  if (!text) { inp.focus(); return; }
+  try {
+    await fetch('/api/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, priority:pri.value})});
+    inp.value = ''; toast('Task added ✓','ok');
+    loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+  } catch(e) { toast('Failed to add task','err'); }
+}
+
+async function addTsbReminder() {
+  const inp  = document.getElementById('tsb-rem-input');
+  const when = document.getElementById('tsb-rem-when');
+  const text = inp.value.trim();
+  const whenVal = when.value.trim() || 'in 1 hour';
+  if (!text) { inp.focus(); return; }
+  try {
+    await fetch('/api/reminders', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text, when:whenVal})});
+    inp.value = ''; toast('Reminder set ✓','ok');
+    loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+  } catch(e) { toast('Failed to add reminder','err'); }
+}
+
+async function toggleTodoDoneTsb(id, done) {
+  if (done) await fetch(`/api/todos/${id}/done`, {method:'POST'});
+  else await fetch(`/api/todos/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({done:false})});
+  loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+}
+async function deleteTodoTsb(id) {
+  await fetch(`/api/todos/${id}`, {method:'DELETE'});
+  loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+}
+async function doneReminderTsb(id) {
+  await fetch(`/api/reminders/${id}/done`, {method:'POST'});
+  loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+}
+async function deleteReminderTsb(id) {
+  await fetch(`/api/reminders/${id}`, {method:'DELETE'});
+  loadAssistantPanel(); loadTsbPanel(); loadRsbPanel();
+}
+
 // ── Right Sidebar ─────────────────────────────────────────────────────────────
 function toggleRightSidebar() {
   const rsb = document.getElementById('right-sidebar');
