@@ -519,8 +519,162 @@ function showContextualChips(bubble, responseText) {
 }
 
 function onConfirmRequired(d) {
-  showConfirmInBubble(S.activeBubble, d);
-  toast('Action requires your approval', 'warn', 4000);
+  showConfirmModal(d);
+  // Also show inline stub in bubble so user sees context
+  if (S.activeBubble) {
+    const b = S.activeBubble.querySelector('.msg-body');
+    const thinking = b.querySelector('.msg-thinking');
+    if (thinking) thinking.style.display = 'none';
+    const mt = b.querySelector('.msg-text');
+    mt.style.display = 'block';
+    mt.innerHTML = `<div class="msg-confirm"><div class="msg-confirm-text">⚠️ Approval dialog opened — review and confirm above.</div></div>`;
+  }
+  toast('Action requires your approval', 'warn', 5000);
+}
+
+// ── Confirmation Modal ─────────────────────────────────────────────────────
+let _confModalData = null;
+let _confRequiresYes = false;
+
+function showConfirmModal(d) {
+  _confModalData = d;
+  const overlay = document.getElementById('confirm-modal-overlay');
+  const rawMsg = (d.message || '').replace(/^Confirmation required.*?:\s*/i, '').trim();
+  const isPlanRisk = d.type === 'plan_risk';
+  const requiresYes = !!(d.requires_yes) || isPlanRisk;
+  _confRequiresYes = requiresYes;
+  const riskScore = d.risk_score || 0;
+
+  // Risk level + icon
+  let riskLevel = 'low', icon = '✅';
+  if (riskScore > 100 || d.requires_yes) { riskLevel = 'critical'; icon = '🚨'; }
+  else if (riskScore > 60)               { riskLevel = 'high';     icon = '🔴'; }
+  else if (riskScore > 30)               { riskLevel = 'medium';   icon = '⚠️'; }
+
+  document.getElementById('cm-icon').textContent = icon;
+  document.getElementById('cm-title').textContent = _getSensitiveActionTitle(d, rawMsg);
+  const badge = document.getElementById('cm-risk-badge');
+  badge.className = `cm-risk-badge ${riskLevel}`;
+  badge.textContent = riskLevel;
+  document.getElementById('cm-desc').textContent = rawMsg || 'Review the details below before approving.';
+
+  // Steps list (plan_risk)
+  const stepsSection = document.getElementById('cm-steps-section');
+  const stepsList = document.getElementById('cm-steps-list');
+  const steps = d.steps || S.currentPlanSteps || [];
+  if (isPlanRisk && steps.length > 0) {
+    stepsList.innerHTML = steps.map((s, i) => {
+      const sid = esc(s.step_id || `step-${i}`);
+      const riskCls = s.risk_level === 'critical' ? 'risk-critical' : s.risk_level === 'high' ? 'risk-high' : '';
+      return `<li class="cm-step-item ${riskCls}">
+        <input type="checkbox" class="cm-step-chk" data-step-id="${sid}" checked onclick="event.stopPropagation()">
+        <span class="cm-step-num">${i+1}</span>
+        <span class="cm-step-tool">${esc(s.tool || '')}</span>
+        <span class="cm-step-desc">${esc(s.description || '')}</span>
+      </li>`;
+    }).join('');
+    stepsSection.style.display = 'block';
+  } else {
+    stepsSection.style.display = 'none';
+  }
+
+  // YES input for critical / plan_risk actions
+  const yesWrap = document.getElementById('cm-yes-wrap');
+  const yesInput = document.getElementById('cm-yes-input');
+  const approveBtn = document.getElementById('cm-approve-btn');
+  if (requiresYes) {
+    yesWrap.style.display = 'flex';
+    yesInput.value = '';
+    approveBtn.className = 'cm-approve-btn danger-action';
+    approveBtn.textContent = '✓ Confirm';
+    setTimeout(() => yesInput.focus(), 120);
+  } else {
+    yesWrap.style.display = 'none';
+    approveBtn.className = 'cm-approve-btn';
+    approveBtn.textContent = '✓ Approve';
+    setTimeout(() => approveBtn.focus(), 80);
+  }
+
+  overlay.classList.add('show');
+
+  // Keyboard: Esc → cancel, Enter → approve (only when no YES input needed)
+  overlay._keyFn = (e) => {
+    if (e.key === 'Escape') { e.preventDefault(); dismissConfirmModal(false); }
+    if (e.key === 'Enter' && !requiresYes) { e.preventDefault(); submitConfirmModal(true); }
+    if (e.key === 'Enter' && requiresYes) { e.preventDefault(); submitConfirmModal(true); }
+  };
+  document.addEventListener('keydown', overlay._keyFn);
+}
+
+function _getSensitiveActionTitle(d, msg) {
+  const m = (msg || d.message || '').toLowerCase();
+  if (m.includes('send') && (m.includes('message') || m.includes('whatsapp') || m.includes('email') || m.includes('dm'))) return 'Send a message?';
+  if (m.includes('delete') || m.includes('trash') || m.includes('remove') || m.includes('temp file')) return 'Delete files?';
+  if (m.includes('purchase') || m.includes('buy') || m.includes('payment') || m.includes('checkout')) return 'Make a purchase?';
+  if (m.includes('system') && (m.includes('setting') || m.includes('change') || m.includes('modify'))) return 'Change system settings?';
+  if (m.includes('post') || m.includes('publish') || m.includes('upload') || m.includes('share')) return 'Post / publish content?';
+  if (m.includes('commit') || m.includes('push')) return 'Commit & push code?';
+  if (d.type === 'plan_risk') return 'Approve this execution plan?';
+  return 'Action requires your approval';
+}
+
+function submitConfirmModal(yes) {
+  const d = _confModalData;
+  if (!d) return;
+  if (yes && _confRequiresYes) {
+    const yesWrap = document.getElementById('cm-yes-wrap');
+    if (yesWrap && yesWrap.style.display !== 'none') {
+      const yesInput = document.getElementById('cm-yes-input');
+      if (yesInput.value.trim().toUpperCase() !== 'YES') {
+        yesInput.style.borderColor = 'var(--danger)';
+        yesInput.style.boxShadow = '0 0 0 3px rgba(240,82,82,.25)';
+        yesInput.placeholder = 'Type YES exactly';
+        yesInput.focus();
+        return;
+      }
+    }
+  }
+  _dismissConfirmModalInternal(yes);
+}
+
+function dismissConfirmModal(yes) {
+  _dismissConfirmModalInternal(yes);
+}
+
+function _dismissConfirmModalInternal(yes) {
+  const d = _confModalData;
+  const overlay = document.getElementById('confirm-modal-overlay');
+  overlay.classList.remove('show');
+  if (overlay._keyFn) {
+    document.removeEventListener('keydown', overlay._keyFn);
+    overlay._keyFn = null;
+  }
+  _confRequiresYes = false;
+  if (!d) return;
+
+  const confId = d.confirmation_id || 'x';
+  const taskId = d.task_id || '';
+
+  // Collect deselected step IDs
+  let skipSteps = [];
+  if (yes && d.type === 'plan_risk') {
+    const stepsList = document.getElementById('cm-steps-list');
+    if (stepsList) {
+      stepsList.querySelectorAll('.cm-step-chk').forEach(cb => {
+        if (!cb.checked) skipSteps.push(cb.dataset.stepId);
+      });
+    }
+  }
+
+  wsSend({type:'confirm', data:{task_id:taskId, confirmation_id:confId, response: yes ? 'YES' : 'NO', skip_steps:skipSteps}});
+
+  // Update inline bubble stub
+  const confirmEl = document.querySelector('.msg-confirm');
+  if (confirmEl) {
+    const skippedMsg = skipSteps.length > 0 ? ` (${skipSteps.length} step${skipSteps.length>1?'s':''} skipped)` : '';
+    confirmEl.innerHTML = `<div class="msg-confirm-text">${yes ? `✅ Approved — proceeding…${skippedMsg}` : '🚫 Cancelled by user.'}</div>`;
+  }
+  _confModalData = null;
 }
 
 function onCancelled(d) {

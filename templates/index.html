@@ -440,6 +440,33 @@
   </div>
 </div>
 
+<!-- ── Confirmation Modal ──────────────────────────────────────────────────── -->
+<div id="confirm-modal-overlay" onclick="if(event.target===this&&!_confRequiresYes)dismissConfirmModal(false)">
+  <div id="confirm-modal">
+    <div class="cm-header">
+      <span class="cm-icon" id="cm-icon">⚠️</span>
+      <span class="cm-title" id="cm-title">Action requires your approval</span>
+      <span class="cm-risk-badge medium" id="cm-risk-badge">medium</span>
+    </div>
+    <div class="cm-body">
+      <div class="cm-desc" id="cm-desc"></div>
+      <div id="cm-steps-section" style="display:none">
+        <div class="cm-what-label">Steps that will execute:</div>
+        <ul class="cm-steps-list" id="cm-steps-list"></ul>
+        <div class="cm-skip-note">Uncheck any step to skip it.</div>
+      </div>
+      <div id="cm-yes-wrap" style="display:none" class="cm-yes-wrap">
+        <span class="cm-yes-label">⚠️ High-risk action — type YES to confirm:</span>
+        <input class="cm-yes-input" id="cm-yes-input" placeholder="YES" maxlength="3" autocomplete="off" oninput="this.value=this.value.toUpperCase()">
+      </div>
+    </div>
+    <div class="cm-footer">
+      <button class="cm-deny-btn" onclick="dismissConfirmModal(false)">✕ Cancel</button>
+      <button class="cm-approve-btn" id="cm-approve-btn" onclick="submitConfirmModal(true)">✓ Approve</button>
+    </div>
+  </div>
+</div>
+
 <script src="/static/js/app.js"></script>
 </body>
 </html>

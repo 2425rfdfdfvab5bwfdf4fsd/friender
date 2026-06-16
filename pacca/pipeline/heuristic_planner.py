@@ -203,10 +203,99 @@ class HeuristicPlanner:
             name = names[0] if names else "unknown"
             return [{"tool": "close_app", "args": {"name": name},
                      "description": f"Close {name}"}]
+
+        # OBS Studio — recording / streaming
+        _OBS_KW = ("obs studio", "obsstudio", " obs ")
+        _OBS_ACTION_KW = ("record", "stream", "broadcast", "go live")
+        if any(kw in f" {low} " for kw in _OBS_KW) or (
+            "obs" in low and any(kw in low for kw in _OBS_ACTION_KW)
+        ):
+            return self._plan_obs(low, cmd)
+
+        # Check if this is purely an OBS recording/streaming command even without "obs"
+        if any(w in low for w in ("start recording", "stop recording",
+                                   "start streaming", "stop streaming",
+                                   "begin recording", "end recording",
+                                   "start broadcast", "stop broadcast",
+                                   "go live", "end live stream")):
+            return self._plan_obs(low, cmd)
+
         names = QUOTE_RE.findall(cmd)
+        # Try to find app name in command without quotes
+        _COMMON_APPS = [
+            "chrome", "firefox", "edge", "safari", "brave",
+            "excel", "word", "powerpoint", "outlook", "teams",
+            "slack", "discord", "zoom", "spotify", "vlc",
+            "notepad", "terminal", "vscode", "code", "sublime",
+            "photoshop", "illustrator", "figma", "xcode",
+            "calculator", "calendar", "mail", "finder", "explorer",
+        ]
+        if not names:
+            for app in _COMMON_APPS:
+                if app in low:
+                    names = [app]
+                    break
         name = names[0] if names else "Calculator"
         return [{"tool": "open_known_app", "args": {"name": name},
                  "description": f"Open {name}"}]
+
+    def _plan_obs(self, low: str, cmd: str) -> list[dict]:
+        """Plan OBS Studio recording/streaming actions using desktop automation."""
+        # Stop recording
+        if any(w in low for w in ("stop record", "end record", "stop recording",
+                                   "end recording", "finish record", "pause record")):
+            return [
+                {"tool": "desktop_find_and_click",
+                 "args": {"description": "Stop Recording button in OBS Studio"},
+                 "description": "Click Stop Recording in OBS Studio"},
+            ]
+        # Stop streaming
+        if any(w in low for w in ("stop stream", "end stream", "stop streaming",
+                                   "end streaming", "stop broadcast", "end broadcast",
+                                   "end live", "go offline")):
+            return [
+                {"tool": "desktop_find_and_click",
+                 "args": {"description": "Stop Streaming button in OBS Studio"},
+                 "description": "Click Stop Streaming in OBS Studio"},
+            ]
+        # Start recording
+        if any(w in low for w in ("start record", "begin record", "start recording",
+                                   "begin recording", "record video", "record screen")):
+            return [
+                {"tool": "open_known_app",
+                 "args": {"name": "OBS Studio"},
+                 "description": "Launch OBS Studio"},
+                {"tool": "desktop_find_and_click",
+                 "args": {"description": "Start Recording button in OBS Studio"},
+                 "description": "Click Start Recording"},
+            ]
+        # Start streaming / go live
+        if any(w in low for w in ("start stream", "begin stream", "go live", "start streaming",
+                                   "begin streaming", "start broadcast", "live stream")):
+            return [
+                {"tool": "open_known_app",
+                 "args": {"name": "OBS Studio"},
+                 "description": "Launch OBS Studio"},
+                {"tool": "desktop_find_and_click",
+                 "args": {"description": "Start Streaming button in OBS Studio"},
+                 "description": "Click Start Streaming"},
+            ]
+        # Add scene / source
+        if "add scene" in low or "new scene" in low:
+            return [
+                {"tool": "open_known_app",
+                 "args": {"name": "OBS Studio"},
+                 "description": "Launch OBS Studio"},
+                {"tool": "desktop_find_and_click",
+                 "args": {"description": "plus/add button in OBS Studio Scenes panel"},
+                 "description": "Add new scene in OBS Studio"},
+            ]
+        # Generic: just open OBS
+        return [
+            {"tool": "open_known_app",
+             "args": {"name": "OBS Studio"},
+             "description": "Launch OBS Studio"},
+        ]
 
     def _plan_git(self, low: str, cmd: str) -> list[dict]:
         repo = _cwd()

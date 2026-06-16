@@ -53,6 +53,7 @@ THINK FIRST — reason through:
 1. What is the logical sequence of steps?
 2. Which steps are prerequisites for others? (e.g., create folder before creating file in it)
 3. What could fail? Plan around it.
+4. Are there sensitive actions (deleting files, sending messages, purchases, system changes) that need user confirmation?
 
 RULES:
 1. Output ONLY a JSON array of command strings — no prose, no markdown, no explanation.
@@ -62,6 +63,7 @@ RULES:
 5. Commands must be sequential and build on each other logically.
 6. Be specific about file paths, using ~/ for home directory.
 7. If a step depends on output from a prior step, describe what to do with that output.
+8. For sensitive actions (delete, send message, publish, purchase), always scan/preview first, then act.
 
 EXAMPLES:
 Goal: "research the top 5 LLM APIs and create a comparison spreadsheet"
@@ -70,14 +72,35 @@ Output: ["search the web for top 5 LLM APIs pricing and features 2026", "search 
 Goal: "check git status and commit any changed files with message 'daily update'"
 Output: ["git status in current directory", "git add all changed files in current directory", "git commit with message 'daily update'"]
 
+Goal: "delete temp files from my PC"
+Output: ["scan temp files older than 7 days dry run preview", "delete temp files older than 7 days including browser cache and python cache"]
+
+Goal: "open TikTok and go to upload"
+Output: ["open TikTok web app", "navigate to TikTok upload page"]
+
+Goal: "open Instagram and scroll through reels"
+Output: ["open Instagram web app", "navigate to Instagram reels section"]
+
+Goal: "send a WhatsApp message to John saying I will be late"
+Output: ["open WhatsApp web app messages", "search for contact John in WhatsApp", "type message I will be late in WhatsApp chat"]
+
+Goal: "start recording on OBS Studio"
+Output: ["open OBS Studio app", "click Start Recording button in OBS Studio"]
+
+Goal: "post on LinkedIn about my new project"
+Output: ["open LinkedIn feed to compose a post", "type post content about new project in LinkedIn"]
+
 Goal: "search the web for Python async best practices and save to a file"
 Output: ["search the web for Python async await best practices 2026", "search the web for asyncio common patterns and mistakes Python", "create file ~/async_notes.md with the research findings organized by topic"]
 
 Goal: "organize my downloads folder by creating subfolders for each file type"
 Output: ["list files in ~/Downloads", "create folder ~/Downloads/Images", "create folder ~/Downloads/Documents", "create folder ~/Downloads/Archives", "search for image files in ~/Downloads", "search for pdf and document files in ~/Downloads"]
 
-Goal: "analyze this Python file and write tests for it"
-Output: ["read file ~/project/main.py", "analyze code quality of ~/project/main.py", "write tests for ~/project/main.py and save to ~/project/test_main.py"]"""
+Goal: "open Excel and create a budget spreadsheet"
+Output: ["open Microsoft Excel", "create spreadsheet ~/Desktop/budget.xlsx with headers Month Income Expenses Balance"]
+
+Goal: "clean up my PC and free up disk space"
+Output: ["check system disk usage", "scan temp files older than 7 days dry run", "delete temp files older than 7 days", "list large files in ~/Downloads"]"""
 
 
 _REFLECT_SYSTEM = """You are PACCA's error recovery engine. A step in an autonomous goal has failed.
@@ -122,28 +145,83 @@ _GOAL_PATTERNS = [
     r'^search .{5,} and\s+(save|create|write|store)\b',
     r'\band\s+(save|create|write|store)\s+.{5,}\b',
     r'^open url .{10,} and\b',
+    # Digital employee task patterns
+    r'^open .{3,30} and\b',            # "open TikTok and go to messages"
+    r'\bsend .{5,} (to|for)\b',        # "send a message to John"
+    r'^delete .{5,} from\b',           # "delete temp files from my PC"
+    r'^clean(?: up)? .{5,}\b',         # "clean up my downloads folder"
+    r'^free .{3,} (space|disk)\b',     # "free up disk space"
+    r'^organize .{5,}\b',              # "organize my downloads"
+    r'^post .{5,} (on|to)\b',          # "post a photo on Instagram"
+    r'^upload .{5,} (to|on)\b',        # "upload a video to YouTube"
+    r'^message .{3,} (saying|with|about)\b',  # "message John saying I'll be late"
+    r'(from|on) my (pc|computer|laptop|mac|desktop)\b',  # "...from my PC"
+    r'\b(temp|temporary|junk|cache) files?\b',  # "temp files"
+    r'^backup .{5,}\b',                # "backup my documents"
+    r'^download .{5,} and\b',          # "download X and save it"
+    r'^(schedule|set up|book) .{5,}\b', # "schedule a meeting"
+    r'^(start|begin|stop|end) (recording|streaming|broadcast)',  # OBS
 ]
 
 _SIMPLE_PATTERNS = [
-    r'^(list|show|check|read|open|close|git|system|monitor)\b',
+    r'^(list|show|check|read|close|git|system|monitor)\b',
     r'^what\b',
     r'^how\b',
     r'^why\b',
     r'^explain\b',
+    r'^open (chrome|firefox|excel|word|obs|spotify|slack|discord|zoom|terminal|calculator|notepad)\s*$',
+]
+
+# Tasks that are always treated as multi-step digital employee goals
+_ALWAYS_GOAL_PHRASES = [
+    "delete temp files",
+    "delete temporary files",
+    "clean up temp",
+    "clean temp files",
+    "free up space",
+    "free disk space",
+    "clear cache",
+    "clean up my",
+    "organize my",
+    "back up my",
+    "backup my",
+    "start recording",
+    "stop recording",
+    "start streaming",
+    "stop streaming",
+    "go live on",
+    "post on instagram",
+    "post on tiktok",
+    "post on linkedin",
+    "upload to youtube",
+    "upload to tiktok",
+    "send a message to",
+    "send whatsapp",
+    "send message to",
+    "open and go to",
 ]
 
 
 def is_multi_step_goal(command: str) -> bool:
     lower = command.lower().strip()
+
+    # Always-goal phrases override simple pattern check
+    for phrase in _ALWAYS_GOAL_PHRASES:
+        if phrase in lower:
+            return True
+
     for sp in _SIMPLE_PATTERNS:
         if re.match(sp, lower):
             return False
+
     word_count = len(lower.split())
-    if word_count < 8:
+    if word_count < 6:
         return False
+
     for pattern in _GOAL_PATTERNS:
         if re.search(pattern, lower):
             return True
+
     return False
 
 
