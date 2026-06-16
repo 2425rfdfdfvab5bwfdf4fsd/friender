@@ -30,9 +30,12 @@ from routers import (
     agent_api,
     bridge,
     calendar,
+    drive,
+    gmail,
     intelligence,
     memory,
     personal,
+    plugins,
     whatsapp,
     workflows,
     ws,
@@ -142,9 +145,12 @@ async def index():
 app.include_router(agent_api.router)
 app.include_router(bridge.router)
 app.include_router(calendar.router)
+app.include_router(drive.router)
+app.include_router(gmail.router)
 app.include_router(intelligence.router)
 app.include_router(memory.router)
 app.include_router(personal.router)
+app.include_router(plugins.router)
 app.include_router(whatsapp.router)
 app.include_router(workflows.router)
 app.include_router(ws.router)

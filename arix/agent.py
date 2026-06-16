@@ -48,6 +48,8 @@ import arix.tools.research_tools as research_tools
 import arix.tools.calendar_tools as calendar_tools
 import arix.tools.desktop_tools as desktop_tools
 import arix.tools.webapp_tools as webapp_tools
+import arix.tools.gmail_tools as gmail_tools
+import arix.tools.drive_tools as drive_tools
 
 
 @dataclass
@@ -119,6 +121,17 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "navigate_web_app": lambda args: webapp_tools.navigate_web_app(**_clean(args)),
     "find_installed_apps": lambda args: app_tools.find_installed_apps(**_clean(args)),
     "list_available_web_apps": lambda args: webapp_tools.list_available_web_apps(),
+    # Gmail tools
+    "gmail_list_emails": lambda args: gmail_tools.gmail_list_emails(**_clean(args)),
+    "gmail_read_email": lambda args: gmail_tools.gmail_read_email(**_clean(args)),
+    "gmail_send_email": lambda args: gmail_tools.gmail_send_email(**_clean(args)),
+    "gmail_search_emails": lambda args: gmail_tools.gmail_search_emails(**_clean(args)),
+    "gmail_delete_email": lambda args: gmail_tools.gmail_delete_email(**_clean(args)),
+    # Google Drive tools
+    "drive_list_files": lambda args: drive_tools.drive_list_files(**_clean(args)),
+    "drive_search_files": lambda args: drive_tools.drive_search_files(**_clean(args)),
+    "drive_read_file": lambda args: drive_tools.drive_read_file(**_clean(args)),
+    "drive_upload_file": lambda args: drive_tools.drive_upload_file(**_clean(args)),
     # Desktop tools (via local bridge agent)
     "desktop_screenshot": lambda args: desktop_tools.desktop_screenshot(**_clean(args)),
     "desktop_click": lambda args: desktop_tools.desktop_click(**_clean(args)),

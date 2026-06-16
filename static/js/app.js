@@ -219,6 +219,8 @@ function showTextResponse(bubble, markdown) {
   const meta = b.querySelector('.msg-meta');
   meta.style.display = 'flex';
   scrollToBottom();
+  // TTS hook — dispatch event for integrations.js to consume
+  document.dispatchEvent(new CustomEvent('arix:assistant-message', { detail: { text: markdown } }));
 }
 
 function showErrorMsg(bubble, message) {
@@ -2521,6 +2523,12 @@ const PAL_ITEMS = [
   {icon:'🌿', label:'Git status', desc:'Git repository status', action:()=>{prefill('git status');closePalette();}},
   {icon:'🔍', label:'Toggle dry-run', desc:'Plan without executing', action:()=>{toggleDryRun();closePalette();}},
   {icon:'🎯', label:'Toggle goal mode', desc:'Autonomous multi-step execution', action:()=>{toggleGoalMode();closePalette();}},
+  {icon:'📧', label:'Gmail', desc:'Read and send emails', action:()=>{switchPanel('gmail');closePalette();}},
+  {icon:'📁', label:'Google Drive', desc:'Browse and manage Drive files', action:()=>{switchPanel('drive');closePalette();}},
+  {icon:'🔌', label:'Plugins', desc:'Custom tool builder — connect any webhook', action:()=>{switchPanel('plugins');closePalette();}},
+  {icon:'👁', label:'Screen Vision', desc:'Capture browser page + AI analysis', action:()=>{triggerVisionCapture();closePalette();}},
+  {icon:'🔊', label:'Toggle TTS', desc:'Speak responses aloud', action:()=>{toggleTTS();closePalette();}},
+  {icon:'📧', label:'Compose Email', desc:'Write and send an email via Gmail', action:()=>{showComposeModal();closePalette();}},
 ];
 
 function openPalette() {

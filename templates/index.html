@@ -88,6 +88,10 @@
       <button class="snav-btn" data-panel="insights" onclick="switchPanel('insights')"><span class="snav-icon">📈</span>Insights</button>
       <button class="snav-btn" data-panel="reports" onclick="switchPanel('reports')"><span class="snav-icon">📄</span>Reports</button>
       <div class="snav-sep"></div>
+      <button class="snav-btn" data-panel="gmail" onclick="switchPanel('gmail')"><span class="snav-icon">📧</span>Gmail<span class="snav-badge" id="badge-gmail" style="display:none">0</span></button>
+      <button class="snav-btn" data-panel="drive" onclick="switchPanel('drive')"><span class="snav-icon">📁</span>Drive</button>
+      <button class="snav-btn" data-panel="plugins" onclick="switchPanel('plugins')"><span class="snav-icon">🔌</span>Plugins<span class="snav-badge" id="badge-plugins" style="display:none">0</span></button>
+      <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="settings" onclick="switchPanel('settings')"><span class="snav-icon">⚙️</span>Settings</button>
       <button class="snav-btn" data-panel="audit" onclick="switchPanel('audit')"><span class="snav-icon">🔍</span>Audit</button>
       <button class="snav-btn" data-panel="sysmon" onclick="switchPanel('sysmon')"><span class="snav-icon">📊</span>System</button>
@@ -225,6 +229,97 @@
         <button class="panel-btn" onclick="loadSysmon()" style="margin-bottom:8px">↺ Refresh</button>
         <div id="sysmon-content"></div>
       </div>
+
+      <!-- Gmail panel -->
+      <div id="panel-gmail" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📧</span>
+          <span class="intg-title">Gmail</span>
+          <span id="gmail-status-badge" class="intg-status-badge disconnected">⚪ Not connected</span>
+          <button class="panel-btn" onclick="loadGmail()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="gmail-not-connected" class="intg-setup-box" style="display:none">
+          <div class="intg-setup-title">Connect Gmail</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></div>
+            <div>2. Create OAuth2 credentials with Gmail API scope</div>
+            <div>3. Add these secrets in <b>Settings → Secrets</b>:</div>
+            <code>GMAIL_CLIENT_ID<br>GMAIL_CLIENT_SECRET<br>GMAIL_REFRESH_TOKEN</code>
+          </div>
+        </div>
+        <div id="gmail-connected" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <select id="gmail-label-sel" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);flex:1">
+              <option value="INBOX">Inbox</option>
+              <option value="SENT">Sent</option>
+              <option value="STARRED">Starred</option>
+              <option value="UNREAD">Unread</option>
+              <option value="IMPORTANT">Important</option>
+            </select>
+            <button class="panel-btn primary" onclick="loadGmailEmails()" style="flex:0;white-space:nowrap">Load</button>
+            <button class="panel-btn" onclick="showComposeModal()" style="flex:0;white-space:nowrap">✏️ Compose</button>
+          </div>
+          <input class="panel-search" id="gmail-search-input" placeholder="Search emails…" onkeydown="if(event.key==='Enter')searchGmail(this.value)">
+          <div id="gmail-email-list"></div>
+        </div>
+      </div>
+
+      <!-- Drive panel -->
+      <div id="panel-drive" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📁</span>
+          <span class="intg-title">Google Drive</span>
+          <span id="drive-status-badge" class="intg-status-badge disconnected">⚪ Not connected</span>
+          <button class="panel-btn" onclick="loadDrive()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div id="drive-not-connected" class="intg-setup-box" style="display:none">
+          <div class="intg-setup-title">Connect Google Drive</div>
+          <div class="intg-setup-steps">
+            <div>1. Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></div>
+            <div>2. Create OAuth2 credentials with Drive API scope</div>
+            <div>3. Add these secrets in <b>Settings → Secrets</b>:</div>
+            <code>GOOGLE_DRIVE_CLIENT_ID<br>GOOGLE_DRIVE_CLIENT_SECRET<br>GOOGLE_DRIVE_REFRESH_TOKEN</code>
+          </div>
+        </div>
+        <div id="drive-connected" style="display:none">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <input class="panel-search" id="drive-search-input" placeholder="Search files…" style="flex:1;margin:0" onkeydown="if(event.key==='Enter')searchDrive(this.value)">
+            <button class="panel-btn primary" onclick="searchDrive(document.getElementById('drive-search-input').value)" style="flex:0;white-space:nowrap">🔍</button>
+          </div>
+          <button class="panel-btn" onclick="loadDriveFiles('root')" style="margin-bottom:8px;width:100%">📁 My Drive (root)</button>
+          <div id="drive-breadcrumb" style="font-size:11px;color:var(--muted);margin-bottom:6px"></div>
+          <div id="drive-file-list"></div>
+        </div>
+      </div>
+
+      <!-- Plugins panel -->
+      <div id="panel-plugins" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🔌</span>
+          <span class="intg-title">Custom Plugins</span>
+          <button class="panel-btn primary" onclick="showPluginForm()" style="margin-left:auto;white-space:nowrap">+ New Plugin</button>
+        </div>
+        <div class="plugins-info">
+          Plugins let you connect Arix to any external service or webhook. Define trigger phrases and Arix will call your endpoint automatically.
+        </div>
+        <div id="plugin-form" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px" id="plugin-form-title">New Plugin</div>
+          <input class="panel-input" id="plg-name" placeholder="Plugin name (e.g. Notify Slack)" style="margin-bottom:5px">
+          <input class="panel-input" id="plg-desc" placeholder="Description (what it does)" style="margin-bottom:5px">
+          <input class="panel-input" id="plg-triggers" placeholder="Trigger phrases (comma-separated, e.g. notify team, send slack)" style="margin-bottom:5px">
+          <input class="panel-input" id="plg-url" placeholder="Webhook URL (https://...)" style="margin-bottom:5px">
+          <select id="plg-method" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);width:100%;margin-bottom:5px">
+            <option value="POST">POST</option>
+            <option value="GET">GET</option>
+          </select>
+          <textarea class="panel-textarea" id="plg-payload" placeholder='Payload template (JSON). Use {command} for the user command.' rows="3" style="margin-bottom:8px"></textarea>
+          <div style="display:flex;gap:6px">
+            <button class="panel-btn primary" onclick="savePlugin()" style="flex:1">Save Plugin</button>
+            <button class="panel-btn" onclick="hidePluginForm()" style="flex:0;white-space:nowrap">Cancel</button>
+          </div>
+        </div>
+        <div id="plugin-list"><div class="panel-empty">No plugins yet. Create your first plugin above.</div></div>
+      </div>
     </div>
   </aside>
 
@@ -260,6 +355,8 @@
             </div>
             <div id="input-btns">
               <button class="input-btn" id="goal-toggle-btn" onclick="toggleGoalMode()" title="Execute as autonomous multi-step goal">🎯</button>
+              <button class="input-btn" id="vision-btn" onclick="triggerVisionCapture()" title="Screenshot + AI vision analysis">👁</button>
+              <button class="input-btn" id="tts-btn" onclick="toggleTTS()" title="Speak responses aloud">🔊</button>
               <button class="input-btn" id="mic-btn" onclick="toggleMic()" title="Voice input">🎤</button>
               <button id="send-btn" onclick="sendCommand()" title="Send (Enter)">▲</button>
             </div>
@@ -456,6 +553,36 @@
   </div>
 </div>
 
+<!-- ── Gmail Compose Modal ────────────────────────────────────────────────── -->
+<div id="compose-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center">
+  <div id="compose-modal" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:500px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text)">✉️ Compose Email</div>
+      <button onclick="hideComposeModal()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <input class="panel-input" id="compose-to" placeholder="To: recipient@email.com" style="margin-bottom:6px">
+    <input class="panel-input" id="compose-cc" placeholder="Cc: (optional)" style="margin-bottom:6px">
+    <input class="panel-input" id="compose-subject" placeholder="Subject" style="margin-bottom:6px">
+    <textarea class="panel-textarea" id="compose-body" placeholder="Write your email here…" rows="8" style="margin-bottom:10px"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="panel-btn" onclick="hideComposeModal()">Cancel</button>
+      <button class="panel-btn primary" onclick="sendComposedEmail()" style="flex:0;white-space:nowrap">📤 Send Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Email View Modal ────────────────────────────────────────────────────── -->
+<div id="email-view-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center">
+  <div id="email-view-modal" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:600px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div id="email-view-subject" style="font-size:14px;font-weight:700;color:var(--text)"></div>
+      <button onclick="hideEmailView()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div id="email-view-meta" style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.7"></div>
+    <div id="email-view-body" style="font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;border-top:1px solid var(--border);padding-top:12px"></div>
+  </div>
+</div>
+
 <!-- ── Confirmation Modal ──────────────────────────────────────────────────── -->
 <div id="confirm-modal-overlay" onclick="if(event.target===this&&!_confRequiresYes)dismissConfirmModal(false)">
   <div id="confirm-modal">
@@ -484,5 +611,6 @@
 </div>
 
 <script src="/static/js/app.js"></script>
+<script src="/static/js/integrations.js"></script>
 </body>
 </html>
