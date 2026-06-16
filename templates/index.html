@@ -43,6 +43,7 @@
     <span id="bridge-badge" class="bridge-badge disconnected" title="Local bridge — run local_bridge/bridge_agent.py on your computer" onclick="showBridgeHelp()" style="cursor:pointer">🖥 Bridge: Off</span>
     <button class="hdr-icon-btn" id="dryrun-btn" onclick="toggleDryRun()" title="Dry-run mode">🔍 Dry</button>
     <button class="hdr-icon-btn" id="dev-mode-btn" onclick="toggleDevMode()" title="Developer console">⌨ Console</button>
+    <button class="hdr-icon-btn" id="right-panel-btn" onclick="toggleRightPanel()" title="Quick Actions">⚡ Actions</button>
     <div id="notif-wrap">
       <button id="notif-btn" onclick="toggleNotifDropdown()" title="Notifications">🔔<span id="notif-badge"></span></button>
       <div id="notif-dropdown">
@@ -532,6 +533,79 @@
     </div>
 
   </div>
+
+  <!-- Quick Actions Right Panel -->
+  <aside id="right-panel" class="collapsed">
+    <div id="rp-header">
+      <span id="rp-title">⚡ Quick Actions</span>
+      <button id="rp-close-btn" onclick="toggleRightPanel()" title="Close">✕</button>
+    </div>
+    <div id="rp-body">
+
+      <div class="rp-section">
+        <div class="rp-section-title">AI Tasks</div>
+        <div class="rp-grid">
+          <button class="rp-btn" onclick="rpFill('research_topic: ')">🔬<span>Research</span></button>
+          <button class="rp-btn" onclick="rpFill('generate_code: ')">💻<span>Code</span></button>
+          <button class="rp-btn" onclick="rpFill('explain_code: ')">📖<span>Explain</span></button>
+          <button class="rp-btn" onclick="rpFill('summarize_url: ')">📄<span>Summarize</span></button>
+          <button class="rp-btn" onclick="rpFill('analyze_code_quality: ')">📊<span>Analyze</span></button>
+          <button class="rp-btn" onclick="rpFill('refactor_code: ')">🔧<span>Refactor</span></button>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Files</div>
+        <div class="rp-grid">
+          <button class="rp-btn" onclick="rpFill('list_directory ~/')">📁<span>List</span></button>
+          <button class="rp-btn" onclick="rpFill('create_file: ')">📄<span>Create</span></button>
+          <button class="rp-btn" onclick="rpFill('search_files: ')">🔎<span>Search</span></button>
+          <button class="rp-btn" onclick="rpFill('read_file: ')">📂<span>Read</span></button>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Browser</div>
+        <div class="rp-grid">
+          <button class="rp-btn" onclick="rpFill('browser_web_search: ')">🔍<span>Web Search</span></button>
+          <button class="rp-btn" onclick="rpFill('browser_open_url: ')">🌐<span>Open URL</span></button>
+          <button class="rp-btn" onclick="rpFill('browser_download_file: ')">⬇️<span>Download</span></button>
+          <button class="rp-btn" onclick="rpFill('browser_extract_page_text: ')">📋<span>Extract</span></button>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Git</div>
+        <div class="rp-grid">
+          <button class="rp-btn" onclick="rpFill('git status')">🌿<span>Status</span></button>
+          <button class="rp-btn" onclick="rpFill('git diff')">🔀<span>Diff</span></button>
+          <button class="rp-btn" onclick="rpFill('git_add: .')">➕<span>Add all</span></button>
+          <button class="rp-btn" onclick="rpFill('git_commit: ')">✅<span>Commit</span></button>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title">Panels</div>
+        <div class="rp-grid">
+          <button class="rp-btn" onclick="loadMorningBrief()">🌄<span>Brief</span></button>
+          <button class="rp-btn" onclick="switchPanel('sysmon')">📊<span>System</span></button>
+          <button class="rp-btn" onclick="switchPanel('insights')">📈<span>Insights</span></button>
+          <button class="rp-btn" onclick="switchPanel('memory')">🧠<span>Memory</span></button>
+          <button class="rp-btn" onclick="switchPanel('workflows')">🔄<span>Workflows</span></button>
+          <button class="rp-btn" onclick="switchPanel('notes')">📝<span>Notes</span></button>
+        </div>
+      </div>
+
+      <div class="rp-section">
+        <div class="rp-section-title" style="display:flex;align-items:center;justify-content:space-between">
+          Recent<button class="rp-clear-btn" onclick="clearRpRecent()">Clear</button>
+        </div>
+        <div id="rp-recent-list"><div class="rp-empty">No recent commands</div></div>
+      </div>
+
+    </div>
+  </aside>
+
 </div>
 
 <!-- ── Onboarding Overlay ──────────────────────────────────────────────────── -->

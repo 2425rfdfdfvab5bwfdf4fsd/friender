@@ -859,6 +859,7 @@ function sendCommand() {
   if (S.dryRun && !cmd.toLowerCase().startsWith('dry-run:') && !cmd.toLowerCase().startsWith('dry run:')) cmd = 'dry-run: ' + cmd;
   S.cmdHistory.unshift(cmd.replace(/^dry-run:\s*/i,''));
   if (S.cmdHistory.length > 200) S.cmdHistory.pop();
+  updateRpRecent();
   S.histIdx = -1;
   addUserMsg(cmd.replace(/^dry-run:\s*/i,''));
   const taskId = 'task-' + Date.now();
@@ -1092,6 +1093,44 @@ function switchPanel(name) {
   else if (name === 'calendar') loadCalendar();
   else if (name === 'assistant') loadAssistantPanel();
   else if (name === 'apps') loadAppsPanel();
+}
+
+// ── Quick Actions Right Panel ──────────────────────────────────────────────
+function toggleRightPanel() {
+  const rp = document.getElementById('right-panel');
+  const btn = document.getElementById('right-panel-btn');
+  const isOpen = !rp.classList.contains('collapsed');
+  rp.classList.toggle('collapsed', isOpen);
+  btn.classList.toggle('on', !isOpen);
+  if (!isOpen) updateRpRecent();
+  if (S.termMode && S.fit) setTimeout(() => S.fit.fit(), 230);
+}
+
+function rpFill(cmd) {
+  prefill(cmd);
+  // on mobile, close the right panel after filling
+  if (window.innerWidth <= 768) {
+    document.getElementById('right-panel').classList.add('collapsed');
+    document.getElementById('right-panel-btn').classList.remove('on');
+  }
+}
+
+function updateRpRecent() {
+  const el = document.getElementById('rp-recent-list');
+  if (!el) return;
+  const recent = S.cmdHistory.slice(0, 8);
+  if (!recent.length) {
+    el.innerHTML = '<div class="rp-empty">No recent commands</div>';
+    return;
+  }
+  el.innerHTML = recent.map(cmd =>
+    `<div class="rp-recent-item" onclick="rpFill(${JSON.stringify(cmd)})" title="${esc(cmd)}">${esc(cmd)}</div>`
+  ).join('');
+}
+
+function clearRpRecent() {
+  S.cmdHistory = [];
+  updateRpRecent();
 }
 
 function toggleDryRun() {
