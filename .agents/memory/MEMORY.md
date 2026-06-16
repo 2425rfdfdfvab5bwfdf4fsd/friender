@@ -1,6 +1,6 @@
 - [PACCA architecture](pacca-architecture.md) — full PRD v7.0 implementation; FastAPI+WebSocket terminal UI; 38+ tools; security pipeline in pacca/ package
 - [PACCA known quirks](pacca-quirks.md) — git_add secret-reset bypass; PlanValidator list-path gaps; T007 skip_steps must use confId "plan_risk"; run_code needs both TOOL_DISPATCH + registry entry
-- [PACCA advisory mode](pacca-advisory.md) — expert advisor persona added; AdvisoryIntentDetector in pacca/advisor.py routes questions to LLM; advisory overlay in UI renders markdown via marked.js
+- [PACCA advisory mode](pacca-advisory.md) — expert advisor persona added; AdvisoryIntentDetector in pacca/intelligence/advisor.py routes questions to LLM; advisory overlay in UI renders markdown via marked.js
 - [PACCA v7.0 upgrades](pacca-v7-upgrades.md) — LLM goal decomposition in supervisor.py; /api/memory/stats endpoint; Insights panel (📈 tab); GoalSupervisor.set_llm_client() wired in agent.py
 - [PACCA v7.1 memory features](pacca-v71-memory.md) — Reports panel, weekly overlay, NL prefs, IDF search, skill library, trace store (T001-T012 all complete)
 - [PACCA v7.2 vector memory](pacca-v72-vector.md) — Gap #2 complete: VectorIndex in pacca/memory/vector_index.py; OpenAI text-embedding-3-small + numpy cosine; TF-IDF fallback; wired in agent.py via OPENAI_API_KEY
@@ -8,3 +8,4 @@
 - [PACCA Google Calendar](pacca-calendar.md) — 3 tools wired end-to-end; heuristic planner _plan_calendar(); DELETE /api/calendar/events/{id}; upgraded UI panel with form + day grouping
 - [PACCA v8.0 security & reliability](pacca-v80-upgrades.md) — SEC/REL hardening: auth middleware, WS origin check, persistent grant registry, WAL mode, tool timeout, graceful shutdown; 44-test suite; pyproject.toml
 - [PACCA local bridge](pacca-local-bridge.md) — 11 desktop tools via bridge; BridgeManager singleton; /ws/bridge WS endpoint; local_bridge/bridge_agent.py uses pyautogui; bridge badge in header
+- [PACCA router architecture](pacca-routers.md) — main.py split into 9 routers/ + pacca/app_state.py singletons; main.py is now 162 lines (was 1561); shared state via get_agent(), get_workflow_manager()

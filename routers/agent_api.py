@@ -1,0 +1,270 @@
+"""Core agent API routes — status, tools, sysmon, tasks, audit, settings, trace, skills, reports."""
+from __future__ import annotations
+
+import asyncio
+import json
+from pathlib import Path
+
+from fastapi import APIRouter, HTTPException
+
+from pacca.app_state import get_agent, get_workflow_manager, reset_agent
+from pacca.config import PACCAConfig
+from pacca.tools.registry import TOOL_REGISTRY
+from pacca.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete, complete_onboarding
+
+router = APIRouter(tags=["agent"])
+
+_VERSION = "8.0.0"
+
+
+# ── Status ────────────────────────────────────────────────────────────────────
+
+@router.get("/api/status")
+async def status():
+    import os
+    agent = get_agent()
+    cfg = agent.config
+    wm = get_workflow_manager()
+    llm_available = agent.llm_client.is_available() if agent.llm_client else False
+    return {
+        "version": _VERSION,
+        "provider": cfg.provider,
+        "model": cfg.model,
+        "offline_mode": cfg.offline_mode,
+        "llm_available": llm_available,
+        "llm_error": agent.llm_client.key_error() if agent.llm_client else "No LLM client",
+        "onboarding_complete": is_onboarding_complete(),
+        "tool_count": len(TOOL_REGISTRY),
+        "circuit_breaker": agent.llm_client.circuit_status() if agent.llm_client else {},
+        "risk_confirm_threshold": cfg.risk_confirm_threshold,
+        "risk_proceed_threshold": cfg.risk_proceed_threshold,
+        "max_file_egress_bytes": cfg.max_file_egress_bytes,
+        "whatsapp_configured": bool(
+            os.environ.get("WHATSAPP_ACCESS_TOKEN") and os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+        ),
+        "whatsapp_allowed_count": len({
+            n.strip().lstrip("+")
+            for n in os.environ.get("WHATSAPP_ALLOWED_NUMBERS", "").split(",")
+            if n.strip()
+        }),
+        "memory_task_count": agent.memory.task_count(),
+        "workflow_count": len(wm.list_workflows()) if wm else 0,
+        "whatsapp_secrets": {
+            "access_token": bool(os.environ.get("WHATSAPP_ACCESS_TOKEN")),
+            "phone_number_id": bool(os.environ.get("WHATSAPP_PHONE_NUMBER_ID")),
+            "verify_token": bool(os.environ.get("WHATSAPP_VERIFY_TOKEN")),
+            "allowed_numbers": bool(os.environ.get("WHATSAPP_ALLOWED_NUMBERS")),
+            "webhook_secret": bool(os.environ.get("WHATSAPP_WEBHOOK_SECRET")),
+        },
+    }
+
+
+# ── Tools & disclosure ────────────────────────────────────────────────────────
+
+@router.get("/api/tools")
+async def get_tools():
+    tools = [
+        {
+            "name": name,
+            "description": meta.description,
+            "risk_level": meta.risk_level.value,
+            "domain": meta.domain,
+            "requires_confirmation": meta.requires_confirmation,
+            "reversible": meta.reversible,
+            "data_egress": meta.data_egress,
+            "undo_supported": meta.undo_supported,
+        }
+        for name, meta in TOOL_REGISTRY.items()
+    ]
+    return {"tools": tools}
+
+
+@router.get("/api/disclosure")
+async def get_disclosure():
+    return {"text": DISCLOSURE_TEXT}
+
+
+# ── System monitor ────────────────────────────────────────────────────────────
+
+@router.get("/api/sysmon")
+async def get_sysmon():
+    try:
+        from pacca.tools.system_tools import system_monitor
+        return await asyncio.to_thread(system_monitor, include_processes=True, top_n_processes=10)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+# ── Task history & undo ───────────────────────────────────────────────────────
+
+@router.get("/api/task-history")
+async def get_task_history(n: int = 20):
+    return {"history": get_agent().task_history.get_recent(n)}
+
+
+@router.get("/api/undo-history")
+async def get_undo_history():
+    return {"history": get_agent().undo_manager.history(20)}
+
+
+@router.post("/api/undo")
+async def undo_last():
+    return get_agent().undo_manager.undo_last()
+
+
+# ── Execution trace ───────────────────────────────────────────────────────────
+
+@router.get("/api/trace")
+async def list_traces():
+    agent = get_agent()
+    return {"task_ids": list(reversed(list(agent._trace.keys())))[:20]}
+
+
+@router.get("/api/trace/{task_id}")
+async def get_trace(task_id: str):
+    agent = get_agent()
+    entries = agent._trace.get(task_id, [])
+    return {"task_id": task_id, "entries": entries, "entry_count": len(entries)}
+
+
+# ── Active goals ──────────────────────────────────────────────────────────────
+
+@router.get("/api/active-goals")
+async def get_active_goals():
+    try:
+        return {"active_goals": get_agent().supervisor.active_goals()}
+    except Exception as e:
+        return {"active_goals": [], "error": str(e)}
+
+
+# ── Insights (alias for memory stats) ────────────────────────────────────────
+
+@router.get("/api/insights")
+async def get_insights():
+    try:
+        return get_agent().memory.get_stats()
+    except Exception as e:
+        return {"error": str(e), "total_tasks": 0, "success_rate": 0,
+                "domains": [], "daily_activity": [], "recent_commands": []}
+
+
+# ── Audit log ─────────────────────────────────────────────────────────────────
+
+@router.get("/api/audit-log")
+async def get_audit_log(n: int = 50):
+    log_path = Path.home() / ".pacca" / "audit.log"
+    if not log_path.exists():
+        return {"entries": [], "path": str(log_path)}
+    try:
+        lines = log_path.read_text().splitlines()
+        entries = []
+        for line in lines[-n:]:
+            try:
+                entries.append(json.loads(line))
+            except Exception:
+                entries.append({"raw": line})
+        return {"entries": list(reversed(entries)), "path": str(log_path)}
+    except Exception as e:
+        return {"entries": [], "error": str(e)}
+
+
+@router.get("/api/audit/verify")
+async def verify_audit_chain():
+    from pacca.models.audit_log import AuditLogger
+    return AuditLogger().verify_chain()
+
+
+# ── Skills ────────────────────────────────────────────────────────────────────
+
+@router.get("/api/skills")
+async def list_skills(search: str = "", limit: int = 20):
+    agent = get_agent()
+    return {"skills": agent.memory.get_skills(limit=limit, search=search),
+            "count": agent.memory.skill_count()}
+
+
+@router.get("/api/skills/{skill_id}")
+async def get_skill(skill_id: int):
+    skill = get_agent().memory.get_skill(skill_id)
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    return skill
+
+
+@router.delete("/api/skills/{skill_id}")
+async def delete_skill(skill_id: int):
+    deleted = get_agent().memory.delete_skill(skill_id)
+    return {"status": "ok" if deleted else "not_found", "id": skill_id}
+
+
+@router.post("/api/skills/{skill_id}/use")
+async def use_skill(skill_id: int):
+    agent = get_agent()
+    skill = agent.memory.get_skill(skill_id)
+    if not skill:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    agent.memory.mark_skill_used(skill_id)
+    return {"skill": skill, "status": "ok"}
+
+
+# ── Reports ───────────────────────────────────────────────────────────────────
+
+@router.get("/api/reports")
+async def list_reports(limit: int = 20, search: str = ""):
+    agent = get_agent()
+    try:
+        return {"reports": agent.memory.get_reports(limit=limit, search=search),
+                "total": agent.memory.report_count()}
+    except Exception as e:
+        return {"reports": [], "total": 0, "error": str(e)}
+
+
+@router.get("/api/reports/{report_id}")
+async def get_report(report_id: int):
+    report = get_agent().memory.get_report(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Report {report_id} not found")
+    return report
+
+
+@router.delete("/api/reports/{report_id}")
+async def delete_report(report_id: int):
+    deleted = get_agent().memory.delete_report(report_id)
+    return {"status": "ok" if deleted else "not_found", "id": report_id}
+
+
+# ── Onboarding & settings ─────────────────────────────────────────────────────
+
+@router.post("/api/onboard")
+async def onboard(body: dict):
+    provider = body.get("provider", "anthropic")
+    get_agent().record_provider_consent(provider)
+    complete_onboarding(provider)
+    return {"status": "ok", "provider": provider}
+
+
+@router.post("/api/settings")
+async def update_settings(body: dict):
+    """Update runtime config. Resets the agent so it picks up new settings on next request."""
+    cfg = PACCAConfig.load()
+    field_map = {
+        "provider": str,
+        "model": str,
+        "risk_confirm_threshold": float,
+        "risk_proceed_threshold": float,
+        "max_file_egress_bytes": int,
+    }
+    for field, cast in field_map.items():
+        if field in body:
+            setattr(cfg, field, cast(body[field]))
+    cfg.save()
+    reset_agent()
+    return {
+        "status": "ok",
+        "config": {
+            "provider": cfg.provider,
+            "model": cfg.model,
+            "risk_confirm_threshold": cfg.risk_confirm_threshold,
+            "risk_proceed_threshold": cfg.risk_proceed_threshold,
+        },
+    }
