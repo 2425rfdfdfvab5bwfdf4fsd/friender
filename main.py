@@ -40,6 +40,7 @@ from routers import (
     slack,
     spotify,
     trello,
+    vision,
     whatsapp,
     workflows,
     ws,
@@ -160,6 +161,7 @@ app.include_router(plugins.router)
 app.include_router(slack.router)
 app.include_router(spotify.router)
 app.include_router(trello.router)
+app.include_router(vision.router)
 app.include_router(whatsapp.router)
 app.include_router(workflows.router)
 app.include_router(ws.router)

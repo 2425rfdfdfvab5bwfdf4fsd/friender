@@ -59,25 +59,64 @@ document.addEventListener('arix:assistant-message', (e) => {
 async function triggerVisionCapture() {
   const btn = document.getElementById('vision-btn');
   const inp = document.getElementById('cmd-input');
-  if (!inp) return;
 
-  const question = inp.value.trim() || 'What do you see on this browser page? Describe it in detail.';
-  if (btn) btn.classList.add('active');
+  const question = (inp && inp.value.trim()) || 'Describe what you see on this screen in detail.';
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.5'; }
+  if (typeof toast === 'function') toast('👁 Capturing screen…', 'info');
 
-  if (typeof prefill === 'function') {
-    prefill(`capture_and_analyze: ${question}`);
-  } else {
-    inp.value = `capture_and_analyze: ${question}`;
-  }
+  try {
+    // 1. Add user message to chat
+    if (typeof addUserMsg === 'function') addUserMsg('👁 ' + question);
+    if (inp) inp.value = '';
 
-  if (typeof toast === 'function') {
-    toast('👁 Vision: capturing current browser page…', 'info');
-  }
+    // 2. Create assistant thinking bubble
+    const bubble = typeof createAssistantBubble === 'function'
+      ? createAssistantBubble(null, 'Analyzing screenshot…')
+      : null;
 
-  if (btn) setTimeout(() => btn.classList.remove('active'), 2000);
+    // 3. Capture the page using html2canvas
+    let imageB64 = null;
+    if (typeof html2canvas !== 'undefined') {
+      try {
+        const canvas = await html2canvas(document.body, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 0.6,
+          logging: false,
+          ignoreElements: el => el.id === 'sfx-canvas',
+        });
+        imageB64 = canvas.toDataURL('image/jpeg', 0.7).split(',')[1];
+      } catch (e) {
+        console.warn('html2canvas failed:', e);
+      }
+    }
 
-  if (typeof sendCommand === 'function') {
-    sendCommand();
+    // 4. Call the vision API
+    const payload = { question };
+    if (imageB64) { payload.image_b64 = imageB64; payload.media_type = 'image/jpeg'; }
+
+    const res = await fetch('/api/vision/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    // 5. Show result in the bubble
+    if (bubble && typeof showTextResponse === 'function') {
+      if (data.ok) {
+        showTextResponse(bubble, data.analysis);
+      } else {
+        showTextResponse(bubble, `**Vision Error:** ${data.error}`);
+      }
+    } else if (typeof toast === 'function') {
+      toast(data.ok ? '👁 ' + data.analysis.slice(0, 100) : '❌ ' + data.error, data.ok ? 'info' : 'error');
+    }
+
+  } catch (e) {
+    if (typeof toast === 'function') toast('👁 Vision failed: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
   }
 }
 
