@@ -104,14 +104,25 @@
       <button class="snav-btn" data-panel="sysmon" onclick="switchPanel('sysmon')"><span class="snav-icon">📊</span>System</button>
     </nav>
 
+    <!-- Sidebar Quick Actions -->
+    <div id="snav-quick">
+      <div id="snav-quick-title">Quick Actions</div>
+      <div id="snav-quick-grid">
+        <button class="snav-qa-btn" onclick="loadMorningBrief()">🌄<span>Morning Brief</span></button>
+        <button class="snav-qa-btn" onclick="switchPanel('apps')">📱<span>Apps</span></button>
+        <button class="snav-qa-btn" onclick="switchPanel('insights')">📈<span>Activity Insights</span></button>
+        <button class="snav-qa-btn" onclick="switchPanel('memory')">🧠<span>Search Memory</span></button>
+        <button class="snav-qa-btn" onclick="switchPanel('workflows')">🔄<span>Workflows</span></button>
+        <button class="snav-qa-btn" onclick="switchPanel('calendar')">📅<span>Calendar</span></button>
+      </div>
+    </div>
+
     <!-- Panel content -->
     <div id="panel-wrap">
 
       <!-- Assistant panel -->
       <div id="panel-assistant" class="panel active">
-        <div class="panel-title">Quick Actions</div>
-        <div id="quick-action-list"></div>
-        <div class="qa-section-title" style="margin-top:14px">To-dos</div>
+        <div class="qa-section-title">To-dos</div>
         <div style="display:flex;gap:6px;margin-bottom:7px">
           <input class="panel-input" id="asst-todo-input" placeholder="Add a task…" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')addTodoFromUI()">
           <select id="asst-todo-pri" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 6px;border-radius:var(--radius-sm);font-family:var(--font);font-size:10.5px;outline:none">
