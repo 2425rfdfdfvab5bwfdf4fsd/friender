@@ -401,6 +401,7 @@ function onWelcome(d) {
   if (!d.onboarding_complete) showOnboarding();
   else if (!S.briefShown) { S.briefShown = true; loadMorningBrief(); }
   loadAssistantPanel();
+  openDetailSidebar('assistant');
   setTimeout(loadNotifications, 500);
   startSysmon();
 }
@@ -1299,12 +1300,24 @@ async function deleteReminderRsb(id) {
   loadAssistantPanel(); loadRsbPanel();
 }
 
+const PANEL_TITLES = {
+  assistant:'🤖 Assistant', apps:'📱 Apps', projects:'✓ Projects',
+  notes:'📝 Notes', calendar:'📅 Calendar', workflows:'🔄 Workflows',
+  memory:'🧠 Memory', insights:'📈 Insights', reports:'📄 Reports',
+  gmail:'📧 Gmail', drive:'📁 Drive', notion:'📒 Notion',
+  slack:'💬 Slack', trello:'📋 Trello', spotify:'🎵 Spotify',
+  youtube:'▶️ YouTube', plugins:'🔌 Plugins',
+  settings:'⚙️ Settings', audit:'🔍 Audit', sysmon:'📊 System Monitor'
+};
+
 function switchPanel(name) {
   document.querySelectorAll('.snav-btn').forEach(b => b.classList.toggle('active', b.dataset.panel === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   const panel = document.getElementById('panel-' + name);
   if (panel) panel.classList.add('active');
   if (!S.sidebarOpen) toggleSidebar();
+  // Open detail sidebar and set title
+  openDetailSidebar(name);
   if (name === 'memory') loadMemory();
   else if (name === 'workflows') loadWorkflows();
   else if (name === 'insights') loadInsights();
@@ -1317,6 +1330,20 @@ function switchPanel(name) {
   else if (name === 'calendar') loadCalendar();
   else if (name === 'assistant') loadAssistantPanel();
   else if (name === 'apps') loadAppsPanel();
+}
+
+function openDetailSidebar(name) {
+  const dsb = document.getElementById('detail-sidebar');
+  if (!dsb) return;
+  dsb.classList.remove('dsb-collapsed');
+  const titleEl = document.getElementById('dsb-panel-title');
+  if (titleEl) titleEl.textContent = PANEL_TITLES[name] || name;
+}
+
+function closeDetailSidebar() {
+  const dsb = document.getElementById('detail-sidebar');
+  if (dsb) dsb.classList.add('dsb-collapsed');
+  document.querySelectorAll('.snav-btn').forEach(b => b.classList.remove('active'));
 }
 
 function toggleDryRun() {
