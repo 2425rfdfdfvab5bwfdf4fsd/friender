@@ -484,7 +484,7 @@ function showContextualChips(bubble, responseText) {
     openNoteEditor(null);
     const snip = (responseText||'').slice(0,200).replace(/\n+/g,' ').trim();
     document.getElementById('note-content-input').value = responseText || '';
-    document.getElementById('note-title-input').value = 'PACCA — ' + new Date().toLocaleDateString();
+    document.getElementById('note-title-input').value = 'Arix — ' + new Date().toLocaleDateString();
     toast('Note editor opened — edit and save', 'info');
   }});
   chips.push({icon:'✓', label:'Create Task', action:() => {
@@ -1150,7 +1150,7 @@ async function loadNotifications() {
     if (cnt > 0 && cnt > (S.notifCount||0) && Notification.permission === 'granted') {
       const newest = (d.notifications||[]).find(n => !n.read);
       if (newest) {
-        new Notification('PACCA — ' + (newest.title||'New notification'), {
+        new Notification('Arix — ' + (newest.title||'New notification'), {
           body: newest.message || '',
           icon: '/static/favicon.ico',
           tag: 'pacca-notif-' + newest.id,
@@ -1175,7 +1175,7 @@ async function requestBrowserNotifications() {
   const perm = await Notification.requestPermission();
   if (perm === 'granted') {
     toast('Desktop notifications enabled ✓', 'ok');
-    new Notification('PACCA notifications active', {body: 'You\'ll be notified of reminders and alerts.', silent: true});
+    new Notification('Arix notifications active', {body: 'You\'ll be notified of reminders and alerts.', silent: true});
     loadNotifications();
   } else {
     toast('Notification permission denied', 'warn');
@@ -1254,7 +1254,7 @@ function renderWelcomeMsg() {
 
   addSystemMsg(`<div style="max-width:700px">
     <div style="font-size:19px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.3px">${greeting}${name} 👋</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">I'm <b style="color:var(--accent2)">PACCA</b> — your personal AI digital employee. Assign me any task and I'll figure out the steps, execute them automatically, and report back when done. I'll always ask before doing anything sensitive like sending messages, deleting important files, or making purchases.</div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">I'm <b style="color:var(--accent2)">Arix</b> — your personal AI digital employee. Assign me any task and I'll figure out the steps, execute them automatically, and report back when done. I'll always ask before doing anything sensitive like sending messages, deleting important files, or making purchases.</div>
     <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">Quick-launch apps</div>
     <div class="home-apps-row">${pillsHtml}<button class="home-app-pill" onclick="switchPanel('apps')" style="border-style:dashed"><span class="hap-icon">📱</span>All Apps</button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
@@ -2349,7 +2349,7 @@ function obNext(fromStep) {
     const readyTitle = document.getElementById('ob-ready-title');
     const readyMsg = document.getElementById('ob-ready-msg');
     if (readyTitle) readyTitle.textContent = `You're all set${name !== 'there' ? ', ' + name : ''}!`;
-    if (readyMsg) readyMsg.textContent = `PACCA is ready to help you with ${_OB.data.use_cases || 'tasks, research, and more'}.`;
+    if (readyMsg) readyMsg.textContent = `Arix is ready to help you with ${_OB.data.use_cases || 'tasks, research, and more'}.`;
     _OB.step = 4; _obShowStep(4);
   }
 }
@@ -2461,7 +2461,7 @@ const PAL_ITEMS = [
   {icon:'✓', label:'Projects', desc:'Project management', action:()=>{switchPanel('projects');closePalette();}},
   {icon:'📝', label:'Notes', desc:'Knowledge base', action:()=>{switchPanel('notes');closePalette();}},
   {icon:'📅', label:'Calendar', desc:'Google Calendar', action:()=>{switchPanel('calendar');closePalette();}},
-  {icon:'⚙️', label:'Settings', desc:'Configure PACCA', action:()=>{switchPanel('settings');closePalette();}},
+  {icon:'⚙️', label:'Settings', desc:'Configure Arix', action:()=>{switchPanel('settings');closePalette();}},
   {icon:'🔍', label:'Audit Log', desc:'Security audit', action:()=>{switchPanel('audit');closePalette();}},
   {icon:'⌨', label:'Developer Console', desc:'Terminal mode', action:()=>{toggleDevMode();closePalette();}},
   {icon:'🔬', label:'Research topic', desc:'AI-powered research', action:()=>{prefill('research_topic: ');closePalette();}},
@@ -2520,7 +2520,7 @@ function initTerm() {
   S.term.loadAddon(S.fit);
   S.term.open(document.getElementById('xterm-container'));
   S.fit.fit();
-  S.term.writeln('\x1b[1;34m PACCA Developer Console\x1b[0m\x1b[2m — raw output mode\x1b[0m');
+  S.term.writeln('\x1b[1;34m Arix Developer Console\x1b[0m\x1b[2m — raw output mode\x1b[0m');
   S.term.writeln('\x1b[2m Type commands in the input bar below.\x1b[0m\r\n');
   window.addEventListener('resize', () => { if (S.termMode && S.fit) S.fit.fit(); });
 }
@@ -2580,14 +2580,14 @@ function showBridgeHelp() {
     el.innerHTML = `
       <div id="bridge-help-box">
         <button id="bridge-help-close" onclick="document.getElementById('bridge-help-overlay').classList.remove('show')">✕</button>
-        <h3>🖥 Connect Your Computer to PACCA</h3>
+        <h3>🖥 Connect Your Computer to Arix</h3>
         <div class="step"><b>Step 1</b> — Install the bridge on your computer:</div>
         <pre>pip install pyautogui pillow websockets</pre>
         <div class="step"><b>Step 2</b> — Download and run the bridge agent:</div>
         <pre>python local_bridge/bridge_agent.py --server ${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/bridge</pre>
         <div class="step"><b>Step 3</b> — The Bridge badge above will turn green when connected.</div>
         <div class="step" style="margin-top:14px;color:var(--muted)">
-          Once connected, PACCA can take screenshots of your screen, click, type,
+          Once connected, Arix can take screenshots of your screen, click, type,
           press keyboard shortcuts, and control any app — just like a human would.
           Move your mouse to the top-left corner at any time to abort an action.
         </div>

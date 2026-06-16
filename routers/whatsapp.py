@@ -66,7 +66,7 @@ async def _run_wa_command(command: str, sender: str) -> None:
             elif etype == "confirmation_required":
                 await _wa_send_reply(
                     sender,
-                    f"⚠️ PACCA needs your approval:\n{data.get('message', '')}\n\n"
+                    f"⚠️ Arix needs your approval:\n{data.get('message', '')}\n\n"
                     "Reply *YES* to proceed or *NO* to cancel.",
                 )
                 _wa_pending[sender] = {
@@ -143,7 +143,7 @@ async def whatsapp_receive(request: Request):
                 continue
 
             if not _wa_is_allowed(sender):
-                await _wa_send_reply(sender, "⛔ Unauthorized — your number is not in PACCA's allowed list.")
+                await _wa_send_reply(sender, "⛔ Unauthorized — your number is not in Arix's allowed list.")
                 continue
 
             asyncio.create_task(_run_wa_command(text, sender))

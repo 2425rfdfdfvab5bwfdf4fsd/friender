@@ -20,12 +20,12 @@ router = APIRouter(tags=["websocket"])
 _ADMIN_TOKEN: str = os.environ.get("PACCA_ADMIN_TOKEN", "")
 
 HELP_TEXT = """
-PACCA v8.0 — Personal AI Computer-Control Agent
+Arix — Personal AI Digital Employee
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 FEATURES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  🧠 Persistent Memory  — PACCA remembers past tasks across sessions
+  🧠 Persistent Memory  — Arix remembers past tasks across sessions
   🌐 Browser Automation — click, type, screenshot, fill forms (Playwright)
   🎯 Autonomous Goals   — multi-step goal decomposition + retry loop
   🎙 Voice Interface    — mic button for speech-to-text input + TTS output
@@ -75,7 +75,7 @@ WORKFLOW COMMANDS
 VOICE INTERFACE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   Click the 🎙 mic button (or press Ctrl+M) to speak a command.
-  PACCA will read responses aloud (toggle TTS in the toolbar).
+  Arix will read responses aloud (toggle TTS in the toolbar).
   Requires a browser that supports Web Speech API (Chrome/Edge).
 
 SPECIAL COMMANDS:
@@ -343,7 +343,7 @@ async def websocket_endpoint(ws: WebSocket):
         "onboarding_complete": is_onboarding_complete(),
         "memory_count": agent.memory.task_count(),
         "workflow_count": len(wm.list_workflows()) if wm else 0,
-        "message": "PACCA v8.0 ready. Type a command, ask a question, or type 'help'.",
+        "message": "Arix ready. Type a command, ask a question, or type 'help'.",
     })
 
     try:

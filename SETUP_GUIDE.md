@@ -1,11 +1,11 @@
-# PACCA — Personal AI Digital Employee
+# Arix — Personal AI Digital Employee
 ## Complete Setup Guide
 
 ---
 
-## What is PACCA?
+## What is Arix?
 
-PACCA is your personal AI digital employee that runs on your computer. You give it tasks in plain language — like *"delete temp files from my PC"*, *"open TikTok and go to upload"*, or *"start recording on OBS Studio"* — and it figures out the steps, executes them automatically, and reports back when done.
+Arix is your personal AI digital employee that runs on your computer. You give it tasks in plain language — like *"delete temp files from my PC"*, *"open TikTok and go to upload"*, or *"start recording on OBS Studio"* — and it figures out the steps, executes them automatically, and reports back when done.
 
 It can open and control any app on your computer, manage files, browse the web, send messages, fill forms, and complete multi-step workflows on your behalf. For sensitive actions (deleting files, sending messages, making purchases), it always asks for your approval first.
 
@@ -50,7 +50,7 @@ sudo apt install python3.11 python3.11-pip python3.11-venv -y
 
 ---
 
-## Step 2 — Download PACCA
+## Step 2 — Download Arix
 
 ### Option A — Clone from Git (recommended)
 ```bash
@@ -71,7 +71,7 @@ cd pacca
 
 ## Step 3 — Create a Virtual Environment (Recommended)
 
-A virtual environment keeps PACCA's dependencies separate from your system Python.
+A virtual environment keeps Arix's dependencies separate from your system Python.
 
 ```bash
 # Create the environment
@@ -106,7 +106,7 @@ playwright install chromium
 
 ## Step 5 — Get an AI API Key
 
-PACCA needs an AI provider to understand your commands and plan tasks. Choose one:
+Arix needs an AI provider to understand your commands and plan tasks. Choose one:
 
 ### Option A — Anthropic Claude (Recommended, best results)
 1. Go to [console.anthropic.com](https://console.anthropic.com)
@@ -162,7 +162,7 @@ source ~/.zshrc
 
 ---
 
-## Step 7 — Start the PACCA Server
+## Step 7 — Start the Arix Server
 
 ```bash
 python main.py
@@ -179,16 +179,16 @@ Now open your browser and go to:
 http://localhost:5000
 ```
 
-PACCA's chat interface will load. You'll see the onboarding screen on your first visit — enter your name, timezone, and communication style.
+Arix's chat interface will load. You'll see the onboarding screen on your first visit — enter your name, timezone, and communication style.
 
 ---
 
 ## Step 8 — Set Up the Local Bridge (for full desktop control)
 
-The **Local Bridge** lets PACCA control your physical desktop — clicking buttons, typing text, taking screenshots, and using any app installed on your PC, just like you would.
+The **Local Bridge** lets Arix control your physical desktop — clicking buttons, typing text, taking screenshots, and using any app installed on your PC, just like you would.
 
-> **Without the bridge:** PACCA can manage files, browse the web, and open apps via web browser.
-> **With the bridge:** PACCA can also click inside apps, fill forms, control OBS Studio, navigate TikTok/Instagram, and do anything you can do with a mouse and keyboard.
+> **Without the bridge:** Arix can manage files, browse the web, and open apps via web browser.
+> **With the bridge:** Arix can also click inside apps, fill forms, control OBS Studio, navigate TikTok/Instagram, and do anything you can do with a mouse and keyboard.
 
 ### Install bridge dependencies (one time only)
 
@@ -208,13 +208,13 @@ python local_bridge/bridge_agent.py --server ws://localhost:5000/ws/bridge
 You'll see:
 ```
 ╔══════════════════════════════════════════╗
-║   PACCA Local Bridge Agent               ║
+║   Arix Local Bridge Agent               ║
 ║   Server : ws://localhost:5000/ws/bridge ║
 ╚══════════════════════════════════════════╝
-Connected to PACCA server ✓
+Connected to Arix server ✓
 ```
 
-The **Bridge: Off** badge in the PACCA header will turn green: **Bridge: On ✓**
+The **Bridge: Off** badge in the Arix header will turn green: **Bridge: On ✓**
 
 ### Safety tip
 - Move your mouse to the **top-left corner** of your screen at any time to instantly stop all desktop automation (pyautogui failsafe).
@@ -222,12 +222,12 @@ The **Bridge: Off** badge in the PACCA header will turn green: **Bridge: On ✓*
 
 ---
 
-## Step 9 — Using PACCA as a Digital Employee
+## Step 9 — Using Arix as a Digital Employee
 
-Once everything is running, you can give PACCA tasks like a real employee. Here are examples:
+Once everything is running, you can give Arix tasks like a real employee. Here are examples:
 
 ### File & System Tasks
-| Say this... | PACCA will... |
+| Say this... | Arix will... |
 |------------|--------------|
 | `Delete temp files from my PC` | Scan, show what it found, ask approval, then clean up |
 | `Free up disk space` | Check usage, clean temp files, report results |
@@ -236,7 +236,7 @@ Once everything is running, you can give PACCA tasks like a real employee. Here 
 | `Find all PDF files in my Downloads` | Search and list every PDF |
 
 ### App Control
-| Say this... | PACCA will... |
+| Say this... | Arix will... |
 |------------|--------------|
 | `Open TikTok and go to upload` | Launch TikTok in browser, navigate to upload page |
 | `Open Instagram and go to reels` | Open Instagram, navigate to Reels section |
@@ -246,7 +246,7 @@ Once everything is running, you can give PACCA tasks like a real employee. Here 
 | `Open Chrome and search for Python tutorials` | Open Chrome, search Google |
 
 ### OBS Studio
-| Say this... | PACCA will... |
+| Say this... | Arix will... |
 |------------|--------------|
 | `Start recording on OBS` | Launch OBS Studio, click Start Recording |
 | `Stop recording` | Click Stop Recording in OBS |
@@ -254,14 +254,14 @@ Once everything is running, you can give PACCA tasks like a real employee. Here 
 | `Stop streaming` | Click Stop Streaming |
 
 ### Web & Research
-| Say this... | PACCA will... |
+| Say this... | Arix will... |
 |------------|--------------|
 | `Search the web for iPhone 16 Pro reviews and save to a file` | Search, collect results, create a file |
 | `Download the file at https://example.com/report.pdf` | Download and save it |
 | `What's the latest news about AI?` | Search and summarize |
 
 ### Multi-Step Goals (autonomous mode)
-| Say this... | PACCA will... |
+| Say this... | Arix will... |
 |------------|--------------|
 | `Research the top 5 cloud storage services and create a comparison spreadsheet` | Research online → create Excel file |
 | `Open TikTok, go to messages, and check new messages` | Multi-step app navigation |
@@ -272,7 +272,7 @@ Once everything is running, you can give PACCA tasks like a real employee. Here 
 
 ## Sensitive Actions — Approval Required
 
-PACCA **always asks for your approval** before doing anything that can't be easily undone. A confirmation dialog will pop up showing:
+Arix **always asks for your approval** before doing anything that can't be easily undone. A confirmation dialog will pop up showing:
 
 - What action is about to happen
 - The risk level (low / medium / high / critical)
@@ -293,7 +293,7 @@ For critical actions (like bulk file deletion), you must type **YES** before it 
 
 ## Configuration
 
-PACCA stores its config at `~/.pacca/config.json`. You can edit this file directly or change settings through the **Settings** panel in the UI.
+Arix stores its config at `~/.pacca/config.json`. You can edit this file directly or change settings through the **Settings** panel in the UI.
 
 ### Key settings
 
@@ -314,11 +314,11 @@ PACCA stores its config at `~/.pacca/config.json`. You can edit this file direct
 | `ANTHROPIC_API_KEY` | Your Anthropic (Claude) API key |
 | `OPENAI_API_KEY` | Your OpenAI (GPT) API key |
 | `GEMINI_API_KEY` | Your Google Gemini API key |
-| `PACCA_BRIDGE_TOKEN` | Optional security token for the bridge connection |
+| `Arix_BRIDGE_TOKEN` | Optional security token for the bridge connection |
 
 ---
 
-## Running PACCA on Replit (No Local Install Needed)
+## Running Arix on Replit (No Local Install Needed)
 
 If you're using the Replit-hosted version:
 
@@ -353,7 +353,7 @@ lsof -ti:5000 | xargs kill -9
 ```
 
 ### Bridge not connecting
-- Make sure the PACCA server is running first
+- Make sure the Arix server is running first
 - Check the server URL — use `ws://` for local, `wss://` for HTTPS/Replit
 - If you see "Bridge: Off" in the header, the bridge script is not running
 
@@ -384,7 +384,7 @@ playwright install chromium
 - [ ] `pip install -e .` completed
 - [ ] API key obtained (Anthropic / OpenAI / Gemini)
 - [ ] API key set as environment variable
-- [ ] `python main.py` running — browser shows PACCA interface
+- [ ] `python main.py` running — browser shows Arix interface
 - [ ] Onboarding completed (name, timezone, style)
 - [ ] *(Optional)* `pip install pyautogui pillow websockets` for desktop control
 - [ ] *(Optional)* `python local_bridge/bridge_agent.py` running for full desktop automation
@@ -392,7 +392,7 @@ playwright install chromium
 
 ---
 
-## What PACCA Can Control
+## What Arix Can Control
 
 | Category | Apps / Actions |
 |----------|---------------|
@@ -407,4 +407,4 @@ playwright install chromium
 
 ---
 
-*PACCA v8.x — Personal AI Computer-Control Agent*
+*Arix v8.x — Personal AI Computer-Control Agent*

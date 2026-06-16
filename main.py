@@ -57,7 +57,7 @@ async def lifespan(app_: FastAPI):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="PACCA", version="8.0.0", lifespan=lifespan)
+app = FastAPI(title="Arix", version="8.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
