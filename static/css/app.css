@@ -713,6 +713,171 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 *::-webkit-scrollbar-track{background:transparent}
 *::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
 
+/* ══════════════════════════════════════════════════════════════════════════
+   SCI-FI ANIMATION LAYER — Arix v8.0
+   All animations use transform/opacity only (GPU composited, 60fps safe).
+   Respects prefers-reduced-motion via override at bottom.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── New sci-fi design tokens ── */
+:root {
+  --neon:#00e5ff; --neon2:#7b2ff7;
+  --neon-glow:0 0 8px rgba(0,229,255,.55),0 0 28px rgba(0,229,255,.2);
+  --neon-border:rgba(0,229,255,.28);
+}
+
+/* ── 1. Header horizontal scan beam ── */
+#header{overflow:hidden}
+#header::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,.055),transparent);
+  animation:hdrScan 9s ease-in-out infinite;pointer-events:none;z-index:1}
+@keyframes hdrScan{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(500%)}}
+
+/* ── 2. Logo word neon breathe ── */
+#logo-word{animation:logoBreathe 3.5s ease-in-out infinite}
+@keyframes logoBreathe{
+  0%,100%{filter:drop-shadow(0 0 2px rgba(0,229,255,.2))}
+  50%{filter:drop-shadow(0 0 12px rgba(0,229,255,.85)) drop-shadow(0 0 30px rgba(91,156,246,.4))}}
+
+/* ── 3. Logo image slow glow pulse ── */
+#logo-img{animation:logoGlow 4s ease-in-out infinite}
+@keyframes logoGlow{
+  0%,100%{filter:brightness(1) drop-shadow(0 0 3px rgba(0,229,255,.2))}
+  50%{filter:brightness(1.12) drop-shadow(0 0 10px rgba(0,229,255,.6))}}
+
+/* ── 4. Status dot radar ping ── */
+#status-dot{position:relative;z-index:1}
+#status-dot.ok::after{content:'';position:absolute;inset:-5px;border-radius:50%;
+  border:1.5px solid rgba(18,194,133,.7);
+  animation:radarPing 2.4s ease-out infinite;pointer-events:none}
+@keyframes radarPing{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(3.2)}}
+
+/* ── 5. Enhanced message entrance (flash-in) ── */
+@keyframes msgIn{
+  0%{opacity:0;transform:translateY(14px);filter:brightness(2.5) blur(2px)}
+  55%{filter:brightness(1.08) blur(0)}
+  100%{opacity:1;transform:translateY(0);filter:brightness(1) blur(0)}}
+
+/* ── 6. Sci-fi scanner bars replacing thinking dots ── */
+.thinking-dots b{
+  width:2.5px !important;height:18px !important;border-radius:2px !important;
+  background:linear-gradient(180deg,var(--accent2),var(--neon)) !important;
+  animation:sciScanBar 1.1s ease-in-out infinite !important}
+.thinking-dots b:nth-child(2){animation-delay:.18s !important}
+.thinking-dots b:nth-child(3){animation-delay:.36s !important}
+@keyframes sciScanBar{
+  0%,100%{transform:scaleY(.2);opacity:.2;box-shadow:none}
+  50%{transform:scaleY(1);opacity:1;box-shadow:0 0 8px var(--neon),0 0 16px rgba(0,229,255,.4)}}
+.msg-thinking{border-color:rgba(0,229,255,.2) !important;
+  box-shadow:inset 0 0 20px rgba(0,229,255,.03) !important}
+
+/* ── 7. Input bar neon focus glow ── */
+#input-bar{transition:box-shadow .35s ease,border-color .35s ease}
+#input-bar:focus-within{
+  border-color:rgba(0,229,255,.35) !important;
+  box-shadow:0 0 0 1px rgba(0,229,255,.2),0 0 35px rgba(0,229,255,.09),0 8px 32px rgba(0,0,0,.45) !important}
+
+/* ── 8. Nav hover scan sweep ── */
+.snav-btn{position:relative;overflow:hidden}
+.snav-btn::before{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,.14),transparent);
+  pointer-events:none;opacity:0}
+.snav-btn:hover::before{opacity:1;animation:navSweep .5s ease forwards}
+@keyframes navSweep{from{left:-80%}to{left:160%}}
+
+/* ── 9. Active nav — neon left bar ── */
+.snav-btn.active{box-shadow:inset 3px 0 0 var(--neon) !important}
+.snav-btn.active .snav-icon{filter:drop-shadow(0 0 5px rgba(0,229,255,.6))}
+
+/* ── 10. Holographic shimmer + HUD corner on assistant msg text ── */
+.msg-text{position:relative;overflow:hidden;
+  border:1px solid rgba(var(--accent-rgb),.15) !important;
+  background:linear-gradient(145deg,var(--surface2) 0%,rgba(12,16,22,.9) 100%) !important}
+.msg-text::before{content:'';position:absolute;top:5px;left:5px;width:9px;height:9px;
+  border-top:1px solid rgba(0,229,255,.4);border-left:1px solid rgba(0,229,255,.4);
+  pointer-events:none;z-index:2}
+.msg-text::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(105deg,transparent 30%,rgba(0,229,255,.038) 50%,transparent 70%);
+  animation:holoShimmer 5.5s ease-in-out infinite;pointer-events:none;z-index:1}
+@keyframes holoShimmer{
+  0%,100%{transform:translateX(-160%) skewX(-12deg)}
+  50%{transform:translateX(220%) skewX(-12deg)}}
+
+/* ── 11. Exec card animated top scan line ── */
+.msg-exec-card{position:relative;overflow:hidden}
+.msg-exec-card::before{content:'';position:absolute;top:0;left:-100%;width:60%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,229,255,.65),transparent);
+  animation:execScan 4.5s linear infinite;pointer-events:none;z-index:3}
+@keyframes execScan{from{left:-60%}to{left:160%}}
+
+/* ── 12. Step running — sci-fi dual-tone spinner ── */
+.step-status.running{
+  border:2px solid transparent !important;
+  border-top-color:var(--neon) !important;
+  border-right-color:rgba(0,229,255,.3) !important;
+  background:rgba(0,229,255,.07) !important;
+  box-shadow:0 0 10px rgba(0,229,255,.3) !important;
+  animation:sciRing .75s linear infinite !important}
+@keyframes sciRing{to{transform:rotate(360deg)}}
+
+/* ── 13. Goal progress bar animated flow ── */
+.goal-progress-fill{
+  background:linear-gradient(90deg,var(--accent),var(--neon),var(--accent2),var(--accent)) !important;
+  background-size:300% 100% !important;
+  animation:progressFlow 2.8s linear infinite !important}
+@keyframes progressFlow{from{background-position:100% 0}to{background-position:-200% 0}}
+
+/* ── 14. Particle canvas — behind chat thread ── */
+#sfx-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.45}
+#chat-view{position:relative}
+#chat-thread{position:relative;z-index:1}
+#goal-bar{position:relative;z-index:2}
+
+/* ── 15. Send button neon on hover ── */
+#send-btn:hover{box-shadow:var(--neon-glow);border-color:rgba(0,229,255,.5) !important;
+  background:rgba(0,229,255,.12) !important}
+#send-btn{transition:box-shadow .25s ease,background .25s ease,border-color .25s ease}
+
+/* ── 16. Stat bar shimmer ── */
+.stat-bar{overflow:hidden;position:relative}
+.stat-bar::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);
+  animation:statShimmer 2.8s ease-in-out infinite}
+@keyframes statShimmer{0%,100%{transform:translateX(-200%)}50%{transform:translateX(200%)}}
+
+/* ── 17. Provider badge live pulse ── */
+#provider-badge.live{animation:badgePulse 3.5s ease-in-out infinite}
+@keyframes badgePulse{
+  0%,100%{box-shadow:none}
+  50%{box-shadow:0 0 12px rgba(137,196,255,.4),0 0 4px rgba(137,196,255,.2)}}
+
+/* ── 18. Toast — flash-in with brightness burst ── */
+@keyframes toastIn{
+  from{opacity:0;transform:translateX(18px) scale(.95);filter:brightness(2)}
+  45%{filter:brightness(1.1)}
+  to{opacity:1;transform:translateX(0) scale(1);filter:brightness(1)}}
+
+/* ── 19. Home app pills — neon hover ── */
+.home-app-pill:hover{
+  border-color:rgba(0,229,255,.4) !important;
+  box-shadow:0 0 12px rgba(0,229,255,.12);
+  color:var(--text) !important}
+
+/* ── 20. Sidebar top ambient glow ── */
+#sidebar{position:relative}
+#sidebar::after{content:'';position:absolute;top:0;left:0;right:0;height:54px;
+  background:linear-gradient(180deg,rgba(0,229,255,.04) 0%,transparent 100%);
+  pointer-events:none;z-index:0}
+
+/* ── Reduced motion — disable all sci-fi animations ── */
+@media(prefers-reduced-motion:reduce){
+  #header::before,#logo-word,#logo-img,#status-dot.ok::after,
+  .thinking-dots b,.msg-text::after,.msg-exec-card::before,
+  .step-status.running,.goal-progress-fill,.stat-bar::after,
+  #provider-badge.live,.snav-btn::before{animation:none !important}
+  .msg{animation:fadeOnly .2s ease !important}
+  @keyframes fadeOnly{from{opacity:0}to{opacity:1}}}
+
 /* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media(max-width:768px){
   #sidebar{position:fixed;top:var(--hdr-h);left:0;bottom:0;transform:translateX(-100%);transition:transform .22s ease;z-index:27;width:min(var(--sidebar-w),88vw)}
