@@ -1250,36 +1250,13 @@ function renderWelcomeMsg() {
   ];
   const exIdx = Math.floor(Math.random() * examples.length);
 
-  addSystemMsg(`<div style="max-width:700px">
-    <div style="font-size:19px;font-weight:700;color:var(--text);margin-bottom:6px;letter-spacing:-.3px">${greeting}${name} 👋</div>
-    <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">I'm <b style="color:var(--accent2)">Arix</b> — your personal AI digital employee. Assign me any task and I'll figure out the steps, execute them automatically, and report back when done. I'll always ask before doing anything sensitive like sending messages, deleting important files, or making purchases.</div>
-    <div style="font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:7px">Quick-launch apps</div>
+  addSystemMsg(`<div style="max-width:660px">
+    <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-.3px">${greeting}${name} 👋</div>
+    <div style="font-size:12.5px;color:var(--text2);margin-bottom:12px">I'm <b style="color:var(--accent2)">Arix</b> — ready to execute tasks, open apps, manage files, browse the web, and more.</div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Quick-launch</div>
     <div class="home-apps-row">${pillsHtml}<button class="home-app-pill" onclick="switchPanel('apps')" style="border-style:dashed"><span class="hap-icon">📱</span>All Apps</button></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:18px;margin-bottom:5px">📁</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Files & Folders</div>
-        <div style="font-size:10.5px;color:var(--text2)">Create, move, search, organize, clean up temp files</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:18px;margin-bottom:5px">📱</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Apps & Automation</div>
-        <div style="font-size:10.5px;color:var(--text2)">Open, navigate, fill forms, complete workflows in any app</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:18px;margin-bottom:5px">🌐</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">Web & Research</div>
-        <div style="font-size:10.5px;color:var(--text2)">Browse, search, extract content, download files</div>
-      </div>
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:11px 13px">
-        <div style="font-size:18px;margin-bottom:5px">⚙️</div>
-        <div style="font-size:11.5px;font-weight:600;color:var(--text);margin-bottom:2px">System & Maintenance</div>
-        <div style="font-size:10.5px;color:var(--text2)">Monitor resources, clean temp files, manage processes</div>
-      </div>
-    </div>
-    <div style="font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
-      <span>💡</span>
-      <span>Try: <span style="color:var(--accent2)">${examples[exIdx]}</span> — or press <b style="color:var(--text2)">⌘K</b> for all commands</span>
+    <div style="font-size:11px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 11px;display:flex;align-items:center;gap:7px">
+      <span>💡</span><span>Try: <span style="color:var(--accent2)">${examples[exIdx]}</span> — or press <b style="color:var(--text2)">⌘K</b></span>
     </div>
   </div>`);
 }
