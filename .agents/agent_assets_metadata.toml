@@ -12,3 +12,9 @@ id = "7tsmDhCdOsx3E6EOpGlQm"
 uri = "file://PACCA_Product_Evolution_Plan.md"
 type = "text"
 title = "PACCA — World-Class AI Operating System: Complete Product Evolution Plan"
+
+[[outputs]]
+id = "7LtdAlLE0vbkQVNyTB4Kr"
+uri = "file://SETUP_GUIDE.md"
+type = "text"
+title = "PACCA Setup Guide"
