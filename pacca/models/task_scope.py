@@ -56,6 +56,16 @@ DOMAIN_TOOL_MAP: dict[str, frozenset[str]] = {
     "research": frozenset({
         "research_topic", "summarize_url",
     }),
+    "cleanup": frozenset({
+        "cleanup_temp_files", "system_monitor", "list_directory",
+    }),
+    "webapp": frozenset({
+        "open_web_app", "navigate_web_app", "list_available_web_apps",
+        "open_known_app", "find_installed_apps",
+        "browser_open_url", "browser_web_search",
+        "browser_click", "browser_type_text", "browser_fill_form",
+        "browser_screenshot", "browser_scroll",
+    }),
 }
 
 INTENT_VERB_PATTERNS: list[tuple[re.Pattern, str]] = [
@@ -85,6 +95,9 @@ DOMAIN_KEYWORD_PATTERNS: list[tuple[re.Pattern, str]] = [
     (re.compile(r'\b(image|photo|picture|screenshot|vision|analyze image|describe image|capture)\b', re.I), "vision"),
     (re.compile(r'\b(generate code|generate_code|write code|code for|explain code|refactor|unit test|code quality|programming)\b', re.I), "coding"),
     (re.compile(r'\b(research|investigate|summarize url|summarize website|web research|find info about)\b', re.I), "research"),
+    (re.compile(r'\b(temp files?|temporary files?|clean up|clear cache|free (?:up )?(?:disk |)space|disk cleanup|junk files?|cache cleanup|remove junk|delete temp|cleanup temp|browser cache|free disk|pyc|__pycache__)\b', re.I), "cleanup"),
+    (re.compile(r'\b(whatsapp web|instagram|tiktok|linkedin|facebook|youtube|spotify|discord web|telegram web|netflix|reddit|gmail|google drive|google docs|google sheets|open web app|web app|notion|figma|canva|chatgpt|open (?:on |in )(?:browser|web))\b', re.I), "webapp"),
+    (re.compile(r'\b(open|launch|start)\s+(?:tiktok|instagram|linkedin|whatsapp|facebook|twitter|reddit|discord|telegram|spotify|youtube|netflix)\b', re.I), "webapp"),
 ]
 
 
@@ -98,7 +111,7 @@ class TaskScope:
     raw_command: str
     redacted_command: str
     intent_verb: str
-    intent_domain: Literal["file", "app", "system", "calendar", "browser", "document", "git", "messaging", "vision", "coding", "research", "mixed"]
+    intent_domain: Literal["file", "app", "system", "calendar", "browser", "document", "git", "messaging", "vision", "coding", "research", "cleanup", "webapp", "mixed"]
     allowed_tools: frozenset
     allowed_path_prefixes: tuple
     allowed_url_patterns: tuple | None

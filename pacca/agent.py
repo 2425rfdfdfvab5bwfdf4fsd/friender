@@ -47,6 +47,7 @@ import pacca.tools.code_tools as code_tools
 import pacca.tools.research_tools as research_tools
 import pacca.tools.calendar_tools as calendar_tools
 import pacca.tools.desktop_tools as desktop_tools
+import pacca.tools.webapp_tools as webapp_tools
 
 
 @dataclass
@@ -112,6 +113,12 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "list_calendar_events": lambda args: calendar_tools.list_calendar_events(**_clean(args)),
     "create_calendar_event": lambda args: calendar_tools.create_calendar_event(**_clean(args)),
     "delete_calendar_event": lambda args: calendar_tools.delete_calendar_event(**_clean(args)),
+    # Digital Employee tools
+    "cleanup_temp_files": lambda args: system_tools.cleanup_temp_files(**_clean(args)),
+    "open_web_app": lambda args: webapp_tools.open_web_app(**_clean(args)),
+    "navigate_web_app": lambda args: webapp_tools.navigate_web_app(**_clean(args)),
+    "find_installed_apps": lambda args: app_tools.find_installed_apps(**_clean(args)),
+    "list_available_web_apps": lambda args: webapp_tools.list_available_web_apps(),
     # Desktop tools (via local bridge agent)
     "desktop_screenshot": lambda args: desktop_tools.desktop_screenshot(**_clean(args)),
     "desktop_click": lambda args: desktop_tools.desktop_click(**_clean(args)),

@@ -85,7 +85,26 @@ class HeuristicPlanner:
         if domain in ("vision", "coding", "research"):
             # These require LLM; heuristic mode produces a clear no-op notice
             return self._plan_llm_required(domain, cmd)
+        if domain == "cleanup":
+            return self._plan_cleanup(low, cmd)
+        if domain == "webapp":
+            return self._plan_webapp(low, cmd)
         # "file", "mixed", or unknown — use file planner with system keyword override
+        # Also check for cleanup / webapp intent by keyword before falling through
+        _CLEANUP_KW = ("temp file", "temporary file", "clean up", "clean cache",
+                       "clear cache", "free up space", "free disk", "disk cleanup",
+                       "remove junk", "delete junk", "junk files", "cache cleanup",
+                       "cleanup temp", "delete temp", "remove temp", "clear temp",
+                       "pyc", "__pycache__", "browser cache", "free space")
+        if any(kw in low for kw in _CLEANUP_KW):
+            return self._plan_cleanup(low, cmd)
+        _WEBAPP_KW = ("whatsapp", "instagram", "tiktok", "linkedin", "facebook",
+                      "twitter", "gmail", "youtube", "spotify", "discord",
+                      "telegram", "netflix", "reddit", "notion", "figma",
+                      "google drive", "google docs", "google sheets",
+                      "open web", "web app", "open app")
+        if any(kw in low for kw in _WEBAPP_KW):
+            return self._plan_webapp(low, cmd)
         return self._plan_file(low, cmd)
 
     def _plan_llm_required(self, domain: str, cmd: str) -> list[dict]:
@@ -406,3 +425,134 @@ class HeuristicPlanner:
         return [{"tool": "send_whatsapp_message",
                  "args": {"message": msg},
                  "description": f"Send WhatsApp message: {msg[:40]}"}]
+
+    def _plan_cleanup(self, low: str, cmd: str) -> list[dict]:
+        """Plan a temp-file cleanup task — always dry-run first, then confirm."""
+        dry_run = "preview" in low or "dry" in low or "check" in low or "scan" in low
+        include_browser = "browser" in low or "chrome" in low or "firefox" in low
+        include_pyc = "pyc" in low or "python" in low or "cache" in low
+
+        # Extract optional max_age_days (e.g. "files older than 14 days")
+        age_days = 7
+        m = re.search(r'\b(\d+)\s*days?\b', low)
+        if m:
+            age_days = min(int(m.group(1)), 365)
+
+        steps = []
+        if not dry_run:
+            # Step 1: Always scan first so agent can report what was found
+            steps.append({
+                "tool": "cleanup_temp_files",
+                "args": {
+                    "dry_run": True,
+                    "max_age_days": age_days,
+                    "include_browser_cache": include_browser,
+                    "include_pyc": include_pyc,
+                },
+                "description": f"Scan for temp files older than {age_days} days (dry run)",
+            })
+            # Step 2: Actual deletion (requires_confirmation=True will gate this)
+            steps.append({
+                "tool": "cleanup_temp_files",
+                "args": {
+                    "dry_run": False,
+                    "max_age_days": age_days,
+                    "include_browser_cache": include_browser,
+                    "include_pyc": include_pyc,
+                },
+                "description": f"Delete temp files older than {age_days} days",
+            })
+        else:
+            steps.append({
+                "tool": "cleanup_temp_files",
+                "args": {
+                    "dry_run": True,
+                    "max_age_days": age_days,
+                    "include_browser_cache": include_browser,
+                    "include_pyc": include_pyc,
+                },
+                "description": f"Preview temp files to clean (dry run, {age_days}+ days old)",
+            })
+        return steps
+
+    def _plan_webapp(self, low: str, cmd: str) -> list[dict]:
+        """Plan navigation to a web app, with optional action and search."""
+        quotes = QUOTE_RE.findall(cmd)
+
+        # Social / productivity app name detection
+        _APP_ALIASES: dict[str, str] = {
+            "whatsapp": "WhatsApp",
+            "instagram": "Instagram",
+            "tiktok": "TikTok",
+            "linkedin": "LinkedIn",
+            "facebook": "Facebook",
+            "twitter": "Twitter",
+            "youtube": "YouTube",
+            "gmail": "Gmail",
+            "google drive": "Google Drive",
+            "google docs": "Google Docs",
+            "google sheets": "Google Sheets",
+            "google calendar": "Google Calendar",
+            "spotify": "Spotify",
+            "discord": "Discord",
+            "telegram": "Telegram",
+            "netflix": "Netflix",
+            "reddit": "Reddit",
+            "notion": "Notion",
+            "figma": "Figma",
+            "canva": "Canva",
+            "slack": "Slack",
+            "zoom": "Zoom",
+            "github": "GitHub",
+            "chatgpt": "ChatGPT",
+            "snapchat": "Snapchat",
+        }
+
+        app_name = ""
+        for kw, display in _APP_ALIASES.items():
+            if kw in low:
+                app_name = display
+                break
+
+        # Extract action intent
+        action = "home"
+        action_map = {
+            "message": "messages",
+            "dm":      "messages",
+            "inbox":   "inbox",
+            "compose": "compose",
+            "post":    "post",
+            "job":     "jobs",
+            "upload":  "upload",
+            "profile": "profile",
+            "search":  "home",
+            "explore": "explore",
+            "notification": "notifications",
+            "feed":    "home",
+        }
+        for kw, act in action_map.items():
+            if kw in low:
+                action = act
+                break
+
+        search_q = ""
+        for q in quotes:
+            if "/" not in q and ":" not in q and len(q) < 80:
+                search_q = q
+                break
+
+        if not app_name:
+            # List available apps instead
+            return [{"tool": "list_available_web_apps",
+                     "args": {},
+                     "description": "List all available web apps"}]
+
+        return [{
+            "tool": "open_web_app",
+            "args": {
+                "app_name": app_name,
+                "action": action,
+                "search_query": search_q,
+            },
+            "description": f"Open {app_name}{' — ' + action if action != 'home' else ''}",
+        }]
