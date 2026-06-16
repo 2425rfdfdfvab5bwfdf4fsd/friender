@@ -9,3 +9,4 @@
 - [PACCA v8.0 security & reliability](pacca-v80-upgrades.md) — SEC/REL hardening: auth middleware, WS origin check, persistent grant registry, WAL mode, tool timeout, graceful shutdown; 44-test suite; pyproject.toml
 - [PACCA local bridge](pacca-local-bridge.md) — 11 desktop tools via bridge; BridgeManager singleton; /ws/bridge WS endpoint; local_bridge/bridge_agent.py uses pyautogui; bridge badge in header
 - [PACCA router architecture](pacca-routers.md) — main.py split into 9 routers/ + pacca/app_state.py singletons; main.py is now 162 lines (was 1561); shared state via get_agent(), get_workflow_manager()
+- [PACCA v8.1 smarter AI](pacca-v81-smarter-ai.md) — CoT planning, progressive retry (self-heal→reflect→replan), adaptive goal re-synthesis, memory few-shot context injection

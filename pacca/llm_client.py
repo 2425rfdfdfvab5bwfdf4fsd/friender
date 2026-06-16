@@ -113,6 +113,12 @@ Today's date: June 2026. You are aware of technologies and frameworks released u
 
 SYSTEM_PROMPT_TEMPLATE = """You are PACCA's planning engine. Your ONLY job is to produce a JSON action plan.
 
+THINK FIRST — before generating steps, internally reason through:
+1. What does the user truly want? (literal + implied)
+2. What is the minimal set of steps that achieves this?
+3. What could go wrong? (missing files, permissions, wrong paths)
+4. What is the safest tool ordering? (read before write, check before delete)
+
 CRITICAL RULES — any violation causes immediate plan rejection:
 1. Respond with ONLY a raw JSON array — no prose, no markdown, no code fences, no explanation.
 2. Each step MUST follow this exact shape: {{"tool": "<name>", "args": {{...}}, "description": "<one line>"}}
@@ -124,6 +130,8 @@ CRITICAL RULES — any violation causes immediate plan rejection:
 8. All file paths must be absolute or start with ~/ — never relative paths.
 9. For git tools, always include "repo_path" pointing to the git repository root.
 10. RESPECT user preferences from the memory context below — they reflect how the user wants PACCA to behave.
+11. If the task requires reading a file before modifying it, ALWAYS include a read_file step first.
+12. Prefer the most specific tool available — do not use browser_web_search when a more targeted tool exists.
 
 ALLOWED TOOLS (ONLY these — no others):
 {allowed_tools}
@@ -137,10 +145,24 @@ EXAMPLES of correct output:
 - "delete file notes.txt" → [{{"tool":"move_to_trash","args":{{"path":"~/notes.txt"}},"description":"Move notes.txt to trash"}}]
 - "search for pdf files" → [{{"tool":"search_files","args":{{"path":"~","pattern":"*.pdf"}},"description":"Search for PDF files"}}]
 - "show system usage" → [{{"tool":"system_monitor","args":{{}},"description":"Show CPU and memory usage"}}]
+- "read report.md and summarize" → [{{"tool":"read_file","args":{{"path":"~/report.md"}},"description":"Read report.md"}}, {{"tool":"research_topic","args":{{"topic":"summarize the document content","depth":"quick"}},"description":"Summarize content"}}]
 
 User's redacted command: {redacted_command}
 
 Respond with ONLY the JSON array. Nothing else."""
+
+
+REPLAN_PROMPT = """You are PACCA's adaptive re-planning engine. A multi-step goal is partially complete.
+Some steps succeeded; one step failed after retries. Your job is to synthesize a REVISED plan for the remaining work.
+
+RULES:
+1. Output ONLY a JSON array of natural-language command strings — no prose, no markdown.
+2. Each command must be atomic and executable by PACCA's planner.
+3. Maximum 6 commands. Minimum 1.
+4. Account for what has already succeeded — don't repeat completed work.
+5. Use a different strategy to work around the failed step.
+6. If the failure is clearly unrecoverable, output: ["GOAL_FAILED: <reason>"]
+7. Be specific — include file paths, names, and context from prior results."""
 
 
 def _is_auth_error(exc: Exception) -> bool:
@@ -440,6 +462,56 @@ Rules:
             return result or None
         except Exception:
             return None
+
+    async def synthesize_remaining(
+        self,
+        goal: str,
+        completed_steps: list[str],
+        failed_step: str,
+        failure_error: str,
+        remaining_steps: list[str],
+        max_tokens: int = 512,
+    ) -> list[str] | None:
+        """Adaptively re-plan the remaining steps of a goal after a blocking failure.
+
+        Returns a revised list of natural-language sub-commands, or None if the
+        LLM is unavailable.  Returns ["GOAL_FAILED: <reason>"] when the failure
+        is unrecoverable.
+        """
+        if not self.is_available():
+            return None
+
+        completed_text = (
+            "\n".join(f"  ✓ {s}" for s in completed_steps) if completed_steps else "  (none)"
+        )
+        remaining_text = (
+            "\n".join(f"  - {s}" for s in remaining_steps) if remaining_steps else "  (none)"
+        )
+        context = (
+            f"Original goal: {goal}\n\n"
+            f"Completed steps:\n{completed_text}\n\n"
+            f"Failed step: {failed_step}\n"
+            f"Failure reason: {failure_error[:300]}\n\n"
+            f"Remaining steps (not yet executed):\n{remaining_text}\n\n"
+            "Produce a revised plan for the remaining work:"
+        )
+
+        try:
+            raw = await self._call(REPLAN_PROMPT, context, max_tokens=max_tokens)
+            raw = raw.strip()
+            if raw.startswith("```"):
+                lines = raw.split("\n")
+                raw = "\n".join(lines[1:])
+                if "```" in raw:
+                    raw = raw[:raw.rfind("```")].strip()
+            commands = json.loads(raw)
+            if isinstance(commands, list) and len(commands) >= 1:
+                valid = [str(c).strip() for c in commands if str(c).strip()]
+                if valid:
+                    return valid[:6]
+        except Exception:
+            pass
+        return None
 
     async def complete_text(self, prompt: str, max_tokens: int = 1000) -> str:
         return await self._call("", prompt, max_tokens=max_tokens)

@@ -47,28 +47,37 @@ class GoalPlan:
 
 # ── LLM prompts ───────────────────────────────────────────────────────────────
 
-_LLM_DECOMPOSE_SYSTEM = """You are PACCA's goal decomposition engine. Break a multi-step goal into concrete, atomic sub-commands that PACCA can execute one by one.
+_LLM_DECOMPOSE_SYSTEM = """You are PACCA's goal decomposition engine. Break a multi-step goal into concrete, atomic sub-commands.
+
+THINK FIRST — reason through:
+1. What is the logical sequence of steps?
+2. Which steps are prerequisites for others? (e.g., create folder before creating file in it)
+3. What could fail? Plan around it.
 
 RULES:
 1. Output ONLY a JSON array of command strings — no prose, no markdown, no explanation.
-2. Each command must be an atomic, executable instruction (1 tool call).
-3. Maximum 8 commands. Minimum 2 commands.
+2. Each command must be atomic — accomplishes exactly one thing (one file, one search, one action).
+3. Maximum 10 commands. Minimum 2 commands.
 4. Use natural language — PACCA will parse and route each command.
 5. Commands must be sequential and build on each other logically.
 6. Be specific about file paths, using ~/ for home directory.
+7. If a step depends on output from a prior step, describe what to do with that output.
 
 EXAMPLES:
 Goal: "research the top 5 LLM APIs and create a comparison spreadsheet"
-Output: ["search the web for top 5 LLM APIs 2026", "search the web for pricing and features of OpenAI Anthropic Gemini Cohere APIs", "search the web for LLM API performance benchmarks 2026", "create file ~/Desktop/llm_comparison.md with the research findings structured as a comparison table"]
+Output: ["search the web for top 5 LLM APIs pricing and features 2026", "search the web for OpenAI vs Anthropic vs Gemini vs Cohere API performance benchmarks", "create file ~/Desktop/llm_comparison.md with a structured comparison table of the research findings"]
 
 Goal: "check git status and commit any changed files with message 'daily update'"
 Output: ["git status in current directory", "git add all changed files in current directory", "git commit with message 'daily update'"]
 
 Goal: "search the web for Python async best practices and save to a file"
-Output: ["search the web for Python async await best practices 2025", "search the web for asyncio patterns common mistakes Python", "create file ~/async_notes.md with the research findings"]
+Output: ["search the web for Python async await best practices 2026", "search the web for asyncio common patterns and mistakes Python", "create file ~/async_notes.md with the research findings organized by topic"]
 
-Goal: "list the files in my downloads folder and find any large files over 100MB"
-Output: ["list files in ~/Downloads", "search for files larger than 100MB in ~/Downloads"]"""
+Goal: "organize my downloads folder by creating subfolders for each file type"
+Output: ["list files in ~/Downloads", "create folder ~/Downloads/Images", "create folder ~/Downloads/Documents", "create folder ~/Downloads/Archives", "search for image files in ~/Downloads", "search for pdf and document files in ~/Downloads"]
+
+Goal: "analyze this Python file and write tests for it"
+Output: ["read file ~/project/main.py", "analyze code quality of ~/project/main.py", "write tests for ~/project/main.py and save to ~/project/test_main.py"]"""
 
 
 _REFLECT_SYSTEM = """You are PACCA's error recovery engine. A step in an autonomous goal has failed.
@@ -77,10 +86,23 @@ Your job is to suggest ONE revised approach that avoids the same failure.
 Rules:
 1. Output ONLY a single revised command string — no prose, no explanation, no JSON.
 2. The revised command should accomplish the same intent using a different approach.
-3. If the error suggests a missing file, suggest creating it first.
-4. If the error suggests a permission issue, suggest an alternative path.
-5. If the error is clearly unrecoverable (e.g., network down, tool unavailable), output: SKIP
-6. Keep the revised command concise — PACCA will parse it."""
+3. If the error suggests a missing file or directory, suggest creating it first.
+4. If the error suggests a permission issue, suggest an alternative path (~/Downloads or /tmp).
+5. If the error is network-related, suggest a simpler alternative or different search terms.
+6. If the error is clearly unrecoverable (binary missing, service down), output: SKIP
+7. Keep the revised command concise — PACCA will parse it."""
+
+
+# ── Self-healing patterns: (error_fragment, recovery_command_template) ─────────
+# These fire BEFORE LLM reflection to fix common recoverable errors instantly.
+_SELF_HEAL_PATTERNS: list[tuple[str, str]] = [
+    ("no such file or directory", "create folder {parent}"),
+    ("not a directory", "create folder {parent}"),
+    ("file not found", "create folder {parent}"),
+    ("permission denied", ""),          # handled separately → suggest /tmp
+    ("no module named", ""),            # unrecoverable in this context → SKIP
+    ("command not found", ""),          # tool missing → SKIP
+]
 
 
 # ── Heuristic goal detection ──────────────────────────────────────────────────
@@ -198,6 +220,122 @@ class GoalSupervisor:
 
     def set_memory(self, memory: Any) -> None:
         self._memory = memory
+
+    # ── Self-healing: instant recovery for common errors ─────────────────────
+
+    def _self_heal(self, command: str, error: str) -> str | None:
+        """Return an immediate recovery command for well-known error patterns.
+
+        This fires BEFORE the slower LLM reflection pass so the retry loop can
+        attempt a fix on the very next attempt without an extra API round-trip.
+        Returns a revised command string, "SKIP" to skip the step, or None when
+        no instant fix is available.
+        """
+        err_low = error.lower()
+
+        # Missing directory → try to create the parent folder first
+        if any(p in err_low for p in ("no such file or directory", "not a directory",
+                                       "file not found", "no such file")):
+            import re as _re
+            # Extract a path-like token from the command
+            path_match = _re.search(r'~/[\w/.\-]+|/[\w/.\-]+', command)
+            if path_match:
+                raw_path = path_match.group(0)
+                from pathlib import Path as _Path
+                parent = str(_Path(raw_path).parent)
+                if parent and parent not in ("/", "~"):
+                    return f"create folder {parent}"
+            return None  # can't determine path — fall through to LLM
+
+        # Permission denied → suggest /tmp as the target directory
+        if "permission denied" in err_low:
+            import re as _re
+            path_match = _re.search(r'(~/[\w/.\-]+|/[\w/.\-]+)', command)
+            if path_match:
+                from pathlib import Path as _Path
+                filename = _Path(path_match.group(0)).name
+                return f"{command.replace(path_match.group(0), f'/tmp/{filename}')}"
+            return None
+
+        # Missing Python module / binary → unrecoverable in this context
+        if any(p in err_low for p in ("no module named", "command not found",
+                                       "not installed", "modulenotfounderror")):
+            return "SKIP"
+
+        return None
+
+    # ── Adaptive goal re-planning ─────────────────────────────────────────────
+
+    async def _adaptive_replan(
+        self,
+        plan: "GoalPlan",
+        failed_subtask: "SubTask",
+        current_index: int,
+        emit,
+    ) -> bool:
+        """Ask the LLM to synthesize a revised plan for the remaining steps.
+
+        Replaces the not-yet-executed subtasks in *plan* with the LLM's revised
+        commands.  Emits a ``goal_replanning`` event so the UI can show the user
+        what changed.  Returns True if re-planning succeeded and new steps were
+        injected, False otherwise.
+        """
+        if self._llm_client is None or not self._llm_client.is_available():
+            return False
+        if not hasattr(self._llm_client, "synthesize_remaining"):
+            return False
+
+        completed = [t.command for t in plan.subtasks[:current_index] if t.status == "success"]
+        remaining = [t.command for t in plan.subtasks[current_index + 1:] if not t.skip]
+
+        try:
+            new_commands = await self._llm_client.synthesize_remaining(
+                goal=plan.goal,
+                completed_steps=completed,
+                failed_step=failed_subtask.command,
+                failure_error=failed_subtask.result_summary,
+                remaining_steps=remaining,
+            )
+        except Exception:
+            return False
+
+        if not new_commands:
+            return False
+
+        # Check for unrecoverable signal
+        if len(new_commands) == 1 and new_commands[0].startswith("GOAL_FAILED:"):
+            reason = new_commands[0][len("GOAL_FAILED:"):].strip()
+            emit("goal_error", {
+                "goal_id": plan.goal_id,
+                "error": f"LLM determined goal is unrecoverable: {reason}",
+                "replanning_triggered": True,
+            })
+            plan.status = "failed"
+            return False
+
+        # Splice the new commands into the plan, replacing everything from
+        # current_index+1 onward with freshly synthesized subtasks.
+        old_remaining_count = len(plan.subtasks) - (current_index + 1)
+        new_subtasks = [
+            SubTask(
+                task_id=str(uuid.uuid4())[:8],
+                description=cmd[:120],
+                command=cmd,
+                max_attempts=self.max_retries,
+            )
+            for cmd in new_commands
+        ]
+        plan.subtasks = plan.subtasks[: current_index + 1] + new_subtasks
+        plan.total_steps = len(plan.subtasks)
+
+        emit("goal_replanning", {
+            "goal_id": plan.goal_id,
+            "failed_step": failed_subtask.description[:80],
+            "old_remaining": old_remaining_count,
+            "new_remaining": len(new_subtasks),
+            "new_steps": [t.description for t in new_subtasks],
+        })
+        return True
 
     # ── LLM-based decomposition ───────────────────────────────────────────────
 
@@ -487,10 +625,20 @@ class GoalSupervisor:
                         "error": subtask.result_summary,
                     })
                     if self._is_blocking_failure(subtask):
+                        # Before giving up, attempt a full goal re-synthesis.
+                        # If the LLM can suggest a revised path forward we inject
+                        # those steps into the plan and continue executing.
+                        replanned = await self._adaptive_replan(plan, subtask, i, emit)
+                        if replanned:
+                            # Re-synthesis succeeded — continue with the new steps.
+                            # The loop will advance to i+1 which is now the first
+                            # newly synthesized step.
+                            continue
                         plan.status = "failed"
                         emit("goal_error", {
                             "goal_id": plan.goal_id,
                             "error": f"Blocking step failed: {subtask.description}",
+                            "replanning_attempted": True,
                         })
                         return
 
@@ -536,6 +684,14 @@ class GoalSupervisor:
         emit: Callable[[str, dict], None],
         previous_results: list[str],
     ) -> bool:
+        """Execute one sub-task with progressive retry escalation.
+
+        Retry strategy:
+          attempt 0  — direct execution
+          attempt 1  — instant self-heal (pattern-based, no LLM call)
+          attempt 2  — LLM reflection (revised command via ReflectionPrompt)
+          attempt 3+ — (handled at goal level via _adaptive_replan)
+        """
         subtask.status = "running"
         last_error = ""
         current_command = subtask.command
@@ -545,12 +701,16 @@ class GoalSupervisor:
             subtask.attempt = attempt
 
             if attempt > 0:
-                await asyncio.sleep(1.5 * attempt)
+                backoff = min(1.5 * attempt, 8.0)  # cap at 8 s
+                await asyncio.sleep(backoff)
                 emit("subtask_retry", {
                     "goal_id": plan.goal_id,
                     "task_id": subtask.task_id,
                     "attempt": attempt + 1,
-                    "revised_command": current_command if current_command != subtask.command else None,
+                    "strategy": "self_heal" if attempt == 1 else "reflection",
+                    "revised_command": (
+                        current_command if current_command != subtask.command else None
+                    ),
                 })
 
             try:
@@ -618,8 +778,38 @@ class GoalSupervisor:
             if subtask.status == "success":
                 return True
 
-            # Gap #3: Self-reflection before next retry
-            if attempt < max_total - 1 and self._llm_client:
+            # ── Progressive retry escalation ──────────────────────────────────
+            if attempt >= max_total - 1:
+                break  # exhausted all attempts
+
+            if attempt == 0:
+                # Attempt 1: instant self-heal (pattern-based, no API call)
+                healed = self._self_heal(current_command, last_error)
+                if healed == "SKIP":
+                    subtask.status = "skipped"
+                    subtask.result_summary = "Self-heal: step deemed unrecoverable"
+                    emit("subtask_reflected", {
+                        "goal_id": plan.goal_id,
+                        "task_id": subtask.task_id,
+                        "action": "skip",
+                        "strategy": "self_heal",
+                        "reason": last_error[:120],
+                    })
+                    return False
+                elif healed:
+                    emit("subtask_reflected", {
+                        "goal_id": plan.goal_id,
+                        "task_id": subtask.task_id,
+                        "action": "revise",
+                        "strategy": "self_heal",
+                        "original": current_command[:80],
+                        "revised": healed[:80],
+                    })
+                    current_command = healed
+                    continue  # immediately retry with healed command (no extra sleep)
+
+            # Attempt 2+: LLM reflection
+            if self._llm_client and self._llm_client.is_available():
                 revised = await self._reflect_on_failure(
                     command=current_command,
                     error=last_error,
@@ -628,12 +818,13 @@ class GoalSupervisor:
                 )
                 if revised == "SKIP":
                     subtask.status = "skipped"
-                    subtask.result_summary = "Skipped after reflection — step deemed unrecoverable"
+                    subtask.result_summary = "LLM reflection: step deemed unrecoverable"
                     emit("subtask_reflected", {
                         "goal_id": plan.goal_id,
                         "task_id": subtask.task_id,
                         "action": "skip",
-                        "reason": last_error[:100],
+                        "strategy": "reflection",
+                        "reason": last_error[:120],
                     })
                     return False
                 elif revised and revised != current_command:
@@ -641,6 +832,7 @@ class GoalSupervisor:
                         "goal_id": plan.goal_id,
                         "task_id": subtask.task_id,
                         "action": "revise",
+                        "strategy": "reflection",
                         "original": current_command[:80],
                         "revised": revised[:80],
                     })

@@ -260,7 +260,7 @@ class PACCAAgent:
 
         self.supervisor = GoalSupervisor(
             run_command_fn=self.run_command,
-            max_retries=2,
+            max_retries=3,       # attempt 0 + self-heal + LLM reflection
             goal_timeout=600.0,
             max_depth=3,
         )
@@ -317,6 +317,7 @@ class PACCAAgent:
             "plan", "step_start", "step_complete", "step_error",
             "completed", "error", "goal_start", "goal_complete",
             "subtask_complete", "subtask_failed", "subtask_reflected",
+            "goal_replanning",
         })
 
         while True:
@@ -655,11 +656,42 @@ class PACCAAgent:
                 mem_context = self.memory.build_context_for_command(
                     effective_cmd, scope.intent_domain
                 )
-                # Prepend user profile context so the planner knows who it's working for
-                full_context = (
-                    f"USER PROFILE:\n{_user_context}\n\n{mem_context}"
-                    if _user_context else mem_context
+
+                # ── Memory-augmented few-shot planning ────────────────────────
+                # Search episodic memory for up to 3 similar past tasks that
+                # succeeded.  Inject their command + plan as worked examples so
+                # the LLM can reason from real past experience rather than just
+                # the static prompt examples.
+                few_shot_lines: list[str] = []
+                try:
+                    similar = self.memory.search_similar_tasks(
+                        effective_cmd, limit=3, success_only=True
+                    )
+                    for past in similar:
+                        domain = past.get("intent_domain", "")
+                        steps_n = past.get("steps_executed", 0)
+                        few_shot_lines.append(
+                            f'  • [{domain}] "{past["command"][:80]}"'
+                            f' — completed in {steps_n} step(s)'
+                        )
+                except Exception:
+                    pass
+
+                few_shot_section = (
+                    "SIMILAR PAST SUCCESSFUL TASKS (for reference — adapt, don't copy):\n"
+                    + "\n".join(few_shot_lines)
+                    if few_shot_lines else ""
                 )
+
+                # Prepend user profile + few-shot examples so the planner knows
+                # who it's working for and can match past successful patterns.
+                context_parts = [p for p in [
+                    f"USER PROFILE:\n{_user_context}" if _user_context else "",
+                    few_shot_section,
+                    mem_context,
+                ] if p]
+                full_context = "\n\n".join(context_parts)
+
                 plan = await self.llm_client.plan(scope, context=full_context)
             except Exception as e:
                 yield AgentEvent("warning", {

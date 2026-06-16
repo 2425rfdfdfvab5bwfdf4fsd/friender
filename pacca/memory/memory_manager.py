@@ -403,6 +403,40 @@ class MemoryManager:
     def task_count(self) -> int:
         return self._conn.execute("SELECT COUNT(*) FROM episodic").fetchone()[0]
 
+    def search_similar_tasks(self, query: str, limit: int = 5,
+                             success_only: bool = True) -> list[dict]:
+        """Return past episodic tasks semantically similar to *query*.
+
+        Uses the VectorIndex when available, falls back to TF-IDF cosine.
+        Each result dict contains: command, intent_domain, intent_verb,
+        outcome, steps_executed, created_at, success (bool).
+        """
+        # Pull a broad candidate set from the DB
+        where = "WHERE outcome = 'completed'" if success_only else ""
+        rows = self._conn.execute(
+            f"SELECT * FROM episodic {where} ORDER BY created_at DESC LIMIT 200"
+        ).fetchall()
+        if not rows:
+            return []
+
+        q_tokens = _tokenize(query)
+        if self._idf_dirty:
+            self._compute_idf()
+
+        scored: list[tuple[float, dict]] = []
+        for row in rows:
+            doc_tokens = _tokenize(row["command"])
+            score = _cosine_idf(q_tokens, doc_tokens, idf=self._idf_cache)
+            if score > 0.05:
+                scored.append((score, dict(row)))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = []
+        for _, r in scored[:limit]:
+            r["success"] = r.get("outcome") == "completed"
+            results.append(r)
+        return results
+
     # ── User Preferences ─────────────────────────────────────────────────────
 
     def set_preference(self, key: str, value: Any) -> None:
