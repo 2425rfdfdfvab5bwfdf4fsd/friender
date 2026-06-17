@@ -2918,8 +2918,8 @@ function showBridgeHelp() {
   const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (REDUCED) { canvas.style.display = 'none'; return; }
 
-  const NODE_COUNT = 55;
-  const CONNECT_DIST = 130;
+  const NODE_COUNT = 90;
+  const CONNECT_DIST = 180;
   const SPEED = 0.28;
   let W, H, nodes = [], raf;
 
@@ -2935,7 +2935,7 @@ function showBridgeHelp() {
       y: Math.random() * H,
       vx: (Math.random() - 0.5) * SPEED,
       vy: (Math.random() - 0.5) * SPEED,
-      r: Math.random() * 1.6 + 0.6,
+      r: Math.random() * 2.4 + 1.2,
       pulse: Math.random() * Math.PI * 2,
     };
   }
@@ -2967,12 +2967,12 @@ function showBridgeHelp() {
         const dx = a.x - b.x, dy = a.y - b.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < CONNECT_DIST) {
-          const alpha = (1 - dist / CONNECT_DIST) * 0.4;
+          const alpha = (1 - dist / CONNECT_DIST) * 0.75;
           // Alternate cyan / blue lines for depth
           const hue = ((i * 17 + j * 7) % 60) < 30 ? '0,229,255' : '91,156,246';
           ctx.beginPath();
           ctx.strokeStyle = `rgba(${hue},${alpha.toFixed(3)})`;
-          ctx.lineWidth = alpha * 1.2;
+          ctx.lineWidth = alpha * 2.2;
           ctx.moveTo(a.x, a.y);
           ctx.lineTo(b.x, b.y);
           ctx.stroke();
@@ -2984,14 +2984,14 @@ function showBridgeHelp() {
     for (const n of nodes) {
       const glow = (Math.sin(n.pulse) * 0.5 + 0.5);
       const r = n.r + glow * 1.2;
-      const alpha = 0.45 + glow * 0.45;
+      const alpha = 0.7 + glow * 0.3;
 
       // Outer glow ring
-      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 4);
-      grad.addColorStop(0, `rgba(0,229,255,${(alpha * 0.35).toFixed(3)})`);
+      const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, r * 5);
+      grad.addColorStop(0, `rgba(0,229,255,${(alpha * 0.6).toFixed(3)})`);
       grad.addColorStop(1, 'rgba(0,229,255,0)');
       ctx.beginPath();
-      ctx.arc(n.x, n.y, r * 4, 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, r * 5, 0, Math.PI * 2);
       ctx.fillStyle = grad;
       ctx.fill();
 
