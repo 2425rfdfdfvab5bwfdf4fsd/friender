@@ -4,6 +4,25 @@
 
 ---
 
+## Launcher Scripts (Easiest Way)
+
+The project includes three double-clickable batch files — no Command Prompt knowledge needed:
+
+| File | What it does | When to use |
+|------|-------------|-------------|
+| `setup.bat` | Installs everything (venv, packages, .env) | **Once** on first run |
+| `launch.bat` | Starts Arix + opens browser automatically | **Every time** you want to use Arix |
+| `launch_bridge.bat` | Connects desktop control (mouse & keyboard) | When you want Arix to control your PC |
+
+**First time:**
+1. Double-click `setup.bat` — follow the prompts, paste your API key when Notepad opens
+2. Double-click `launch.bat` — browser opens to http://localhost:5000 automatically
+
+**Every day after that:**
+- Just double-click **`launch.bat`** — that's it.
+
+---
+
 ## Table of Contents
 
 1. [Quick Start (5 minutes)](#1-quick-start-5-minutes)
@@ -24,12 +43,13 @@
 
 ## 1. Quick Start (5 minutes)
 
-Already have Python 3.11+ installed? Here's the fastest path. Open **Command Prompt** and run:
+> **Prefer clicking over typing?** Skip this section and use the [Launcher Scripts](#launcher-scripts-easiest-way) above instead.
+
+Already have Python 3.11+ installed? Here's the manual path via Command Prompt:
 
 ```cmd
 cd C:\Users\Saif Khan\Downloads\friender
 
-rmdir /s /q .venv
 py -3.11 -m venv .venv
 .venv\Scripts\activate
 
