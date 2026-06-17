@@ -845,9 +845,9 @@
   const ctx = cvs.getContext('2d');
   const ACCENT   = [91,156,246];
   const ACCENT2  = [137,196,255];
-  const NODE_COUNT = 72;
-  const MAX_DIST  = 160;
-  const PULSE_SPEED = 0.0018;
+  const NODE_COUNT = 110;
+  const MAX_DIST  = 200;
+  const PULSE_SPEED = 0.0022;
 
   let W, H, nodes = [], pulses = [];
 
@@ -861,9 +861,9 @@
     return {
       x: Math.random()*W,
       y: Math.random()*H,
-      vx:(Math.random()-.5)*0.28,
-      vy:(Math.random()-.5)*0.28,
-      r: 1.6 + Math.random()*1.6,
+      vx:(Math.random()-.5)*0.32,
+      vy:(Math.random()-.5)*0.32,
+      r: 2.5 + Math.random()*2.2,
       glow: Math.random()*Math.PI*2
     };
   }
@@ -902,9 +902,9 @@
         const b = nodes[j];
         const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
         if(d>MAX_DIST) continue;
-        const alpha = (1-(d/MAX_DIST))*0.18;
+        const alpha = (1-(d/MAX_DIST))*0.45;
         ctx.strokeStyle=`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${alpha})`;
-        ctx.lineWidth=0.7;
+        ctx.lineWidth=1.1;
         ctx.beginPath();
         ctx.moveTo(a.x,a.y);
         ctx.lineTo(b.x,b.y);
@@ -917,29 +917,35 @@
       if(p.t>1) return false;
       const px = p.ax+(p.bx-p.ax)*p.t;
       const py = p.ay+(p.by-p.ay)*p.t;
-      const grad = ctx.createRadialGradient(px,py,0,px,py,7);
-      grad.addColorStop(0,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0.85)`);
+      const grad = ctx.createRadialGradient(px,py,0,px,py,12);
+      grad.addColorStop(0,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},1.0)`);
+      grad.addColorStop(0.4,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0.6)`);
       grad.addColorStop(1,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0)`);
       ctx.fillStyle=grad;
       ctx.beginPath();
-      ctx.arc(px,py,7,0,Math.PI*2);
+      ctx.arc(px,py,12,0,Math.PI*2);
       ctx.fill();
       return true;
     });
 
     for(const n of nodes){
       n.glow += 0.022;
-      const glowAlpha = 0.55 + 0.45*Math.sin(n.glow);
-      const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*3.5);
+      const glowAlpha = 0.7 + 0.3*Math.sin(n.glow);
+      const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*5);
       grad.addColorStop(0,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${glowAlpha})`);
+      grad.addColorStop(0.5,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${glowAlpha*0.4})`);
       grad.addColorStop(1,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},0)`);
       ctx.fillStyle=grad;
       ctx.beginPath();
-      ctx.arc(n.x,n.y,n.r*3.5,0,Math.PI*2);
+      ctx.arc(n.x,n.y,n.r*5,0,Math.PI*2);
       ctx.fill();
       ctx.fillStyle=`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},${glowAlpha})`;
       ctx.beginPath();
       ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle=`rgba(255,255,255,${glowAlpha*0.6})`;
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r*0.4,0,Math.PI*2);
       ctx.fill();
 
       n.x += n.vx; n.y += n.vy;
