@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <!-- Outer glow -->
+    <filter id="glow-strong" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-eye" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <!-- Radial gradient for face surface -->
+    <radialGradient id="faceGrad" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#1a2332"/>
+      <stop offset="60%" stop-color="#0e1218"/>
+      <stop offset="100%" stop-color="#07090f"/>
+    </radialGradient>
+    <!-- Blue accent gradient -->
+    <linearGradient id="eyeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#5b9cf6" stop-opacity="0.3"/>
+      <stop offset="30%" stop-color="#89c4ff"/>
+      <stop offset="70%" stop-color="#89c4ff"/>
+      <stop offset="100%" stop-color="#5b9cf6" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="helmetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a2d45"/>
+      <stop offset="50%" stop-color="#0e1a28"/>
+      <stop offset="100%" stop-color="#07090f"/>
+    </linearGradient>
+    <radialGradient id="arcGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#89c4ff"/>
+      <stop offset="40%" stop-color="#5b9cf6"/>
+      <stop offset="100%" stop-color="#3d6bbb" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#89c4ff" stop-opacity="0.9"/>
+      <stop offset="50%" stop-color="#5b9cf6" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#3d5573" stop-opacity="0.3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark background circle -->
+  <circle cx="100" cy="100" r="98" fill="#07090f"/>
+  <circle cx="100" cy="100" r="97" fill="none" stroke="#1a2d45" stroke-width="1.5"/>
+
+  <!-- Outer ring accent -->
+  <circle cx="100" cy="100" r="94" fill="none" stroke="#5b9cf6" stroke-width="0.5" stroke-opacity="0.3"
+    stroke-dasharray="8 4" filter="url(#glow-soft)"/>
+
+  <!-- === HELMET SHAPE === -->
+  <!-- Main helmet silhouette — Iron Man style with flat top and angular jaw -->
+  <path d="
+    M 100 18
+    L 155 42
+    L 168 80
+    L 168 120
+    L 155 145
+    L 140 158
+    L 120 165
+    L 100 167
+    L 80 165
+    L 60 158
+    L 45 145
+    L 32 120
+    L 32 80
+    L 45 42
+    Z"
+    fill="url(#helmetGrad)"
+    stroke="url(#rimGrad)"
+    stroke-width="1.8"
+    filter="url(#glow-soft)"
+  />
+
+  <!-- Inner face panel -->
+  <path d="
+    M 100 28
+    L 148 50
+    L 160 85
+    L 160 118
+    L 148 140
+    L 133 153
+    L 115 160
+    L 100 161
+    L 85 160
+    L 67 153
+    L 52 140
+    L 40 118
+    L 40 85
+    L 52 50
+    Z"
+    fill="url(#faceGrad)"
+  />
+
+  <!-- Side panel lines (segmentation detail) -->
+  <line x1="52" y1="60" x2="40" y2="88" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.4"/>
+  <line x1="148" y1="60" x2="160" y2="88" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.4"/>
+  <line x1="45" y1="130" x2="55" y2="150" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.3"/>
+  <line x1="155" y1="130" x2="145" y2="150" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.3"/>
+
+  <!-- === FOREHEAD PANEL === -->
+  <path d="M 78 38 L 100 28 L 122 38 L 118 55 L 100 50 L 82 55 Z"
+    fill="#0e1a28" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.5"/>
+
+  <!-- Center forehead sensor dot -->
+  <circle cx="100" cy="44" r="3.5" fill="#5b9cf6" filter="url(#glow-soft)"/>
+  <circle cx="100" cy="44" r="1.8" fill="#89c4ff"/>
+
+  <!-- === EYES === -->
+  <!-- Left eye socket -->
+  <path d="M 55 82 L 88 76 L 94 86 L 88 96 L 55 90 Z"
+    fill="#050810" stroke="#5b9cf6" stroke-width="0.6" stroke-opacity="0.4"/>
+  <!-- Left eye glow -->
+  <path d="M 57 83.5 L 87 78 L 92 86 L 87 93.5 L 57 88.5 Z"
+    fill="url(#eyeGrad)" filter="url(#glow-eye)" opacity="0.95"/>
+  <!-- Left eye highlight line -->
+  <line x1="60" y1="83" x2="88" y2="78.5" stroke="#89c4ff" stroke-width="1.2" stroke-opacity="0.6"/>
+
+  <!-- Right eye socket -->
+  <path d="M 145 82 L 112 76 L 106 86 L 112 96 L 145 90 Z"
+    fill="#050810" stroke="#5b9cf6" stroke-width="0.6" stroke-opacity="0.4"/>
+  <!-- Right eye glow -->
+  <path d="M 143 83.5 L 113 78 L 108 86 L 113 93.5 L 143 88.5 Z"
+    fill="url(#eyeGrad)" filter="url(#glow-eye)" opacity="0.95"/>
+  <!-- Right eye highlight line -->
+  <line x1="140" y1="83" x2="112" y2="78.5" stroke="#89c4ff" stroke-width="1.2" stroke-opacity="0.6"/>
+
+  <!-- === NOSE BRIDGE === -->
+  <rect x="97" y="96" width="6" height="16" rx="2"
+    fill="#0e1218" stroke="#3d5573" stroke-width="0.7"/>
+
+  <!-- === CHEEK VENTS === -->
+  <!-- Left cheek vent lines -->
+  <line x1="50" y1="102" x2="80" y2="105" stroke="#5b9cf6" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="50" y1="108" x2="80" y2="110" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.4"/>
+  <line x1="51" y1="114" x2="79" y2="115" stroke="#5b9cf6" stroke-width="0.6" stroke-opacity="0.3"/>
+
+  <!-- Right cheek vent lines -->
+  <line x1="150" y1="102" x2="120" y2="105" stroke="#5b9cf6" stroke-width="1" stroke-opacity="0.5"/>
+  <line x1="150" y1="108" x2="120" y2="110" stroke="#5b9cf6" stroke-width="0.8" stroke-opacity="0.4"/>
+  <line x1="149" y1="114" x2="121" y2="115" stroke="#5b9cf6" stroke-width="0.6" stroke-opacity="0.3"/>
+
+  <!-- === MOUTH / LOWER FACE PANEL === -->
+  <path d="M 68 125 L 100 120 L 132 125 L 128 145 L 100 150 L 72 145 Z"
+    fill="#0a1018" stroke="#3d5573" stroke-width="0.8"/>
+
+  <!-- Mouth grille lines -->
+  <line x1="76" y1="130" x2="124" y2="130" stroke="#5b9cf6" stroke-width="0.9" stroke-opacity="0.5"/>
+  <line x1="74" y1="136" x2="126" y2="136" stroke="#5b9cf6" stroke-width="0.9" stroke-opacity="0.4"/>
+  <line x1="75" y1="142" x2="125" y2="142" stroke="#5b9cf6" stroke-width="0.7" stroke-opacity="0.3"/>
+
+  <!-- Mouth grille vertical dividers -->
+  <line x1="88" y1="127" x2="86" y2="147" stroke="#3d5573" stroke-width="0.6" stroke-opacity="0.6"/>
+  <line x1="100" y1="121" x2="100" y2="149" stroke="#3d5573" stroke-width="0.6" stroke-opacity="0.6"/>
+  <line x1="112" y1="127" x2="114" y2="147" stroke="#3d5573" stroke-width="0.6" stroke-opacity="0.6"/>
+
+  <!-- === ARC REACTOR (chin center) === -->
+  <circle cx="100" cy="136" r="7" fill="#07090f" stroke="#5b9cf6" stroke-width="1" filter="url(#glow-soft)"/>
+  <circle cx="100" cy="136" r="4.5" fill="url(#arcGrad)" filter="url(#glow-strong)"/>
+  <circle cx="100" cy="136" r="2" fill="#89c4ff" filter="url(#glow-eye)"/>
+
+  <!-- === OUTER EDGE GLOW === -->
+  <circle cx="100" cy="100" r="97" fill="none" stroke="#5b9cf6" stroke-width="1"
+    stroke-opacity="0.25" filter="url(#glow-soft)"/>
+
+  <!-- Corner triangle details on helmet top -->
+  <polygon points="75,35 84,45 66,45" fill="#5b9cf6" fill-opacity="0.2" stroke="#5b9cf6" stroke-width="0.5"/>
+  <polygon points="125,35 116,45 134,45" fill="#5b9cf6" fill-opacity="0.2" stroke="#5b9cf6" stroke-width="0.5"/>
+</svg>
