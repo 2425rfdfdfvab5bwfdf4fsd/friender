@@ -37,26 +37,42 @@ def set_llm_client(client: Any) -> None:
 
 
 def _find_nix_chromium() -> str | None:
-    """Locate the Replit/Nix-provided Chromium binary for Playwright."""
+    """Locate the Replit/Nix-provided Chromium binary for Playwright.
+
+    NOTE: Does NOT glob /nix/store/ — that path hangs in sandboxed environments.
+    Uses PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH env var or known-path checks only.
+    """
+    # Honour explicit override first
+    env_path = os.environ.get("PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH", "")
+    if env_path and os.path.isfile(env_path) and os.access(env_path, os.X_OK):
+        return env_path
+
+    # Check a small list of known stable paths (no glob over /nix/store/)
     candidates = [
         "/nix/store/kcvsxrmgwp3ffz5jijyy7wn9fcsjl4hz-playwright-browsers-1.55.0-with-cjk"
         "/chromium-1187/chrome-linux/chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+        "/usr/bin/google-chrome",
     ]
     for path in candidates:
-        if os.path.isfile(path) and os.access(path, os.X_OK):
-            return path
-
-    import glob as _glob
-    matches = _glob.glob(
-        "/nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome"
-    )
-    for path in sorted(matches, reverse=True):
         if os.path.isfile(path) and os.access(path, os.X_OK):
             return path
     return None
 
 
-_NIX_CHROMIUM = _find_nix_chromium()
+# Deferred: resolved lazily on first browser launch, not at import time
+_NIX_CHROMIUM: str | None = None
+_NIX_CHROMIUM_RESOLVED = False
+
+
+def _get_nix_chromium() -> str | None:
+    """Return the Chromium path, resolving it once on first call."""
+    global _NIX_CHROMIUM, _NIX_CHROMIUM_RESOLVED
+    if not _NIX_CHROMIUM_RESOLVED:
+        _NIX_CHROMIUM = _find_nix_chromium()
+        _NIX_CHROMIUM_RESOLVED = True
+    return _NIX_CHROMIUM
 
 Arix_DOWNLOADS = Path.home() / ".arix" / "downloads"
 
@@ -193,8 +209,9 @@ class BrowserController:
             self._playwright = await async_playwright().start()
             try:
                 launch_kwargs: dict = {"headless": self.headless}
-                if _NIX_CHROMIUM:
-                    launch_kwargs["executable_path"] = _NIX_CHROMIUM
+                nix_chromium = _get_nix_chromium()
+                if nix_chromium:
+                    launch_kwargs["executable_path"] = nix_chromium
 
                 # Gap #11: stealth launch args
                 if _STEALTH_MODE:
