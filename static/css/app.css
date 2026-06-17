@@ -16,6 +16,7 @@
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;height:100dvh}
 body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex;flex-direction:column;overflow:hidden}
+#nn-bg{position:absolute;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;opacity:.5}
 
 /* ── Toasts ─────────────────────────────────────────────────────────────── */
 #toast-container{position:fixed;top:60px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
@@ -132,7 +133,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 #content-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;position:relative}
 
 /* ── Chat View ──────────────────────────────────────────────────────────── */
-#chat-view{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;background:radial-gradient(ellipse at 25% 0%,rgba(var(--accent-rgb),.04) 0%,transparent 55%),radial-gradient(ellipse at 75% 100%,rgba(var(--accent2-rgb),.03) 0%,transparent 50%),url('/static/ai_bg.jpg') center/cover no-repeat;}
+#chat-view{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;position:relative;isolation:isolate;background:radial-gradient(ellipse at 25% 0%,rgba(var(--accent-rgb),.04) 0%,transparent 55%),radial-gradient(ellipse at 75% 100%,rgba(var(--accent2-rgb),.03) 0%,transparent 50%),url('/static/ai_bg.jpg') center/cover no-repeat;}
 #chat-thread{flex:1;overflow-y:auto;padding:24px 20px;display:flex;flex-direction:column;gap:18px;scroll-behavior:smooth}
 #chat-thread::-webkit-scrollbar{width:4px}
 #chat-thread::-webkit-scrollbar-track{background:transparent}

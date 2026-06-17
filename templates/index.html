@@ -522,6 +522,7 @@
 
     <!-- Chat view -->
     <div id="chat-view">
+      <canvas id="nn-bg"></canvas>
       <div id="chat-thread"></div>
 
       <!-- Goal floating bar -->
@@ -838,5 +839,123 @@
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/integrations.js"></script>
+<script>
+(function(){
+  const cvs = document.getElementById('nn-bg');
+  const ctx = cvs.getContext('2d');
+  const ACCENT   = [91,156,246];
+  const ACCENT2  = [137,196,255];
+  const NODE_COUNT = 72;
+  const MAX_DIST  = 160;
+  const PULSE_SPEED = 0.0018;
+
+  let W, H, nodes = [], pulses = [];
+
+  function resize(){
+    const rect = cvs.parentElement.getBoundingClientRect();
+    W = cvs.width  = rect.width  || window.innerWidth;
+    H = cvs.height = rect.height || window.innerHeight;
+  }
+
+  function randNode(){
+    return {
+      x: Math.random()*W,
+      y: Math.random()*H,
+      vx:(Math.random()-.5)*0.28,
+      vy:(Math.random()-.5)*0.28,
+      r: 1.6 + Math.random()*1.6,
+      glow: Math.random()*Math.PI*2
+    };
+  }
+
+  function initNodes(){
+    nodes = Array.from({length:NODE_COUNT}, randNode);
+  }
+
+  function spawnPulse(ax,ay,bx,by){
+    pulses.push({ax,ay,bx,by,t:0});
+  }
+
+  let lastPulse = 0;
+  function maybeSpawnPulse(now){
+    if(now - lastPulse < 420) return;
+    const i = Math.floor(Math.random()*nodes.length);
+    const a = nodes[i];
+    let best = null, bd = Infinity;
+    for(let j=0;j<nodes.length;j++){
+      if(j===i) continue;
+      const dx=nodes[j].x-a.x, dy=nodes[j].y-a.y, d=Math.hypot(dx,dy);
+      if(d<MAX_DIST && d<bd){ bd=d; best=j; }
+    }
+    if(best!==null){
+      spawnPulse(a.x,a.y,nodes[best].x,nodes[best].y);
+      lastPulse = now;
+    }
+  }
+
+  function draw(now){
+    ctx.clearRect(0,0,W,H);
+
+    for(let i=0;i<nodes.length;i++){
+      const a = nodes[i];
+      for(let j=i+1;j<nodes.length;j++){
+        const b = nodes[j];
+        const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
+        if(d>MAX_DIST) continue;
+        const alpha = (1-(d/MAX_DIST))*0.18;
+        ctx.strokeStyle=`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${alpha})`;
+        ctx.lineWidth=0.7;
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+      }
+    }
+
+    pulses = pulses.filter(p=>{
+      p.t += PULSE_SPEED * 16;
+      if(p.t>1) return false;
+      const px = p.ax+(p.bx-p.ax)*p.t;
+      const py = p.ay+(p.by-p.ay)*p.t;
+      const grad = ctx.createRadialGradient(px,py,0,px,py,7);
+      grad.addColorStop(0,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0.85)`);
+      grad.addColorStop(1,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0)`);
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.arc(px,py,7,0,Math.PI*2);
+      ctx.fill();
+      return true;
+    });
+
+    for(const n of nodes){
+      n.glow += 0.022;
+      const glowAlpha = 0.55 + 0.45*Math.sin(n.glow);
+      const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*3.5);
+      grad.addColorStop(0,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${glowAlpha})`);
+      grad.addColorStop(1,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},0)`);
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r*3.5,0,Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle=`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},${glowAlpha})`;
+      ctx.beginPath();
+      ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
+      ctx.fill();
+
+      n.x += n.vx; n.y += n.vy;
+      if(n.x<0||n.x>W) n.vx*=-1;
+      if(n.y<0||n.y>H) n.vy*=-1;
+    }
+
+    maybeSpawnPulse(now);
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  initNodes();
+  window.addEventListener('resize',()=>{ resize(); initNodes(); });
+  requestAnimationFrame(draw);
+})();
+</script>
 </body>
 </html>
