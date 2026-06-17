@@ -1,4 +1,4 @@
-# Arix — Setup Guide
+# Arix — Windows Setup Guide
 
 > Your personal AI digital employee. Give it tasks in plain English — it plans, acts, and reports back.
 
@@ -24,30 +24,27 @@
 
 ## 1. Quick Start (5 minutes)
 
-Already have Python 3.11+? Here's the fastest path:
+Already have Python 3.11+ installed? Here's the fastest path. Open **Command Prompt** and run:
 
-```bash
-# 1. Enter the project folder (use whatever name you downloaded it as)
-cd friender          # or: cd arix, cd pacca, etc.
+```cmd
+cd C:\Users\YourName\Downloads\friender
 
-# 2. Create and activate a virtual environment
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-# source .venv/bin/activate   # macOS / Linux
+rmdir /s /q .venv
+py -3.11 -m venv .venv
+.venv\Scripts\activate
 
-# 3. Install everything
-pip install -e .
+pip install -r requirements.txt
 
-# 4. Copy the example config and add your API key
-copy .env.example .env        # Windows
-# cp .env.example .env        # macOS / Linux
-# → Open .env in Notepad and paste your ANTHROPIC_API_KEY
+copy .env.example .env
+```
 
-# 5. Start Arix
+Open `.env` in Notepad, paste your `ANTHROPIC_API_KEY`, save, then:
+
+```cmd
 python main.py
 ```
 
-Then open **http://localhost:5000** in your browser.
+Open **http://localhost:5000** in your browser.
 
 ---
 
@@ -55,152 +52,144 @@ Then open **http://localhost:5000** in your browser.
 
 | What | Minimum |
 |------|---------|
+| Windows | **Windows 10** (build 1903+) or **Windows 11** |
 | Python | **3.11** or newer |
-| pip | latest (comes with Python) |
+| pip | Latest (bundled with Python) |
 | RAM | 512 MB free |
 | Internet | Required for AI features |
-| OS | Windows 10/11 · macOS 12+ · Ubuntu 20.04+ |
 
 ---
 
 ## 3. Install Python
 
-### Windows
+1. Go to **[python.org/downloads](https://www.python.org/downloads/)** and download the latest **Python 3.11** or **3.12** Windows installer.
+2. Run the installer (`python-3.11.x-amd64.exe`).
+3. **Critical:** On the first screen, tick **"Add Python to PATH"** before clicking Install Now.
 
-1. Go to **[python.org/downloads](https://www.python.org/downloads/)** and download Python 3.11+
-2. Run the installer
-3. **Important:** tick **"Add Python to PATH"** before clicking Install
-4. Verify it worked:
+   ![Add to PATH checkbox](https://www.python.org/static/img/python-logo.png)
+
+4. Open a new **Command Prompt** and verify:
+
    ```cmd
    python --version
    ```
-   You should see `Python 3.11.x` or higher.
 
-### macOS
+   You should see `Python 3.11.x` or higher. If you see an error, restart your PC and try again.
 
-```bash
-# Install Homebrew if you don't have it
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+5. Alternatively, if you have multiple Python versions installed, use the Python Launcher:
 
-brew install python@3.11
-```
-
-### Linux (Ubuntu / Debian)
-
-```bash
-sudo apt update && sudo apt install python3.11 python3.11-pip python3.11-venv -y
-```
+   ```cmd
+   py -3.11 --version
+   ```
 
 ---
 
 ## 4. Download Arix
 
-### Option A — Git clone (recommended)
+### Option A — ZIP download (easiest)
 
-```bash
+1. Download the ZIP from Replit and unzip it.
+2. The unzipped folder will be named something like `friender` or `arix`.
+3. Open **Command Prompt** inside that folder:
+
+   ```cmd
+   cd C:\Users\YourName\Downloads\friender
+   ```
+
+   Replace `YourName` and `friender` with your actual username and folder name.
+
+### Option B — Git clone
+
+If you have Git installed:
+
+```cmd
 git clone https://github.com/your-username/arix.git
 cd arix
-```
-
-### Option B — ZIP download
-
-1. Download the ZIP from Replit or GitHub and unzip it
-2. Open a terminal inside the unzipped folder:
-
-```bash
-# The folder name will match whatever you called it when downloading
-cd friender      # adjust to your actual folder name
 ```
 
 ---
 
 ## 5. Install Dependencies
 
-### Step A — Create a virtual environment
+### Step 1 — Create a virtual environment
 
-```bash
-python -m venv .venv
+A virtual environment keeps Arix's packages separate from other Python projects on your PC.
+
+```cmd
+py -3.11 -m venv .venv
 ```
 
-Activate it:
+### Step 2 — Activate it
 
-```bash
-# Windows
+```cmd
 .venv\Scripts\activate
-
-# macOS / Linux
-source .venv/bin/activate
 ```
 
-You'll see `(.venv)` in your prompt — this means it's active.
+Your prompt will change to show `(.venv)` at the start — this means it's active. **Every time you open a new terminal to run Arix, you must activate the venv first.**
 
-### Step B — Install packages
+### Step 3 — Install all packages
 
-```bash
-pip install -e .
+```cmd
+pip install -r requirements.txt
 ```
 
-This installs FastAPI, the Anthropic SDK, document tools, memory, security, and all other core dependencies from `pyproject.toml`.
+This installs FastAPI, the Anthropic SDK, Playwright, document tools, and everything else Arix needs. It takes 1–3 minutes on first run.
 
-### Step C — Optional extras
+### Step 4 — Optional extras
 
 | Feature | Install command |
 |---------|----------------|
-| Browser automation (web scraping, form filling) | `pip install playwright==1.49.1 playwright-stealth && playwright install chromium` |
-| Desktop automation (bridge agent) | `pip install pyautogui pillow websockets` |
-| Development tools (tests, linting) | `pip install -e ".[dev]"` |
+| Desktop automation (mouse & keyboard control) | `pip install pyautogui` |
+| Browser automation (already in requirements.txt) | `playwright install chromium` |
 
 ---
 
 ## 6. Configure Your API Key
 
-Arix needs at least one AI provider to understand and plan your tasks.
+Arix needs at least one AI provider key to understand and plan your tasks.
 
 ### Option A — Anthropic Claude *(recommended — best results)*
 
-1. Go to **[console.anthropic.com](https://console.anthropic.com)** → sign up / log in
-2. Click **API Keys** → **Create Key**
-3. Copy the key — it starts with `sk-ant-...`
+1. Go to **[console.anthropic.com](https://console.anthropic.com)** → sign up / log in.
+2. Click **API Keys** → **Create Key**.
+3. Copy the key — it starts with `sk-ant-...`.
 
 ### Option B — OpenAI GPT-4
 
-1. Go to **[platform.openai.com](https://platform.openai.com)** → sign up / log in
-2. Go to **API Keys** → **Create new secret key**
-3. Copy the key — it starts with `sk-...`
+1. Go to **[platform.openai.com](https://platform.openai.com)** → sign up / log in.
+2. Go to **API Keys** → **Create new secret key**.
+3. Copy the key — it starts with `sk-...`.
 
-> **Bonus:** An OpenAI key also unlocks **semantic (vector) memory search** — Arix can find similar past tasks using AI embeddings instead of just keyword matching.
+> **Bonus:** An OpenAI key also enables **vector memory search** — Arix can find similar past tasks using AI embeddings instead of just keyword matching.
 
 ### Option C — Google Gemini *(free tier available)*
 
-1. Go to **[aistudio.google.com](https://aistudio.google.com)**
-2. Click **Get API key** and copy it
+1. Go to **[aistudio.google.com](https://aistudio.google.com)**.
+2. Click **Get API key** and copy it.
 
-> **No key?** Arix still runs in demo mode using a built-in heuristic planner. You can try it without any API key.
+> **No key at all?** Arix still runs in **demo mode** using its built-in heuristic planner — no API costs.
 
 ---
 
 ## 7. Set Up Your .env File
 
-The project ships with a `.env.example` file listing every available setting. Copy it to `.env` and fill in your values:
+### Create the file
 
-```bash
-# Windows
+```cmd
 copy .env.example .env
-
-# macOS / Linux
-cp .env.example .env
 ```
 
-Then open `.env` in any text editor (Notepad, VS Code, etc.) and edit it. The minimal setup looks like this:
+Then open it in Notepad (or VS Code):
+
+```cmd
+notepad .env
+```
+
+### Minimal .env (just paste your key)
 
 ```env
-# Paste your API key for whichever provider you chose
 ANTHROPIC_API_KEY=sk-ant-your-key-here
-# OPENAI_API_KEY=sk-your-key-here
-# GEMINI_API_KEY=your-key-here
 ```
-
-> **Never commit `.env` to Git.** It's already in `.gitignore`. Your keys stay on your machine.
 
 ### Full .env reference
 
@@ -210,37 +199,41 @@ ANTHROPIC_API_KEY=sk-ant-...        # Claude — default, best results
 # OPENAI_API_KEY=sk-...            # GPT-4 + enables vector memory
 # GEMINI_API_KEY=...               # Google Gemini
 
-# ── Security (optional but recommended for production) ────────────────────────
-# Protects all API endpoints with a Bearer token
-# Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"
-# PACCA_ADMIN_TOKEN=
+# ── Security (optional — recommended if others can reach your PC) ─────────────
+# Protects all API endpoints with a Bearer token.
+# Generate one by running: python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Arix_ADMIN_TOKEN=
 
-# Comma-separated allowed WebSocket origins (leave blank = allow all, fine for local)
+# Comma-separated allowed WebSocket origins (blank = allow all, fine for local use)
 # PACCA_ALLOWED_ORIGINS=localhost,127.0.0.1
 
 # ── Runtime Tuning ────────────────────────────────────────────────────────────
 # How many seconds before a tool call times out (default: 60)
 # PACCA_TOOL_TIMEOUT=60
 
-# Override where the config file lives (default: ~/.arix/config.json)
-# PACCA_CONFIG_PATH=
-
 # ── Integrations (all optional — add only what you need) ──────────────────────
-# See Section 10 for how to get each of these credentials
+# See Section 10 for how to obtain each credential
 ```
+
+> **Never share your `.env` file.** It contains your private API keys. It is already listed in `.gitignore` so it won't be accidentally uploaded to GitHub.
 
 ---
 
 ## 8. Start the Server
 
-```bash
+Make sure your virtual environment is activated (`(.venv)` shows in your prompt), then:
+
+```cmd
 python main.py
 ```
 
 Expected output:
+
 ```
-INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     Started server process [...]
+INFO:     Waiting for application startup.
 INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
 ```
 
 Open your browser and go to:
@@ -249,41 +242,52 @@ Open your browser and go to:
 http://localhost:5000
 ```
 
-On your first visit you'll see the **onboarding screen** — enter your name, timezone, and preferred communication style. This personalizes how Arix talks to you.
+On your first visit you'll see the **onboarding screen** — enter your name, timezone, and preferred communication style. This personalises how Arix talks to you.
 
-> **Replit users:** The server is already running. Open the Webview tab — no `python main.py` needed.
+### To stop the server
+
+Press **Ctrl+C** in the Command Prompt window.
+
+### To restart after a reboot
+
+```cmd
+cd C:\Users\YourName\Downloads\friender
+.venv\Scripts\activate
+python main.py
+```
 
 ---
 
 ## 9. Local Bridge (Desktop Control)
 
-The **Local Bridge** runs on *your actual computer* and gives Arix mouse and keyboard control — clicking buttons, typing text, taking screenshots, just like you would.
+The **Local Bridge** gives Arix mouse and keyboard control over your PC — clicking buttons, typing text, reading the screen — just like a human would.
 
 | Without bridge | With bridge |
 |----------------|-------------|
-| File management, web browsing, integrations, code | Everything left + click inside any app, fill forms, control OBS Studio, use TikTok/Instagram natively |
+| File management, web browsing, integrations, code | Everything + click inside any app, fill forms, control OBS Studio, use TikTok/Instagram, type anywhere |
 
 ### Setup
 
-**Step 1 — Install bridge dependencies** *(one time only)*
+**Step 1 — Install bridge dependency** *(one time only)*
 
-```bash
-pip install pyautogui pillow websockets
+With your venv activated:
+
+```cmd
+pip install pyautogui
 ```
 
-**Step 2 — Run the bridge in a second terminal**
+**Step 2 — Run the bridge in a second Command Prompt window**
 
-Keep the Arix server running in your first terminal, then open a second one:
+Keep `python main.py` running in your first window. Open a **second Command Prompt**, navigate to the project folder, activate the venv, then:
 
-```bash
-# Local server
+```cmd
+cd C:\Users\YourName\Downloads\friender
+.venv\Scripts\activate
 python local_bridge/bridge_agent.py --server ws://localhost:5000/ws/bridge
-
-# Replit / cloud-hosted server
-python local_bridge/bridge_agent.py --server wss://your-app.replit.app/ws/bridge
 ```
 
 You'll see:
+
 ```
 ╔══════════════════════════════════════════╗
 ║   Arix Local Bridge Agent               ║
@@ -292,19 +296,26 @@ You'll see:
 Connected to Arix server ✓
 ```
 
-The header badge changes from **Bridge: Off** to **Bridge: On ✓**.
+The header badge in the browser changes from **Bridge: Off** to **Bridge: On ✓**.
+
+### Connecting to a cloud-hosted Arix (Replit)
+
+```cmd
+python local_bridge/bridge_agent.py --server wss://your-app.replit.app/ws/bridge
+```
 
 ### Safety features
 
 - **Failsafe:** Move your mouse to the **top-left corner** of the screen at any time to immediately stop all desktop automation.
 - **Disconnect:** Press `Ctrl+C` in the bridge terminal.
-- **Token protection:** Add `--token YOUR_TOKEN` to both the server and bridge if you set `PACCA_ADMIN_TOKEN` in your `.env`.
+- **Tip:** If something goes wrong mid-task, slam the mouse to the top-left — automation halts instantly.
+- **Admin token:** If you set `Arix_ADMIN_TOKEN` in `.env`, also pass `--token YOUR_TOKEN` when starting the bridge.
 
 ---
 
 ## 10. Integrations (Optional)
 
-These connect Arix to external services. Add the relevant variables to your `.env` file — Arix auto-detects which services are configured when it starts.
+These connect Arix to external services. Add the relevant lines to your `.env` file and restart the server — Arix auto-detects which services are configured.
 
 ---
 
@@ -313,10 +324,10 @@ These connect Arix to external services. Add the relevant variables to your `.en
 Read, search, send, and delete emails.
 
 **Get credentials:**
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services** → **Credentials**
 2. Enable the **Gmail API**
-3. Create an **OAuth 2.0 Client ID** (Desktop App type)
-4. Use the client ID + secret to run the OAuth flow and obtain a refresh token
+3. Create an **OAuth 2.0 Client ID** (Application type: Desktop App)
+4. Download the JSON, run the OAuth flow to get a refresh token
 
 ```env
 GMAIL_CLIENT_ID=your-client-id.apps.googleusercontent.com
@@ -324,7 +335,7 @@ GMAIL_CLIENT_SECRET=your-client-secret
 GMAIL_REFRESH_TOKEN=your-refresh-token
 ```
 
-**What you can then say:** *"Show my unread emails"*, *"Search Gmail for invoices"*, *"Send an email to…"*
+**What you can say:** *"Show my unread emails"*, *"Search Gmail for invoices"*, *"Send an email to…"*
 
 ---
 
@@ -338,7 +349,7 @@ GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret
 GOOGLE_DRIVE_REFRESH_TOKEN=your-refresh-token
 ```
 
-*(Same OAuth app as Gmail — just enable the Drive API too.)*
+*(Use the same Google Cloud project as Gmail — just also enable the Drive API.)*
 
 ---
 
@@ -352,7 +363,7 @@ GOOGLE_CALENDAR_CLIENT_SECRET=your-client-secret
 GOOGLE_CALENDAR_REFRESH_TOKEN=your-refresh-token
 ```
 
-*(Same OAuth app — enable the Calendar API.)*
+*(Same Google Cloud project — enable the Calendar API.)*
 
 ---
 
@@ -375,7 +386,7 @@ Send messages and interact with channels.
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create App** → From Scratch
 2. Under **OAuth & Permissions**, add bot scopes: `chat:write`, `channels:read`, `users:read`
-3. Install to workspace and copy the **Bot User OAuth Token**
+3. Install to workspace → copy the **Bot User OAuth Token**
 
 ```env
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
@@ -387,8 +398,8 @@ SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 
 Manage boards, lists, and cards.
 
-1. Go to [trello.com/app-key](https://trello.com/app-key) and copy your API key
-2. Generate a token on the same page
+1. Go to [trello.com/app-key](https://trello.com/app-key) and copy your **API Key**
+2. Generate a **Token** on the same page
 
 ```env
 TRELLO_API_KEY=your-trello-api-key
@@ -415,7 +426,7 @@ SPOTIFY_CLIENT_SECRET=your-client-secret
 
 Search videos, get channel info, manage playlists.
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services
+1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services**
 2. Enable **YouTube Data API v3** → create an **API Key**
 
 ```env
@@ -442,15 +453,15 @@ WHATSAPP_RECIPIENT=whatsapp:+1your-number
 
 ## 11. Example Commands
 
-Once Arix is running, just type in plain English:
+Once Arix is running, type in plain English in the browser terminal:
 
 ### Files & System
 ```
 Delete temp files from my PC
 Organize my Downloads folder by file type
-Find all PDFs in my Documents
+Find all PDFs in my Documents folder
 Zip the project folder
-Free up disk space and show me the result
+Free up disk space and show me a report
 ```
 
 ### Web & Research
@@ -467,6 +478,7 @@ Open TikTok and go to the upload page
 Open OBS Studio and start recording
 Open Instagram and go to Reels
 Open LinkedIn and check my messages
+Open Notepad and type a quick note
 ```
 
 ### Gmail & Calendar
@@ -506,13 +518,13 @@ Send a WhatsApp message to John saying I'll be 10 minutes late
 
 ## 12. Configuration Reference
 
-Arix's config lives at **`~/.arix/config.json`** and is created automatically on first run. You can also change settings in the **Settings panel** inside the UI.
+Arix's config is stored at **`C:\Users\YourName\.arix\config.json`** and is created automatically on first run. You can also change most settings from the **Settings panel** inside the browser UI.
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
 | `provider` | Which AI to use: `anthropic`, `openai`, `gemini` | `anthropic` |
 | `model` | Model name (auto-detected from your key) | `claude-sonnet-4-5` |
-| `risk_proceed_threshold` | Risk score below this → auto-proceed (no popup) | `30` |
+| `risk_proceed_threshold` | Risk score below this → auto-proceed silently | `30` |
 | `risk_confirm_threshold` | Risk score above this → must type YES | `100` |
 | `offline_mode` | Skip all LLM calls; use heuristic planner only | `false` |
 
@@ -529,96 +541,150 @@ Arix's config lives at **`~/.arix/config.json`** and is created automatically on
 
 ## 13. Troubleshooting
 
-### "Module not found" / import errors
-```bash
-pip install -e .
+### "Module not found" or import errors
+
+Make sure your virtual environment is active (`(.venv)` in your prompt), then reinstall:
+
+```cmd
+pip install -r requirements.txt
 ```
-Make sure your virtual environment is **activated** first (you should see `(.venv)` in your prompt).
+
+---
+
+### "python is not recognized as an internal or external command"
+
+Python is not on your PATH. Either:
+- Re-run the Python installer and tick **"Add Python to PATH"**
+- Or use `py -3.11` instead of `python` in every command
+
+---
+
+### Internal Server Error at localhost:5000
+
+This usually means the server started but hit an error processing your first request. Check the Command Prompt window running `python main.py` for the full error message. Common causes:
+
+- Missing or malformed `.env` file
+- A dependency wasn't installed — run `pip install -r requirements.txt` again
+- Port 5000 is in use by another process (see next section)
 
 ---
 
 ### Server won't start — port already in use
-```bash
-# Windows — find and kill the process on port 5000
-netstat -ano | findstr :5000
-taskkill /PID <PID_FROM_ABOVE> /F
 
-# macOS / Linux
-lsof -ti:5000 | xargs kill -9
+Find and kill the process using port 5000:
+
+```cmd
+netstat -ano | findstr :5000
 ```
+
+Note the PID number in the last column, then:
+
+```cmd
+taskkill /PID 12345 /F
+```
+
+Replace `12345` with the actual PID, then start `python main.py` again.
 
 ---
 
-### AI not working — responses are generic or slow
-1. Check your key is loaded:
-   ```bash
-   # Windows
+### AI not working — generic or no responses
+
+1. Check your key is visible to the server:
+
+   ```cmd
    echo %ANTHROPIC_API_KEY%
-   # macOS / Linux
-   echo $ANTHROPIC_API_KEY
    ```
-2. Make sure `.env` is saved in the project root folder
-3. Verify you have credits/quota on your API account
-4. Try offline mode as a test — add `"offline_mode": true` to `~/.arix/config.json`
+
+   If blank, the `.env` file isn't loading. Make sure it's in the project root folder (same folder as `main.py`).
+
+2. Verify you have credits/quota on your API provider's dashboard.
+3. Test offline mode — add `"offline_mode": true` to `C:\Users\YourName\.arix\config.json` to confirm the rest of the app is working.
+
+---
+
+### Virtual environment not activating
+
+If you see `".venv\Scripts\activate" is not recognized`:
+
+```cmd
+py -3.11 -m venv .venv
+```
+
+Then try activating again. If PowerShell blocks it with an execution policy error:
+
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+Then run `.venv\Scripts\activate` again.
 
 ---
 
 ### Bridge not connecting
-- The Arix server must be running **before** you start the bridge
-- For local: use `ws://` (not `wss://`)
-- For Replit / HTTPS: use `wss://`
-- Check the header badge — "Bridge: Off" means the bridge script isn't running
+
+- The Arix server (`python main.py`) must be **running first** before you start the bridge
+- Use `ws://` for local connections (not `wss://`)
+- Use `wss://` only when connecting to a cloud/Replit-hosted server
+- Check the browser header badge — **Bridge: Off** means the bridge script isn't running
 
 ---
 
 ### Desktop automation not working (click/type does nothing)
-- Make sure the bridge is running and shows **Bridge: On ✓**
-- **macOS:** Go to System Settings → Privacy & Security → Accessibility → allow Terminal or Python
-- **Windows:** Try running the bridge terminal as **Administrator**
-- Move mouse to the **top-left corner** to reset the failsafe if something is stuck
+
+- Confirm the bridge terminal shows **Connected to Arix server ✓**
+- Try running the bridge Command Prompt **as Administrator** (right-click → Run as administrator)
+- Move the mouse to the **top-left corner** to reset the failsafe if automation is stuck
 
 ---
 
 ### Browser (Playwright) errors
-```bash
-pip install playwright==1.49.1 playwright-stealth
+
+```cmd
 playwright install chromium
+```
+
+If `playwright` isn't recognised, run it via Python:
+
+```cmd
+python -m playwright install chromium
 ```
 
 ---
 
 ### Integration not responding (Gmail, Notion, Slack…)
-1. Double-check the env var is set in `.env` and the file is saved
-2. Restart the server after editing `.env` — it loads on startup
-3. Check the **Integrations panel** in the UI for a connection status indicator
-4. For Google OAuth: all three vars must be present (`CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`)
+
+1. Open `.env` and confirm the variable is present and has no extra spaces or quotes around the value.
+2. **Restart the server** after editing `.env` — it only reads the file at startup.
+3. Open the **Integrations panel** in the browser UI for a live connection status.
+4. For Google services (Gmail, Drive, Calendar): all three variables must be set — `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN`.
 
 ---
 
 ## Quick Start Checklist
 
 ```
- Core setup
- ─────────────────────────────────────────────────────
- [ ] Python 3.11+ installed and on PATH
- [ ] Project folder opened in a terminal
- [ ] Virtual environment created (.venv) and activated
- [ ] pip install -e .  completed with no errors
- [ ] .env.example copied to .env
- [ ] API key pasted into .env (Anthropic / OpenAI / Gemini)
- [ ] python main.py running — no errors in terminal
- [ ] http://localhost:5000 opens in browser
- [ ] Onboarding completed (name, timezone, style)
+Core setup
+─────────────────────────────────────────────────────────────
+[ ] Python 3.11+ installed — python --version confirms it
+[ ] Project folder opened in Command Prompt
+[ ] py -3.11 -m venv .venv  completed
+[ ] .venv\Scripts\activate  — prompt shows (.venv)
+[ ] pip install -r requirements.txt  — no errors
+[ ] copy .env.example .env  completed
+[ ] API key pasted into .env and file saved
+[ ] python main.py  running — "Application startup complete."
+[ ] http://localhost:5000  opens in browser
+[ ] Onboarding completed (name, timezone, style)
 
- Optional features
- ─────────────────────────────────────────────────────
- [ ] pip install pyautogui pillow websockets     ← desktop control
- [ ] python local_bridge/bridge_agent.py running ← bridge connected
- [ ] playwright install chromium                 ← browser automation
- [ ] Integration credentials added to .env       ← Gmail, Notion, etc.
+Optional features
+─────────────────────────────────────────────────────────────
+[ ] pip install pyautogui              ← desktop control
+[ ] python local_bridge/bridge_agent.py running  ← bridge on
+[ ] playwright install chromium        ← browser automation
+[ ] Integration credentials added to .env  ← Gmail, Notion…
 ```
 
 ---
 
-*Arix v8.2 — Personal AI Computer-Control Agent*
+*Arix v8.2 — Personal AI Computer-Control Agent · Windows 10/11*
 *For architecture details see `README.md` · For API docs see `docs/`*
