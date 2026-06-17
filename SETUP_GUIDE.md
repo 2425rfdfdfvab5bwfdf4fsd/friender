@@ -1,5 +1,5 @@
 # Arix — Personal AI Digital Employee
-## Complete Setup Guide
+## Complete Setup Guide (v8.2)
 
 ---
 
@@ -7,7 +7,7 @@
 
 Arix is your personal AI digital employee that runs on your computer. You give it tasks in plain language — like *"delete temp files from my PC"*, *"open TikTok and go to upload"*, or *"start recording on OBS Studio"* — and it figures out the steps, executes them automatically, and reports back when done.
 
-It can open and control any app on your computer, manage files, browse the web, send messages, fill forms, and complete multi-step workflows on your behalf. For sensitive actions (deleting files, sending messages, making purchases), it always asks for your approval first.
+It can open and control any app on your computer, manage files, browse the web, send messages, fill forms, run code, analyze images, read your Gmail, manage Google Drive, interact with Notion, Trello, Slack, Spotify, YouTube, and complete complex multi-step workflows on your behalf. For sensitive actions (deleting files, sending messages, git commits), it always asks for your approval first.
 
 ---
 
@@ -54,17 +54,17 @@ sudo apt install python3.11 python3.11-pip python3.11-venv -y
 
 ### Option A — Clone from Git (recommended)
 ```bash
-git clone https://github.com/your-username/pacca.git
-cd pacca
+git clone https://github.com/your-username/arix.git
+cd arix
 ```
 
 ### Option B — Download ZIP
 1. Download the project ZIP from Replit or GitHub
-2. Unzip it to a folder, e.g. `C:\Users\YourName\pacca` or `~/pacca`
+2. Unzip it to a folder, e.g. `C:\Users\YourName\arix` or `~/arix`
 3. Open a terminal and navigate into the folder:
    ```bash
-   cd ~/pacca      # macOS/Linux
-   cd C:\Users\YourName\pacca   # Windows
+   cd ~/arix       # macOS/Linux
+   cd C:\Users\YourName\arix   # Windows
    ```
 
 ---
@@ -94,12 +94,17 @@ You should see `(.venv)` at the start of your terminal prompt when it's active.
 pip install -e .
 ```
 
-This installs all required packages listed in `pyproject.toml` including FastAPI, the Anthropic SDK, document tools, and more.
+This installs all required packages listed in `pyproject.toml`, including FastAPI, Anthropic SDK, OpenAI SDK, document tools, cryptography, and more.
 
-### Optional — Browser automation (for web scraping and form filling)
+### Optional — Browser automation (for web scraping, form filling, clicking)
 ```bash
-pip install playwright playwright-stealth
+pip install playwright==1.49.1 playwright-stealth==2.0.3
 playwright install chromium
+```
+
+### Optional — Desktop automation (for the Local Bridge)
+```bash
+pip install pyautogui pillow websockets
 ```
 
 ---
@@ -108,17 +113,19 @@ playwright install chromium
 
 Arix needs an AI provider to understand your commands and plan tasks. Choose one:
 
-### Option A — Anthropic Claude (Recommended, best results)
+### Option A — Anthropic Claude (Recommended — best results)
 1. Go to [console.anthropic.com](https://console.anthropic.com)
 2. Sign up / log in
 3. Click **API Keys** → **Create Key**
 4. Copy the key (starts with `sk-ant-...`)
 
-### Option B — OpenAI (GPT-4)
+### Option B — OpenAI GPT-4
 1. Go to [platform.openai.com](https://platform.openai.com)
 2. Sign up / log in
 3. Go to **API Keys** → **Create new secret key**
 4. Copy the key (starts with `sk-...`)
+
+> **Note:** An OpenAI key also enables **vector memory search** (semantic similarity) using `text-embedding-3-small`. Without it, Arix falls back to keyword search.
 
 ### Option C — Google Gemini (Free tier available)
 1. Go to [aistudio.google.com](https://aistudio.google.com)
@@ -127,7 +134,7 @@ Arix needs an AI provider to understand your commands and plan tasks. Choose one
 
 ---
 
-## Step 6 — Set Your API Key
+## Step 6 — Set Your AI API Key
 
 ### Windows (Command Prompt — lasts until you close the window)
 ```cmd
@@ -158,7 +165,7 @@ echo 'export ANTHROPIC_API_KEY=sk-ant-your-key-here' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-> **Note:** Replace `ANTHROPIC_API_KEY` with `OPENAI_API_KEY` or `GEMINI_API_KEY` if you chose a different provider.
+> **Tip:** Replace `ANTHROPIC_API_KEY` with `OPENAI_API_KEY` or `GEMINI_API_KEY` if you chose a different provider.
 
 ---
 
@@ -174,7 +181,7 @@ INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
 INFO:     Application startup complete.
 ```
 
-Now open your browser and go to:
+Open your browser and go to:
 ```
 http://localhost:5000
 ```
@@ -187,11 +194,10 @@ Arix's chat interface will load. You'll see the onboarding screen on your first 
 
 The **Local Bridge** lets Arix control your physical desktop — clicking buttons, typing text, taking screenshots, and using any app installed on your PC, just like you would.
 
-> **Without the bridge:** Arix can manage files, browse the web, and open apps via web browser.
+> **Without the bridge:** Arix can manage files, browse the web, open apps, and call all integrations.
 > **With the bridge:** Arix can also click inside apps, fill forms, control OBS Studio, navigate TikTok/Instagram, and do anything you can do with a mouse and keyboard.
 
 ### Install bridge dependencies (one time only)
-
 ```bash
 pip install pyautogui pillow websockets
 ```
@@ -201,7 +207,7 @@ pip install pyautogui pillow websockets
 Open a **second terminal window** (keep the server running in the first), then:
 
 ```bash
-cd pacca
+cd arix
 python local_bridge/bridge_agent.py --server ws://localhost:5000/ws/bridge
 ```
 
@@ -222,7 +228,80 @@ The **Bridge: Off** badge in the Arix header will turn green: **Bridge: On ✓**
 
 ---
 
-## Step 9 — Using Arix as a Digital Employee
+## Step 9 — Configure Integrations (Optional)
+
+Arix supports 8 third-party service integrations. Each requires its own API credentials set as environment variables (or Replit Secrets if using Replit).
+
+### Gmail
+Required for reading, searching, sending, and deleting emails.
+```
+GMAIL_CLIENT_ID=your-google-oauth-client-id
+GMAIL_CLIENT_SECRET=your-google-oauth-client-secret
+GMAIL_REFRESH_TOKEN=your-oauth-refresh-token
+```
+Get credentials from [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → Credentials → OAuth 2.0 Client IDs (enable the Gmail API).
+
+### Google Drive
+Required for listing, searching, reading, and uploading files.
+```
+GOOGLE_DRIVE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_DRIVE_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_DRIVE_REFRESH_TOKEN=your-oauth-refresh-token
+```
+Same OAuth setup as Gmail — enable the Google Drive API in the same project.
+
+### Google Calendar
+Required for listing, creating, and deleting calendar events.
+```
+GOOGLE_CALENDAR_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CALENDAR_CLIENT_SECRET=your-google-oauth-client-secret
+GOOGLE_CALENDAR_REFRESH_TOKEN=your-oauth-refresh-token
+```
+Same OAuth setup — enable the Google Calendar API.
+
+### Notion
+```
+NOTION_API_KEY=secret_your-notion-integration-token
+```
+Get from [notion.so/my-integrations](https://www.notion.so/my-integrations) → New Integration.
+
+### Slack
+```
+SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
+```
+Get from [api.slack.com/apps](https://api.slack.com/apps) → Create App → Bot Token.
+
+### Trello
+```
+TRELLO_API_KEY=your-trello-api-key
+TRELLO_API_TOKEN=your-trello-api-token
+```
+Get from [trello.com/app-key](https://trello.com/app-key).
+
+### Spotify
+```
+SPOTIFY_CLIENT_ID=your-spotify-client-id
+SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
+SPOTIFY_ACCESS_TOKEN=your-spotify-access-token   # optional, auto-fetched
+```
+Get from [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → Create App.
+
+### YouTube
+```
+YOUTUBE_API_KEY=your-youtube-data-api-key
+```
+Get from [console.cloud.google.com](https://console.cloud.google.com) → APIs & Services → YouTube Data API v3.
+
+### WhatsApp (Meta Cloud API)
+```
+WHATSAPP_TOKEN=your-meta-cloud-api-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
+```
+Get from [developers.facebook.com](https://developers.facebook.com) → WhatsApp → Getting Started.
+
+---
+
+## Step 10 — Using Arix as a Digital Employee
 
 Once everything is running, you can give Arix tasks like a real employee. Here are examples:
 
@@ -234,6 +313,7 @@ Once everything is running, you can give Arix tasks like a real employee. Here a
 | `Organize my Downloads folder` | Create subfolders by type, move files |
 | `Backup my Documents to ~/Backup` | Copy all documents to backup folder |
 | `Find all PDF files in my Downloads` | Search and list every PDF |
+| `Zip the project folder` | Create a ZIP archive from any folder |
 
 ### App Control
 | Say this... | Arix will... |
@@ -251,7 +331,6 @@ Once everything is running, you can give Arix tasks like a real employee. Here a
 | `Start recording on OBS` | Launch OBS Studio, click Start Recording |
 | `Stop recording` | Click Stop Recording in OBS |
 | `Start streaming on OBS` | Launch OBS, click Start Streaming |
-| `Stop streaming` | Click Stop Streaming |
 
 ### Web & Research
 | Say this... | Arix will... |
@@ -259,14 +338,42 @@ Once everything is running, you can give Arix tasks like a real employee. Here a
 | `Search the web for iPhone 16 Pro reviews and save to a file` | Search, collect results, create a file |
 | `Download the file at https://example.com/report.pdf` | Download and save it |
 | `What's the latest news about AI?` | Search and summarize |
+| `Research the top 5 cloud storage services` | Browse, summarize, return structured results |
+| `Summarize the article at https://...` | Extract and summarize page content |
+
+### Gmail / Google Workspace
+| Say this... | Arix will... |
+|------------|--------------|
+| `Check my unread emails` | List recent unread Gmail messages |
+| `Search my email for invoices from last month` | Search Gmail and return results |
+| `Send an email to john@example.com about the project update` | Draft and send (asks approval) |
+| `List files in my Google Drive` | Fetch and display Drive file list |
+| `Show my calendar events for this week` | List Google Calendar events |
+| `Create a calendar event for Friday at 3pm — team standup` | Create event with details |
+
+### Notion / Trello / Slack
+| Say this... | Arix will... |
+|------------|--------------|
+| `Search my Notion for project notes` | Query your Notion workspace |
+| `Show my Trello boards` | List all boards and cards |
+| `Send a Slack message to #general saying the build passed` | Post Slack message (asks approval) |
+
+### Code & AI Analysis
+| Say this... | Arix will... |
+|------------|--------------|
+| `Generate a Python script that renames files by date` | Write and optionally save code |
+| `Explain this code` | AI-powered code explanation |
+| `Analyze the quality of main.py` | Code quality review |
+| `Run this Python snippet and show the output` | Execute code in a sandbox |
+| `Analyze the screenshot I just took` | AI vision analysis of any image |
 
 ### Multi-Step Goals (autonomous mode)
 | Say this... | Arix will... |
 |------------|--------------|
 | `Research the top 5 cloud storage services and create a comparison spreadsheet` | Research online → create Excel file |
-| `Open TikTok, go to messages, and check new messages` | Multi-step app navigation |
 | `Send a WhatsApp message to John saying I'll be late` | Open WhatsApp → find John → type message (asks approval before sending) |
 | `Clean up my PC and show me how much space was freed` | Full cleanup workflow with report |
+| `Read my latest emails and create a task list in Notion` | Gmail → Notion multi-step workflow |
 
 ---
 
@@ -283,11 +390,11 @@ For critical actions (like bulk file deletion), you must type **YES** before it 
 
 **Sensitive actions that trigger approval:**
 - Deleting files or folders
-- Sending messages (WhatsApp, email)
+- Sending messages (WhatsApp, Slack, email)
 - Publishing or posting content (Instagram, TikTok, LinkedIn)
 - Making purchases
 - Changing system settings
-- Git commits and pushes
+- Git commits
 
 ---
 
@@ -300,7 +407,7 @@ Arix stores its config at `~/.arix/config.json`. You can edit this file directly
 | Setting | Description | Default |
 |---------|-------------|---------|
 | `provider` | AI provider: `anthropic`, `openai`, `gemini` | `anthropic` |
-| `model` | Model name (auto-detected from API key) | `claude-sonnet-4-5` |
+| `model` | Model name (auto-detected from provider) | `claude-sonnet-4-5` |
 | `risk_proceed_threshold` | Risk score below this = auto-proceed | `30` |
 | `risk_confirm_threshold` | Risk score above this = require YES | `100` |
 | `offline_mode` | Run without any API key (demo mode) | `false` |
@@ -309,12 +416,48 @@ Arix stores its config at `~/.arix/config.json`. You can edit this file directly
 
 ## Environment Variables Reference
 
+### Core AI
+
 | Variable | Purpose |
 |----------|---------|
-| `ANTHROPIC_API_KEY` | Your Anthropic (Claude) API key |
-| `OPENAI_API_KEY` | Your OpenAI (GPT) API key |
-| `GEMINI_API_KEY` | Your Google Gemini API key |
-| `Arix_BRIDGE_TOKEN` | Optional security token for the bridge connection |
+| `ANTHROPIC_API_KEY` | Anthropic (Claude) API key — primary LLM provider |
+| `OPENAI_API_KEY` | OpenAI (GPT) API key + enables vector memory embeddings |
+| `GEMINI_API_KEY` | Google Gemini API key |
+
+### Google Workspace (OAuth)
+
+| Variable | Purpose |
+|----------|---------|
+| `GMAIL_CLIENT_ID` | Gmail OAuth client ID |
+| `GMAIL_CLIENT_SECRET` | Gmail OAuth client secret |
+| `GMAIL_REFRESH_TOKEN` | Gmail OAuth refresh token |
+| `GOOGLE_DRIVE_CLIENT_ID` | Google Drive OAuth client ID |
+| `GOOGLE_DRIVE_CLIENT_SECRET` | Google Drive OAuth client secret |
+| `GOOGLE_DRIVE_REFRESH_TOKEN` | Google Drive OAuth refresh token |
+| `GOOGLE_CALENDAR_CLIENT_ID` | Google Calendar OAuth client ID |
+| `GOOGLE_CALENDAR_CLIENT_SECRET` | Google Calendar OAuth client secret |
+| `GOOGLE_CALENDAR_REFRESH_TOKEN` | Google Calendar OAuth refresh token |
+
+### Other Integrations
+
+| Variable | Purpose |
+|----------|---------|
+| `NOTION_API_KEY` | Notion integration token |
+| `SLACK_BOT_TOKEN` | Slack bot OAuth token |
+| `TRELLO_API_KEY` | Trello API key |
+| `TRELLO_API_TOKEN` | Trello API token |
+| `SPOTIFY_CLIENT_ID` | Spotify app client ID |
+| `SPOTIFY_CLIENT_SECRET` | Spotify app client secret |
+| `SPOTIFY_ACCESS_TOKEN` | Spotify access token (auto-fetched if not set) |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key |
+| `WHATSAPP_TOKEN` | WhatsApp / Meta Cloud API token |
+| `WHATSAPP_PHONE_NUMBER_ID` | WhatsApp phone number ID |
+
+### Bridge Security
+
+| Variable | Purpose |
+|----------|---------|
+| `ARIX_BRIDGE_TOKEN` | Optional security token for the bridge connection |
 
 ---
 
@@ -323,14 +466,15 @@ Arix stores its config at `~/.arix/config.json`. You can edit this file directly
 If you're using the Replit-hosted version:
 
 1. The server is already running — open the **Webview** tab in Replit
-2. To connect the local bridge from your computer:
+2. Add your API keys in **Replit Secrets** (the padlock icon) — no `.env` file needed
+3. To connect the local bridge from your computer:
    ```bash
    pip install pyautogui pillow websockets
    python local_bridge/bridge_agent.py \
      --server wss://your-repl-name.replit.app/ws/bridge \
      --token YOUR_BRIDGE_TOKEN
    ```
-3. Find your Replit app URL in the Replit webview address bar
+4. Find your Replit app URL in the Replit webview address bar
 
 ---
 
@@ -358,9 +502,9 @@ lsof -ti:5000 | xargs kill -9
 - If you see "Bridge: Off" in the header, the bridge script is not running
 
 ### AI features not working (responses are generic)
-- Check your API key is set correctly: `echo $ANTHROPIC_API_KEY` (macOS/Linux) or `echo %ANTHROPIC_API_KEY%` (Windows)
+- Check your API key: `echo $ANTHROPIC_API_KEY` (macOS/Linux) or `echo %ANTHROPIC_API_KEY%` (Windows)
 - Make sure you have credits/quota on your API account
-- Try running in demo mode first: set `offline_mode: true` in `~/.arix/config.json`
+- Try demo mode: set `"offline_mode": true` in `~/.arix/config.json`
 
 ### Desktop automation not working (click/type commands fail)
 - The local bridge must be running
@@ -370,9 +514,14 @@ lsof -ti:5000 | xargs kill -9
 
 ### Browser automation (Playwright) errors
 ```bash
-pip install playwright playwright-stealth
+pip install playwright==1.49.1 playwright-stealth==2.0.3
 playwright install chromium
 ```
+
+### Integration not working (Gmail / Drive / Notion etc.)
+- Verify the environment variable is set: `echo $NOTION_API_KEY`
+- For Google OAuth integrations, make sure all three vars are set (`CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`)
+- Check the Integrations panel in the Arix UI for connection status and error messages
 
 ---
 
@@ -389,6 +538,29 @@ playwright install chromium
 - [ ] *(Optional)* `pip install pyautogui pillow websockets` for desktop control
 - [ ] *(Optional)* `python local_bridge/bridge_agent.py` running for full desktop automation
 - [ ] *(Optional)* `playwright install chromium` for browser automation
+- [ ] *(Optional)* Integration API keys added for Gmail, Drive, Notion, Slack, Trello, Spotify, YouTube, WhatsApp
+
+---
+
+## Complete Tool Registry (75 tools)
+
+| Domain | Count | Tools |
+|--------|-------|-------|
+| **file** | 10 | list_directory, create_folder, create_file, read_file, move_file, copy_file, search_files, zip_files, unzip_archive, move_to_trash |
+| **browser** | 14 | browser_open_url, browser_web_search, browser_extract_page_text, browser_download_file, browser_tab_management, browser_click, browser_type_text, browser_fill_form, browser_screenshot, browser_wait_for_element, browser_scroll, browser_go_back, browser_get_page_source, browser_get_structured_data |
+| **desktop** | 11 | desktop_screenshot, desktop_click, desktop_double_click, desktop_right_click, desktop_type_text, desktop_key, desktop_scroll, desktop_move_mouse, desktop_drag, desktop_find_and_click, desktop_read_screen |
+| **coding** | 6 | generate_code, explain_code, refactor_code, write_tests, analyze_code_quality, run_code |
+| **gmail** | 5 | gmail_list_emails, gmail_read_email, gmail_search_emails, gmail_send_email, gmail_delete_email |
+| **drive** | 4 | drive_list_files, drive_read_file, drive_search_files, drive_upload_file |
+| **git** | 4 | git_status, git_diff, git_add, git_commit |
+| **document** | 4 | create_docx, read_docx, create_xlsx, read_xlsx |
+| **app** | 4 | open_known_app, close_app, list_running_apps, find_installed_apps |
+| **calendar** | 3 | list_calendar_events, create_calendar_event, delete_calendar_event |
+| **web apps** | 3 | open_web_app, navigate_web_app, list_available_web_apps |
+| **vision** | 2 | analyze_image, capture_and_analyze |
+| **research** | 2 | research_topic, summarize_url |
+| **system** | 2 | system_monitor, cleanup_temp_files |
+| **messaging** | 1 | send_whatsapp_message |
 
 ---
 
@@ -398,13 +570,18 @@ playwright install chromium
 |----------|---------------|
 | **Social Media** | TikTok, Instagram, WhatsApp, LinkedIn, Facebook, Twitter/X, Snapchat, Telegram, Discord, Reddit |
 | **Productivity** | Gmail, Google Drive, Google Docs, Google Sheets, Google Calendar, Outlook, OneDrive, Notion, Trello |
-| **Desktop Apps** | Microsoft Excel, Word, PowerPoint, OBS Studio, Chrome, Firefox, Edge, Spotify, VLC, VS Code, Zoom, Slack |
+| **Communication** | Slack, WhatsApp (via Meta Cloud API), Email |
+| **Entertainment** | Spotify, YouTube, VLC |
+| **Desktop Apps** | Microsoft Excel, Word, PowerPoint, OBS Studio, Chrome, Firefox, Edge, VS Code, Zoom |
 | **Files** | Create, read, move, copy, search, zip/unzip, delete (with approval), clean temp files |
 | **System** | Monitor CPU/RAM/disk, list running apps, close apps, disk cleanup |
-| **Browser** | Open URLs, search the web, extract page content, fill forms, click elements, download files |
+| **Browser** | Open URLs, search the web, extract page content, fill forms, click elements, download files, take screenshots |
+| **Code** | Generate, explain, refactor, test, analyze quality, execute in sandbox |
+| **AI Vision** | Analyze any image, capture and analyze browser pages |
+| **Research** | Deep web research, URL summarization |
 | **Git** | Status, diff, add, commit (with approval) |
 | **Documents** | Create/read Word (.docx) and Excel (.xlsx) files |
 
 ---
 
-*Arix v8.x — Personal AI Computer-Control Agent*
+*Arix v8.2 — Personal AI Computer-Control Agent*
