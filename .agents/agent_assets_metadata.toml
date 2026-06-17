@@ -18,3 +18,9 @@ id = "7LtdAlLE0vbkQVNyTB4Kr"
 uri = "file://SETUP_GUIDE.md"
 type = "text"
 title = "Arix Setup Guide"
+
+[[outputs]]
+id = "4M2dHQz2zsFT51eja167b"
+uri = "file://research/awesome-claws-agents-deep-research.md"
+type = "text"
+title = "Awesome Claws — Deep Research Report"
