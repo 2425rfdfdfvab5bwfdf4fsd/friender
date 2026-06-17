@@ -398,6 +398,28 @@ function onWelcome(d) {
   pb.textContent = (d.provider||'—') + ' / ' + (d.model||'—');
   pb.className = d.llm_available ? 'live' : '';
   if (d.memory_count) updateBadge('mem', d.memory_count);
+
+  if (!d.llm_available && d.key_error) {
+    const banner = document.createElement('div');
+    banner.className = 'msg msg-asst';
+    banner.innerHTML = `
+      <div class="msg-avatar msg-avatar-logo"><img src="/static/logo.png" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block"></div>
+      <div class="msg-body">
+        <div class="msg-text" style="display:block">
+          <div class="msg-error" style="background:rgba(255,180,0,.12);border-color:rgba(255,180,0,.4);color:#ffb400">
+            <span class="msg-error-icon">⚠️</span>
+            <span><strong>No API key — running in demo mode</strong><br>
+            ${esc(d.key_error)}<br><br>
+            <strong>To fix:</strong> Open <code>.env</code> in your project folder, paste your key, save it, then restart the server.<br>
+            Demo mode still supports: file management, memory, todos, reminders, and heuristic-planned commands.</span>
+          </div>
+        </div>
+        <div class="msg-meta" style="display:flex"><span class="msg-time-lbl">${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</span></div>
+      </div>`;
+    chatThread.appendChild(banner);
+    scrollToBottom();
+  }
+
   if (!d.onboarding_complete) showOnboarding();
   else if (!S.briefShown) { S.briefShown = true; loadMorningBrief(); }
   loadAssistantPanel();

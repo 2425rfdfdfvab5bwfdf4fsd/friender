@@ -285,8 +285,11 @@ async def _handle_command(
 async def websocket_endpoint(ws: WebSocket):
     # ── Origin validation ─────────────────────────────────────────────────────
     origin = ws.headers.get("origin", "")
-    cfg = get_agent().config
-    allowed_origins: list[str] = getattr(cfg, "allowed_ws_origins", []) or []
+    try:
+        cfg = get_agent().config
+        allowed_origins: list[str] = getattr(cfg, "allowed_ws_origins", []) or []
+    except Exception:
+        allowed_origins = []
     env_origins = os.environ.get("Arix_ALLOWED_ORIGINS", "")
     if env_origins:
         allowed_origins = [o.strip() for o in env_origins.split(",") if o.strip()]
@@ -301,7 +304,16 @@ async def websocket_endpoint(ws: WebSocket):
             return
 
     await ws.accept()
-    agent = get_agent()
+
+    try:
+        agent = get_agent()
+    except Exception as exc:
+        await ws.send_json({
+            "type": "error",
+            "data": {"message": f"⚠ Arix could not start: {exc}\n\nCheck that your .env file is in the project folder and contains a valid API key, then restart the server."},
+        })
+        await ws.close()
+        return
 
     # ── Token auth (when Arix_ADMIN_TOKEN is set) ────────────────────────────
     if _ADMIN_TOKEN:
@@ -335,15 +347,27 @@ async def websocket_endpoint(ws: WebSocket):
         await outgoing.put({"type": type_, "data": data})
 
     wm = get_workflow_manager()
+    llm_available = agent.llm_client.is_available() if agent.llm_client else False
+    key_error = (agent.llm_client.key_error() if agent.llm_client else None) or None
+    if not llm_available and key_error:
+        welcome_msg = (
+            f"⚠ No API key found — running in demo mode (heuristic planner only).\n\n"
+            f"{key_error}\n\n"
+            f"Add your key to the .env file in the project folder, then restart the server.\n"
+            f"Type 'help' to see what you can still do in demo mode."
+        )
+    else:
+        welcome_msg = "Arix ready. Type a command, ask a question, or type 'help'."
     await put("welcome", {
         "version": "8.0.0",
         "provider": agent.config.provider,
         "model": agent.config.model,
-        "llm_available": agent.llm_client.is_available() if agent.llm_client else False,
+        "llm_available": llm_available,
+        "key_error": key_error,
         "onboarding_complete": is_onboarding_complete(),
         "memory_count": agent.memory.task_count(),
         "workflow_count": len(wm.list_workflows()) if wm else 0,
-        "message": "Arix ready. Type a command, ask a question, or type 'help'.",
+        "message": welcome_msg,
     })
 
     try:

@@ -18,6 +18,13 @@ import time as _time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+# Load .env before anything else so API keys are visible to all modules
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles

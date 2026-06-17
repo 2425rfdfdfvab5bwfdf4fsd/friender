@@ -260,8 +260,8 @@ class LLMClient:
         """Return a human-readable explanation if the key is known to be invalid."""
         if not self.api_key:
             return (
-                "No API key configured. Add ANTHROPIC_API_KEY or GEMINI_API_KEY "
-                "in Replit Secrets (🔒 sidebar)."
+                "No API key configured. Add ANTHROPIC_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY) "
+                "to your .env file, then restart the server."
             )
         if self.provider == "gemini" and not self.api_key.startswith("AIza"):
             return (
