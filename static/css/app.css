@@ -834,7 +834,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 @keyframes progressFlow{from{background-position:100% 0}to{background-position:-200% 0}}
 
 /* ── 14. Particle canvas — behind chat thread ── */
-#sfx-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.85}
+#sfx-canvas{position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.45}
 #chat-view{position:relative}
 #chat-thread{position:relative;z-index:1}
 #goal-bar{position:relative;z-index:2}
