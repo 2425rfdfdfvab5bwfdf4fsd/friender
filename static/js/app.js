@@ -2069,15 +2069,15 @@ async function triggerMemoryCompress() {
     const r = await fetch('/api/memory/compress?days=7', {method:'POST'});
     const d = await r.json();
     if (d.error) {
-      showToast('❌ Compress failed: ' + d.error, 'error');
+      toast('❌ Compress failed: ' + d.error, 'error');
     } else if (d.compressed === 0) {
-      showToast('ℹ️ Nothing to compress — no tasks older than 7 days', 'info');
+      toast('ℹ️ Nothing to compress — no tasks older than 7 days', 'info');
     } else {
-      showToast(`🗜️ Compressed ${d.compressed} task(s) across ${d.groups} group(s) into memory`, 'success');
+      toast(`🗜️ Compressed ${d.compressed} task(s) across ${d.groups} group(s) into memory`, 'success');
       loadMemory();
     }
   } catch(e) {
-    showToast('❌ Compress error: ' + e.message, 'error');
+    toast('❌ Compress error: ' + e.message, 'error');
   } finally {
     btn.textContent = orig;
     btn.disabled = false;
@@ -2093,13 +2093,13 @@ async function triggerDetectPrefs() {
     const r = await fetch('/api/memory/detect-preferences', {method:'POST'});
     const d = await r.json();
     if (d.count > 0) {
-      showToast(`🔍 Detected ${d.count} implicit preference(s)`, 'success');
+      toast(`🔍 Detected ${d.count} implicit preference(s)`, 'success');
       loadMemory();
     } else {
-      showToast('ℹ️ No new implicit preferences detected yet', 'info');
+      toast('ℹ️ No new implicit preferences detected yet', 'info');
     }
   } catch(e) {
-    showToast('❌ Detect prefs error: ' + e.message, 'error');
+    toast('❌ Detect prefs error: ' + e.message, 'error');
   } finally {
     btn.textContent = orig;
     btn.disabled = false;

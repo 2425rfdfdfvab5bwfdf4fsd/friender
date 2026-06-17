@@ -110,7 +110,10 @@ def _get_client_ip(request: Request) -> str:
 
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    limit = get_agent().config.api_rate_limit_per_minute
+    try:
+        limit = get_agent().config.api_rate_limit_per_minute
+    except Exception:
+        limit = 0
     if limit <= 0 or request.url.path.startswith("/static/") or request.url.path == "/favicon.ico":
         return await call_next(request)
 
