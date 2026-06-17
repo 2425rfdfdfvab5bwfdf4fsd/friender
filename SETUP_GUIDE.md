@@ -27,7 +27,7 @@
 Already have Python 3.11+ installed? Here's the fastest path. Open **Command Prompt** and run:
 
 ```cmd
-cd C:\Users\YourName\Downloads\friender
+cd C:\Users\Saif Khan\Downloads\friender
 
 rmdir /s /q .venv
 py -3.11 -m venv .venv
@@ -93,10 +93,8 @@ Open **http://localhost:5000** in your browser.
 3. Open **Command Prompt** inside that folder:
 
    ```cmd
-   cd C:\Users\YourName\Downloads\friender
+   cd C:\Users\Saif Khan\Downloads\friender
    ```
-
-   Replace `YourName` and `friender` with your actual username and folder name.
 
 ### Option B — Git clone
 
@@ -251,7 +249,7 @@ Press **Ctrl+C** in the Command Prompt window.
 ### To restart after a reboot
 
 ```cmd
-cd C:\Users\YourName\Downloads\friender
+cd C:\Users\Saif Khan\Downloads\friender
 .venv\Scripts\activate
 python main.py
 ```
@@ -281,7 +279,7 @@ pip install pyautogui
 Keep `python main.py` running in your first window. Open a **second Command Prompt**, navigate to the project folder, activate the venv, then:
 
 ```cmd
-cd C:\Users\YourName\Downloads\friender
+cd C:\Users\Saif Khan\Downloads\friender
 .venv\Scripts\activate
 python local_bridge/bridge_agent.py --server ws://localhost:5000/ws/bridge
 ```
@@ -518,7 +516,7 @@ Send a WhatsApp message to John saying I'll be 10 minutes late
 
 ## 12. Configuration Reference
 
-Arix's config is stored at **`C:\Users\YourName\.arix\config.json`** and is created automatically on first run. You can also change most settings from the **Settings panel** inside the browser UI.
+Arix's config is stored at **`C:\Users\Saif Khan\.arix\config.json`** and is created automatically on first run. You can also change most settings from the **Settings panel** inside the browser UI.
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -598,7 +596,7 @@ Replace `12345` with the actual PID, then start `python main.py` again.
    If blank, the `.env` file isn't loading. Make sure it's in the project root folder (same folder as `main.py`).
 
 2. Verify you have credits/quota on your API provider's dashboard.
-3. Test offline mode — add `"offline_mode": true` to `C:\Users\YourName\.arix\config.json` to confirm the rest of the app is working.
+3. Test offline mode — add `"offline_mode": true` to `C:\Users\Saif Khan\.arix\config.json` to confirm the rest of the app is working.
 
 ---
 
