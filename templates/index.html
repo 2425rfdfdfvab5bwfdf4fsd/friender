@@ -842,119 +842,194 @@
 <script>
 (function(){
   const cvs = document.getElementById('nn-bg');
-  const ctx = cvs.getContext('2d');
-  const ACCENT   = [91,156,246];
-  const ACCENT2  = [137,196,255];
-  const NODE_COUNT = 72;
-  const MAX_DIST  = 160;
-  const PULSE_SPEED = 0.0018;
+  const ctx  = cvs.getContext('2d');
 
-  let W, H, nodes = [], pulses = [];
+  /* ── Palette ─────────────────────────────────────────────────── */
+  const PALETTE = [
+    [91,156,246],   // core blue
+    [137,196,255],  // sky cyan
+    [110,170,255],  // mid blue
+    [160,120,255],  // soft violet
+    [72,200,230],   // teal
+  ];
 
+  /* ── Layer definitions (far → near) ─────────────────────────── */
+  const LAYERS = [
+    { count:20, rMin:0.8,  rMax:1.4,  speed:0.10, opacity:0.30, maxDist:130, hub:false },
+    { count:26, rMin:1.4,  rMax:2.2,  speed:0.18, opacity:0.55, maxDist:155, hub:false },
+    { count: 9, rMin:3.2,  rMax:5.0,  speed:0.11, opacity:1.00, maxDist:210, hub:true  },
+  ];
+
+  let W, H, nodes=[], pulses=[];
+
+  /* ── Sizing ──────────────────────────────────────────────────── */
   function resize(){
-    const rect = cvs.parentElement.getBoundingClientRect();
-    W = cvs.width  = rect.width  || window.innerWidth;
-    H = cvs.height = rect.height || window.innerHeight;
+    const r = cvs.parentElement.getBoundingClientRect();
+    W = cvs.width  = r.width  || innerWidth;
+    H = cvs.height = r.height || innerHeight;
   }
 
-  function randNode(){
+  /* ── Node factory ────────────────────────────────────────────── */
+  function mkNode(layer){
+    const col = PALETTE[Math.floor(Math.random()*PALETTE.length)];
     return {
-      x: Math.random()*W,
-      y: Math.random()*H,
-      vx:(Math.random()-.5)*0.28,
-      vy:(Math.random()-.5)*0.28,
-      r: 1.6 + Math.random()*1.6,
-      glow: Math.random()*Math.PI*2
+      x:  Math.random()*W,   y:  Math.random()*H,
+      vx: (Math.random()-.5)*layer.speed,
+      vy: (Math.random()-.5)*layer.speed,
+      wax: 0.25+Math.random()*0.35,  wfx: 0.0005+Math.random()*0.0007,
+      way: 0.25+Math.random()*0.35,  wfy: 0.0004+Math.random()*0.0006,
+      px:  Math.random()*Math.PI*2,  py: Math.random()*Math.PI*2,
+      r:   layer.rMin + Math.random()*(layer.rMax-layer.rMin),
+      col, op: layer.opacity, maxD: layer.maxDist, hub: layer.hub,
+      glow: Math.random()*Math.PI*2, gs: 0.010+Math.random()*0.015,
     };
   }
 
-  function initNodes(){
-    nodes = Array.from({length:NODE_COUNT}, randNode);
+  function init(){
+    nodes = [];
+    LAYERS.forEach(L => { for(let i=0;i<L.count;i++) nodes.push(mkNode(L)); });
   }
 
-  function spawnPulse(ax,ay,bx,by){
-    pulses.push({ax,ay,bx,by,t:0});
-  }
-
-  let lastPulse = 0;
-  function maybeSpawnPulse(now){
-    if(now - lastPulse < 420) return;
-    const i = Math.floor(Math.random()*nodes.length);
-    const a = nodes[i];
-    let best = null, bd = Infinity;
-    for(let j=0;j<nodes.length;j++){
-      if(j===i) continue;
-      const dx=nodes[j].x-a.x, dy=nodes[j].y-a.y, d=Math.hypot(dx,dy);
-      if(d<MAX_DIST && d<bd){ bd=d; best=j; }
-    }
-    if(best!==null){
-      spawnPulse(a.x,a.y,nodes[best].x,nodes[best].y);
-      lastPulse = now;
-    }
-  }
-
-  function draw(now){
-    ctx.clearRect(0,0,W,H);
-
+  /* ── Connections ─────────────────────────────────────────────── */
+  function drawEdges(){
     for(let i=0;i<nodes.length;i++){
-      const a = nodes[i];
+      const a=nodes[i];
       for(let j=i+1;j<nodes.length;j++){
-        const b = nodes[j];
-        const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy);
-        if(d>MAX_DIST) continue;
-        const alpha = (1-(d/MAX_DIST))*0.18;
-        ctx.strokeStyle=`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${alpha})`;
-        ctx.lineWidth=0.7;
-        ctx.beginPath();
-        ctx.moveTo(a.x,a.y);
-        ctx.lineTo(b.x,b.y);
-        ctx.stroke();
+        const b=nodes[j];
+        const dx=b.x-a.x, dy=b.y-a.y;
+        const d=Math.hypot(dx,dy);
+        const maxD=Math.max(a.maxD,b.maxD);
+        if(d>maxD) continue;
+        const fade=(1-d/maxD);
+        const base=(a.hub||b.hub)?0.32:0.13;
+        const alpha=fade*fade*base*Math.min(a.op,b.op);
+        const lw=(a.hub||b.hub)?1.1:0.55;
+        const g=ctx.createLinearGradient(a.x,a.y,b.x,b.y);
+        const [ar,ag,ab]=a.col, [br,bg,bb]=b.col;
+        g.addColorStop(0,   `rgba(${ar},${ag},${ab},${alpha})`);
+        g.addColorStop(0.45,`rgba(${br},${bg},${bb},${alpha*0.85})`);
+        g.addColorStop(1,   `rgba(${br},${bg},${bb},${alpha*0.25})`);
+        ctx.strokeStyle=g; ctx.lineWidth=lw;
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
       }
     }
+  }
 
-    pulses = pulses.filter(p=>{
-      p.t += PULSE_SPEED * 16;
+  /* ── Node rendering ──────────────────────────────────────────── */
+  function drawNode(n){
+    const pulse=0.72+0.28*Math.sin(n.glow);
+    const [r,g,b]=n.col;
+    const cr=n.r, op=n.op;
+    /* outermost ambient haze */
+    const g0=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,cr*16);
+    g0.addColorStop(0,`rgba(${r},${g},${b},${0.04*op*pulse})`);
+    g0.addColorStop(1,`rgba(${r},${g},${b},0)`);
+    ctx.fillStyle=g0; ctx.beginPath(); ctx.arc(n.x,n.y,cr*16,0,Math.PI*2); ctx.fill();
+    /* mid glow ring */
+    const g1=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,cr*7);
+    g1.addColorStop(0,  `rgba(${r},${g},${b},${0.20*op*pulse})`);
+    g1.addColorStop(0.55,`rgba(${r},${g},${b},${0.06*op})`);
+    g1.addColorStop(1,  `rgba(${r},${g},${b},0)`);
+    ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(n.x,n.y,cr*7,0,Math.PI*2); ctx.fill();
+    /* bright core */
+    const g2=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,cr);
+    g2.addColorStop(0,   `rgba(255,255,255,${0.92*op*pulse})`);
+    g2.addColorStop(0.35,`rgba(${r},${g},${b},${0.95*op*pulse})`);
+    g2.addColorStop(1,   `rgba(${r},${g},${b},${0.38*op})`);
+    ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(n.x,n.y,cr,0,Math.PI*2); ctx.fill();
+    /* hub orbital rings */
+    if(n.hub){
+      ctx.save();
+      ctx.strokeStyle=`rgba(${r},${g},${b},${0.22*pulse})`;
+      ctx.lineWidth=0.9;
+      ctx.beginPath(); ctx.arc(n.x,n.y,cr*3.5,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle=`rgba(${r},${g},${b},${0.10*pulse})`;
+      ctx.lineWidth=0.6;
+      ctx.setLineDash([4,6]);
+      ctx.beginPath(); ctx.arc(n.x,n.y,cr*6.2,0,Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+
+  /* ── Comet pulses ────────────────────────────────────────────── */
+  let _lastPulse=0;
+  function maybeSpawn(now){
+    if(now-_lastPulse < 260) return;
+    _lastPulse=now;
+    const hubs=nodes.filter(n=>n.hub);
+    const src=hubs[Math.floor(Math.random()*hubs.length)];
+    if(!src) return;
+    const targets=nodes
+      .filter(n=>n!==src)
+      .map(n=>({n,d:Math.hypot(n.x-src.x,n.y-src.y)}))
+      .filter(({d})=>d<src.maxD*1.5)
+      .sort((a,b)=>a.d-b.d)
+      .slice(0, src.hub&&Math.random()<0.4 ? 3 : 1);
+    targets.forEach(({n})=>pulses.push({
+      ax:src.x,ay:src.y,bx:n.x,by:n.y,
+      t:0, spd:0.0035+Math.random()*0.003,
+      col:Math.random()<0.6?src.col:n.col,
+      sz:(src.hub||n.hub)?10:6,
+    }));
+  }
+
+  function drawPulses(){
+    pulses=pulses.filter(p=>{
+      p.t+=p.spd;
       if(p.t>1) return false;
-      const px = p.ax+(p.bx-p.ax)*p.t;
-      const py = p.ay+(p.by-p.ay)*p.t;
-      const grad = ctx.createRadialGradient(px,py,0,px,py,7);
-      grad.addColorStop(0,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0.85)`);
-      grad.addColorStop(1,`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},0)`);
-      ctx.fillStyle=grad;
-      ctx.beginPath();
-      ctx.arc(px,py,7,0,Math.PI*2);
-      ctx.fill();
+      const px=p.ax+(p.bx-p.ax)*p.t;
+      const py=p.ay+(p.by-p.ay)*p.t;
+      const [r,g,b]=p.col;
+      const life=Math.sin(p.t*Math.PI);
+      /* comet trail */
+      const tLen=0.14, t0=Math.max(0,p.t-tLen);
+      const tx=p.ax+(p.bx-p.ax)*t0, ty=p.ay+(p.by-p.ay)*t0;
+      const trail=ctx.createLinearGradient(tx,ty,px,py);
+      trail.addColorStop(0,`rgba(${r},${g},${b},0)`);
+      trail.addColorStop(0.6,`rgba(${r},${g},${b},${0.30*life})`);
+      trail.addColorStop(1,`rgba(255,255,255,${0.55*life})`);
+      ctx.strokeStyle=trail; ctx.lineWidth=p.sz*0.55;
+      ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(px,py); ctx.stroke();
+      /* head flare */
+      const gh=ctx.createRadialGradient(px,py,0,px,py,p.sz*2.8);
+      gh.addColorStop(0,`rgba(255,255,255,${0.95*life})`);
+      gh.addColorStop(0.25,`rgba(${r},${g},${b},${0.75*life})`);
+      gh.addColorStop(1,`rgba(${r},${g},${b},0)`);
+      ctx.fillStyle=gh; ctx.beginPath(); ctx.arc(px,py,p.sz*2.8,0,Math.PI*2); ctx.fill();
       return true;
     });
+  }
 
+  /* ── Physics update ──────────────────────────────────────────── */
+  function update(now){
     for(const n of nodes){
-      n.glow += 0.022;
-      const glowAlpha = 0.55 + 0.45*Math.sin(n.glow);
-      const grad = ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r*3.5);
-      grad.addColorStop(0,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},${glowAlpha})`);
-      grad.addColorStop(1,`rgba(${ACCENT[0]},${ACCENT[1]},${ACCENT[2]},0)`);
-      ctx.fillStyle=grad;
-      ctx.beginPath();
-      ctx.arc(n.x,n.y,n.r*3.5,0,Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle=`rgba(${ACCENT2[0]},${ACCENT2[1]},${ACCENT2[2]},${glowAlpha})`;
-      ctx.beginPath();
-      ctx.arc(n.x,n.y,n.r,0,Math.PI*2);
-      ctx.fill();
-
-      n.x += n.vx; n.y += n.vy;
-      if(n.x<0||n.x>W) n.vx*=-1;
-      if(n.y<0||n.y>H) n.vy*=-1;
+      n.glow+=n.gs;
+      n.x+=n.vx + Math.sin(now*n.wfx+n.px)*n.wax*0.04;
+      n.y+=n.vy + Math.cos(now*n.wfy+n.py)*n.way*0.04;
+      if(n.x<-30)n.vx= Math.abs(n.vx);
+      if(n.x>W+30)n.vx=-Math.abs(n.vx);
+      if(n.y<-30)n.vy= Math.abs(n.vy);
+      if(n.y>H+30)n.vy=-Math.abs(n.vy);
     }
+  }
 
-    maybeSpawnPulse(now);
-    requestAnimationFrame(draw);
+  /* ── Main loop ───────────────────────────────────────────────── */
+  function loop(now){
+    ctx.clearRect(0,0,W,H);
+    drawEdges();
+    drawPulses();
+    nodes.forEach(drawNode);
+    maybeSpawn(now);
+    update(now);
+    requestAnimationFrame(loop);
   }
 
   resize();
-  initNodes();
-  window.addEventListener('resize',()=>{ resize(); initNodes(); });
-  requestAnimationFrame(draw);
+  init();
+  window.addEventListener('resize',()=>{ resize(); init(); });
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
