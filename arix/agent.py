@@ -381,6 +381,24 @@ class ArixAgent:
             state_to=new.value,
         )
 
+    async def _run_curator_async(self) -> None:
+        """Run Hermes-style Curator loop in the background (non-blocking)."""
+        try:
+            curator = get_curator()
+            curator.set_llm_client(self.llm_client)
+            curator.set_task_history(getattr(self, "task_history", None))
+            result = await curator.run_loop()
+            log.info(
+                "Curator run #%s complete — created=%s refined=%s pruned=%s core=%s",
+                result.get("run_number"),
+                result.get("stage_2_created"),
+                result.get("stage_3_refined"),
+                result.get("stage_4_pruned"),
+                result.get("core_skills"),
+            )
+        except Exception as e:
+            log.warning("Curator run error: %s", e)
+
     async def run_command(self, command: str,
                           task_id: str | None = None) -> AsyncIterator[AgentEvent]:
         task_id = task_id or str(uuid.uuid4())
@@ -792,6 +810,20 @@ class ArixAgent:
                     outcome="failed" if _had_error else "completed",
                     steps_executed=0,
                 )
+            except Exception:
+                pass
+
+            # ── Hermes-style Curator: fire after N completed goals ────────────
+            try:
+                curator = get_curator()
+                should_run = curator.on_goal_completed(
+                    goal=raw_cmd[:200],
+                    steps_completed=1,
+                    success=not _had_error,
+                )
+                if should_run and self.llm_client and self.llm_client.is_available():
+                    import asyncio as _asyncio
+                    _asyncio.ensure_future(self._run_curator_async())
             except Exception:
                 pass
 

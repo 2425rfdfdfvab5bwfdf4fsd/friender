@@ -538,6 +538,109 @@ PREDICTOR_HAND = Hand(
     ),
 )
 
+DESIGNER_HAND = Hand(
+    hand_id="designer-hand",
+    name="Designer",
+    icon="🎨",
+    description="UI/UX design, visual layout planning, CSS/HTML generation, and design system guidance. Creates polished interfaces and documents visual specifications.",
+    version="1.0.0",
+    category="Creative",
+    tool_domains=["file", "coding", "browser", "document"],
+    knowledge=[
+        "Start with user goals — design solves a problem, not decoration",
+        "Mobile-first: design for 375px then scale up",
+        "Use 8px spacing grid: 8, 16, 24, 32, 48, 64px",
+        "Contrast ratio: 4.5:1 minimum for body text (WCAG AA)",
+        "Limit to 2 typefaces: one for headings, one for body",
+        "Color palette: 1 primary, 1 accent, semantic (success/warning/danger), neutrals",
+        "Every interactive element needs 3 states: default, hover, active/focus",
+        "Animate at 150–300ms with ease-out; never animate layout shifts",
+        "Write CSS as custom properties (--color-primary) for theming",
+        "Deliver designs as HTML/CSS/React with real content, not placeholders",
+    ],
+    plans=[
+        HandPlan(
+            name="UI Component",
+            trigger_keywords=["design a", "create ui", "build component", "make a form", "design button"],
+            description="Design and code a polished UI component",
+            steps=[
+                "research_topic {component_type} best practices and examples",
+                "generate_code for the component in HTML/CSS with full styling",
+                "create file ~/design/{name}.html with the final component",
+            ],
+            estimated_duration_s=45,
+        ),
+        HandPlan(
+            name="Landing Page",
+            trigger_keywords=["landing page", "homepage", "website design", "create website"],
+            description="Full landing page with hero, features, and CTA",
+            steps=[
+                "research_topic {topic} competitor landing pages",
+                "generate_code full landing page HTML/CSS with hero, features, CTA sections",
+                "create file ~/design/{name}_landing.html with complete page",
+            ],
+            estimated_duration_s=90,
+        ),
+    ],
+    persona=(
+        "You are Arix's Designer Hand — a senior product designer and front-end developer. "
+        "You create beautiful, accessible, production-ready interfaces. You speak in design "
+        "tokens, think in component systems, and always deliver real code, not mockups."
+    ),
+)
+
+DATA_HAND = Hand(
+    hand_id="data-hand",
+    name="Data",
+    icon="📊",
+    description="Data analysis, CSV/Excel processing, chart generation, statistical insights, and data pipeline design. Turns raw data into clear, actionable findings.",
+    version="1.0.0",
+    category="Intelligence",
+    tool_domains=["file", "coding", "document", "research"],
+    knowledge=[
+        "Always inspect data before analyzing: shape, dtypes, null counts, sample rows",
+        "State the question you're answering before writing any code",
+        "Choose chart type to match the insight: bar=compare, line=trend, scatter=correlation",
+        "Report effect sizes, not just p-values — practical significance matters",
+        "Outliers are data too: investigate before removing them",
+        "Always check for duplicates and data quality issues first",
+        "Use descriptive variable names in analysis code — future you will thank you",
+        "Export results in two formats: CSV for data, MD/HTML for narrative findings",
+        "For large datasets: sample first, validate logic, then run on full data",
+        "Every analysis should answer: What? So what? Now what?",
+    ],
+    plans=[
+        HandPlan(
+            name="Data Analysis",
+            trigger_keywords=["analyze data", "analyze csv", "analyze excel", "look at this data", "data insights"],
+            description="Full EDA with statistics and visualisation",
+            steps=[
+                "read_file {file_path} to inspect the raw data",
+                "generate_code Python pandas EDA: shape, dtypes, describe, null counts, top values",
+                "run_code the analysis to get results",
+                "create file ~/analysis/{name}_report.md with full findings and recommendations",
+            ],
+            estimated_duration_s=90,
+        ),
+        HandPlan(
+            name="Excel Report",
+            trigger_keywords=["excel report", "create spreadsheet", "build dashboard in excel", "make xlsx"],
+            description="Build a structured Excel report from data",
+            steps=[
+                "read_file {source_file} to understand the data",
+                "create_xlsx ~/reports/{name}.xlsx with multiple sheets: data, summary, charts",
+            ],
+            estimated_duration_s=40,
+        ),
+    ],
+    persona=(
+        "You are Arix's Data Hand — a senior data scientist and analyst. You approach every "
+        "dataset with rigorous statistical thinking, clear business framing, and a talent for "
+        "turning numbers into narratives. Your analyses are reproducible, honest about "
+        "uncertainty, and always actionable."
+    ),
+)
+
 WRITER_HAND = Hand(
     hand_id="writer-hand",
     name="Writer",
@@ -608,6 +711,8 @@ BUILTIN_HANDS: List[Hand] = [
     BROWSER_HAND,
     CLIP_HAND,
     LEAD_HAND,
+    DESIGNER_HAND,
+    DATA_HAND,
 ]
 
 

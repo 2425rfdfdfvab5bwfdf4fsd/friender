@@ -122,6 +122,7 @@ function dispatch(type, data) {
     case 'tool_loop_result': onToolLoopResult(data); break;
     case 'tool_loop_done':   onToolLoopDone(data); break;
     case 'tool_loop_error':  onToolLoopError(data); break;
+    case 'a2ui_card':       onA2uiCard(data); break;
     default: break;
   }
 }
@@ -631,7 +632,160 @@ function onToolLoopError(d) {
     `<span style="color:var(--danger)">⚠ ${esc(d.error||'Agent loop error')}</span>`,
     'loop-err-row'
   );
-  // Don't finalize yet — completed event will follow if not had_error
+}
+
+// ── A2UI card rendering (OpenClaw Live Canvas equivalent) ─────────────────────
+
+function onA2uiCard(d) {
+  const lc = _getLoopContainer(d.task_id);
+  if (!lc) return;
+  const ls = lc.querySelector('.loop-steps');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'a2ui-card-wrapper';
+  const card = d.card || {};
+  wrapper.innerHTML = _renderA2uiCard(card);
+  ls.appendChild(wrapper);
+  scrollToBottom();
+}
+
+function _renderA2uiCard(card) {  // noqa
+  const type = card.type || 'list';
+  const title = card.title ? `<div class="a2ui-title">${esc(card.title)}</div>` : '';
+
+  switch (type) {
+    case 'table': return title + _a2uiTable(card);
+    case 'list':  return title + _a2uiList(card);
+    case 'metric': return title + _a2uiMetric(card);
+    case 'chart': return title + _a2uiChart(card);
+    case 'code':  return title + _a2uiCode(card);
+    case 'timeline': return title + _a2uiTimeline(card);
+    case 'kanban': return title + _a2uiKanban(card);
+    case 'progress': return title + _a2uiProgress(card);
+    default: return title + `<div class="a2ui-raw">${esc(JSON.stringify(card))}</div>`;
+  }
+}
+
+function _a2uiTable(card) {
+  const cols = card.columns || [];
+  const rows = card.rows || [];
+  if (!cols.length && !rows.length) return '<div class="a2ui-empty">No data</div>';
+  let h = '<div class="a2ui-table-wrap"><table class="a2ui-table"><thead><tr>';
+  cols.forEach(c => h += `<th>${esc(c)}</th>`);
+  h += '</tr></thead><tbody>';
+  rows.slice(0, 100).forEach(row => {
+    h += '<tr>';
+    (Array.isArray(row) ? row : [row]).forEach(cell => h += `<td>${esc(String(cell ?? ''))}</td>`);
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  if (rows.length > 100) h += `<div class="a2ui-more">+${rows.length-100} more rows</div>`;
+  return h;
+}
+
+function _a2uiList(card) {
+  const items = card.items || [];
+  if (!items.length) return '<div class="a2ui-empty">Empty</div>';
+  let h = '<ul class="a2ui-list">';
+  items.slice(0, 60).forEach(item => {
+    const icon = esc(item.icon || card.icon || '•');
+    const label = esc(item.label || '');
+    const sub = item.sub ? `<span class="a2ui-sub">${esc(item.sub)}</span>` : '';
+    const badge = item.badge ? `<span class="a2ui-badge">${esc(item.badge)}</span>` : '';
+    h += `<li class="a2ui-list-item"><span class="a2ui-icon">${icon}</span><span class="a2ui-label">${label}${sub}</span>${badge}</li>`;
+  });
+  h += '</ul>';
+  if (items.length > 60) h += `<div class="a2ui-more">+${items.length-60} more</div>`;
+  return h;
+}
+
+function _a2uiMetric(card) {
+  const metrics = card.metrics || [];
+  let h = '<div class="a2ui-metric-grid">';
+  metrics.forEach(m => {
+    h += `<div class="a2ui-metric-tile">
+      <div class="a2ui-metric-value">${esc(String(m.value ?? '—'))}<span class="a2ui-metric-unit">${esc(m.unit||'')}</span></div>
+      <div class="a2ui-metric-label">${esc(m.label||'')}</div>
+      ${m.trend ? `<div class="a2ui-metric-trend">${esc(m.trend)}</div>` : ''}
+    </div>`;
+  });
+  h += '</div>';
+  return h;
+}
+
+function _a2uiChart(card) {
+  const labels = card.labels || [];
+  const values = card.values || [];
+  const unit = card.unit || '';
+  if (!values.length) return '<div class="a2ui-empty">No chart data</div>';
+  const maxV = Math.max(...values, 1);
+  let h = `<div class="a2ui-chart a2ui-chart-${card.chart_type||'bar'}">`;
+  labels.forEach((lbl, i) => {
+    const pct = Math.round((values[i] / maxV) * 100);
+    const val = values[i];
+    h += `<div class="a2ui-bar-row">
+      <div class="a2ui-bar-label">${esc(String(lbl))}</div>
+      <div class="a2ui-bar-track"><div class="a2ui-bar-fill" style="width:${pct}%"></div></div>
+      <div class="a2ui-bar-val">${esc(String(val))}${esc(unit)}</div>
+    </div>`;
+  });
+  h += '</div>';
+  return h;
+}
+
+function _a2uiCode(card) {
+  const lang = esc(card.language || 'text');
+  const code = esc(card.code || '');
+  return `<div class="a2ui-code"><div class="a2ui-code-lang">${lang}</div><pre class="a2ui-pre"><code>${code}</code></pre></div>`;
+}
+
+function _a2uiTimeline(card) {
+  const events = card.events || [];
+  if (!events.length) return '<div class="a2ui-empty">No events</div>';
+  let h = '<ul class="a2ui-timeline">';
+  events.forEach(e => {
+    const icon = esc(e.icon || '📌');
+    const time = e.time ? `<span class="a2ui-tl-time">${esc(e.time)}</span>` : '';
+    const sub = e.sub ? `<div class="a2ui-tl-sub">${esc(e.sub)}</div>` : '';
+    h += `<li class="a2ui-tl-item">
+      <span class="a2ui-tl-icon">${icon}</span>
+      <div class="a2ui-tl-body"><div class="a2ui-tl-header">${esc(e.label||'')} ${time}</div>${sub}</div>
+    </li>`;
+  });
+  h += '</ul>';
+  return h;
+}
+
+function _a2uiKanban(card) {
+  const columns = card.columns || [];
+  let h = '<div class="a2ui-kanban">';
+  columns.forEach(col => {
+    const color = col.color || 'var(--accent)';
+    let ch = `<div class="a2ui-kanban-col"><div class="a2ui-kanban-hdr" style="border-top:3px solid ${color}">${esc(col.name||'Column')}</div><ul class="a2ui-kanban-items">`;
+    (col.items || []).forEach(item => {
+      ch += `<li class="a2ui-kanban-card"><strong>${esc(item.title||'')}</strong>${item.sub ? `<div class="a2ui-sub">${esc(item.sub)}</div>` : ''}</li>`;
+    });
+    if (!col.items || !col.items.length) ch += `<li class="a2ui-kanban-empty">Empty</li>`;
+    ch += '</ul></div>';
+    h += ch;
+  });
+  h += '</div>';
+  return h;
+}
+
+function _a2uiProgress(card) {
+  const items = card.items || [];
+  let h = '<div class="a2ui-progress-list">';
+  items.forEach(item => {
+    const pct = Math.min(100, Math.round((item.value / (item.max || 100)) * 100));
+    const color = item.color || 'var(--accent)';
+    const unit = item.unit || '%';
+    h += `<div class="a2ui-progress-row">
+      <div class="a2ui-progress-meta"><span class="a2ui-progress-label">${esc(item.label||'')}</span><span class="a2ui-progress-val">${esc(String(item.value))}${esc(unit)}</span></div>
+      <div class="a2ui-progress-track"><div class="a2ui-progress-bar" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  });
+  h += '</div>';
+  return h;
 }
 
 // ── Contextual action chips after assistant response ──────────────────────────

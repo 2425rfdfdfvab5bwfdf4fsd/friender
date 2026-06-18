@@ -490,28 +490,52 @@ class ToolCallingLoop:
                     })
                 return
 
-            # Execute all tool_use blocks
-            tool_results = []
+            # Emit all call announcements first (parallel batch)
+            tool_calls_info = []
             for block in tool_use_blocks:
                 tool_name = block.name
                 tool_args = dict(block.input) if block.input else {}
-
+                tool_calls_info.append((block, tool_name, tool_args))
                 yield ("tool_loop_call", {
                     "task_id": task_id,
                     "tool": tool_name,
                     "args": {k: str(v)[:120] for k, v in tool_args.items()},
                     "iteration": iteration + 1,
+                    "parallel": len(tool_use_blocks) > 1,
                 })
 
-                result = await self._execute_tool(tool_name, tool_args)
+            # Execute ALL tool calls in parallel (asyncio.gather)
+            raw_results = await asyncio.gather(*[
+                self._execute_tool(tn, ta)
+                for (_, tn, ta) in tool_calls_info
+            ])
+
+            tool_results = []
+            for (block, tool_name, tool_args), result in zip(tool_calls_info, raw_results):
                 result_text = _truncate_result(result)
+                success = "error" not in str(result_text).lower()[:50]
+
+                # Try to emit an A2UI card for rich visual rendering
+                a2ui_card = None
+                try:
+                    from arix.intelligence.a2ui import result_to_card
+                    a2ui_card = result_to_card(tool_name, tool_args, result)
+                except Exception:
+                    pass
 
                 yield ("tool_loop_result", {
                     "task_id": task_id,
                     "tool": tool_name,
                     "result_preview": result_text[:300],
-                    "success": "error" not in str(result_text).lower()[:50],
+                    "success": success,
                 })
+
+                if a2ui_card:
+                    yield ("a2ui_card", {
+                        "task_id": task_id,
+                        "tool": tool_name,
+                        "card": a2ui_card,
+                    })
 
                 tool_results.append({
                     "type": "tool_result",
@@ -624,30 +648,47 @@ class ToolCallingLoop:
                     })
                 return
 
-            # Execute tool calls
+            # Parse all tool calls first
+            parsed_calls = []
             for tc in msg.tool_calls:
                 tool_name = tc.function.name
                 try:
                     tool_args = json.loads(tc.function.arguments or "{}")
                 except json.JSONDecodeError:
                     tool_args = {}
-
+                parsed_calls.append((tc, tool_name, tool_args))
                 yield ("tool_loop_call", {
                     "task_id": task_id,
                     "tool": tool_name,
                     "args": {k: str(v)[:120] for k, v in tool_args.items()},
                     "iteration": iteration + 1,
+                    "parallel": len(msg.tool_calls) > 1,
                 })
 
-                result = await self._execute_tool(tool_name, tool_args)
+            # Execute ALL tool calls in parallel
+            raw_results = await asyncio.gather(*[
+                self._execute_tool(tn, ta) for (_, tn, ta) in parsed_calls
+            ])
+
+            for (tc, tool_name, tool_args), result in zip(parsed_calls, raw_results):
                 result_text = _truncate_result(result)
+                success = "error" not in str(result_text).lower()[:50]
 
                 yield ("tool_loop_result", {
                     "task_id": task_id,
                     "tool": tool_name,
                     "result_preview": result_text[:300],
-                    "success": "error" not in str(result_text).lower()[:50],
+                    "success": success,
                 })
+
+                # A2UI card
+                try:
+                    from arix.intelligence.a2ui import result_to_card
+                    card = result_to_card(tool_name, tool_args, result)
+                    if card:
+                        yield ("a2ui_card", {"task_id": task_id, "tool": tool_name, "card": card})
+                except Exception:
+                    pass
 
                 messages.append({
                     "role": "tool",
