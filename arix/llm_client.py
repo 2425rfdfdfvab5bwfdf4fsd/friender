@@ -247,10 +247,10 @@ PROVIDER_REGISTRY: dict[str, dict] = {
     "gemini": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "env_key": "GEMINI_API_KEY",
-        "default_model": "gemini-2.0-flash",
+        "default_model": "gemini-2.0-flash-lite",
         "description": "Google Gemini — multimodal, large context",
-        "models": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro",
-                   "gemini-1.5-flash", "gemini-2.5-pro-preview-06-05"],
+        "models": ["gemini-2.0-flash-lite", "gemini-2.0-flash", "gemini-1.5-flash",
+                   "gemini-1.5-pro", "gemini-2.5-pro-preview-06-05"],
     },
     "groq": {
         "base_url": "https://api.groq.com/openai/v1",

@@ -12,11 +12,11 @@ CONFIG_FILE = Arix_DIR / "config.json"
 
 @dataclass
 class ArixConfig:
-    provider: str = "anthropic"
-    model: str = "claude-opus-4-5"
-    sanitizer_provider: str = "anthropic"
-    sanitizer_model: str = "claude-haiku-4-5"
-    gemini_default_model: str = "gemini-2.0-flash"
+    provider: str = "gemini"
+    model: str = "gemini-2.0-flash-lite"
+    sanitizer_provider: str = "gemini"
+    sanitizer_model: str = "gemini-2.0-flash-lite"
+    gemini_default_model: str = "gemini-2.0-flash-lite"
     max_steps: int = 30
     risk_proceed_threshold: float = 30.0
     risk_confirm_threshold: float = 100.0
@@ -98,8 +98,8 @@ class ArixConfig:
         }
         # Default model for each provider
         default_models = {
-            "anthropic": "claude-opus-4-5",
-            "openai": "gpt-4o",
+            "anthropic": "claude-haiku-4-5",
+            "openai": "gpt-4o-mini",
             "gemini": cfg.gemini_default_model,
             "groq": "llama-3.3-70b-versatile",
             "together": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
