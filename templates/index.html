@@ -104,6 +104,7 @@
       <button class="snav-btn" data-panel="canvas" onclick="switchPanel('canvas')"><span class="snav-icon">🎨</span>Live Canvas</button>
       <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="agents" onclick="switchPanel('agents')"><span class="snav-icon">🤖</span>Agents</button>
+      <button class="snav-btn" data-panel="research-mode" onclick="switchPanel('research-mode')"><span class="snav-icon">🔬</span>Research Mode</button>
       <button class="snav-btn" data-panel="curator" onclick="switchPanel('curator')"><span class="snav-icon">🧬</span>Curator</button>
       <button class="snav-btn" data-panel="knowledge" onclick="switchPanel('knowledge')"><span class="snav-icon">📚</span>Knowledge</button>
       <button class="snav-btn" data-panel="hands" onclick="switchPanel('hands')"><span class="snav-icon">✋</span>Hands</button>
@@ -606,6 +607,64 @@
         <div id="agents-history" style="font-size:11px;color:var(--text2)"></div>
       </div>
 
+      <!-- ── Research Mode panel ─────────────────────────────────────── -->
+      <div id="panel-research-mode" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🔬</span>
+          <span class="intg-title">Autonomous Research</span>
+          <button class="panel-btn" onclick="loadResearchMode()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.6">
+          Inspired by HermitClaw — Arix autonomously picks topics from your history and researches them in the background, building a living knowledge base without prompting.
+        </div>
+
+        <!-- Status card -->
+        <div id="rm-status-card" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div id="rm-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:all .4s"></div>
+            <span id="rm-status-label" style="font-size:12px;font-weight:700;color:var(--text)">Inactive</span>
+            <span id="rm-next-run" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px">
+            <div style="text-align:center;background:var(--surface3);border-radius:var(--radius-sm);padding:8px">
+              <div id="rm-sessions" style="font-size:18px;font-weight:800;color:var(--accent)">0</div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Sessions</div>
+            </div>
+            <div style="text-align:center;background:var(--surface3);border-radius:var(--radius-sm);padding:8px">
+              <div id="rm-interval" style="font-size:18px;font-weight:800;color:var(--accent2)">45</div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">Min Interval</div>
+            </div>
+          </div>
+          <div id="rm-last-topic" style="font-size:10.5px;color:var(--text2);font-style:italic;margin-bottom:10px"></div>
+          <div style="display:flex;gap:6px">
+            <button id="rm-toggle-btn" class="panel-btn primary" onclick="toggleResearchMode()" style="flex:1">▶ Start</button>
+            <button class="panel-btn" onclick="runResearchNow()" title="Research one topic right now" style="flex:0;white-space:nowrap">⚡ Now</button>
+          </div>
+        </div>
+
+        <!-- Interval setting -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap">Interval (min)</span>
+          <input type="number" id="rm-interval-input" min="5" max="1440" value="45"
+            style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:var(--radius-sm);font-size:11px;width:70px;outline:none">
+          <button class="panel-btn" onclick="updateResearchInterval()" style="flex:0;white-space:nowrap">Set</button>
+        </div>
+
+        <!-- Seed topics -->
+        <div class="qa-section-title" style="margin-bottom:6px">Seed Topics</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-bottom:6px">Topics Arix will always research (alongside auto-discovered ones from your history).</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <input class="panel-input" id="rm-seed-input" placeholder="Add a topic…" style="margin:0;flex:1"
+            onkeydown="if(event.key==='Enter')addResearchSeed()">
+          <button class="panel-btn primary" onclick="addResearchSeed()" style="flex:0">+</button>
+        </div>
+        <div id="rm-seeds-list" style="margin-bottom:12px"></div>
+
+        <!-- Recent findings -->
+        <div class="qa-section-title" style="margin-bottom:6px">Recent Findings</div>
+        <div id="rm-findings-list"></div>
+      </div>
+
       <!-- ── Curator panel ───────────────────────────────────────────── -->
       <div id="panel-curator" class="panel">
         <div class="intg-header">
@@ -1094,6 +1153,106 @@ async function loadAgents(){
   }catch(e){console.error(e);}
 }
 function agentIcon(role){return{researcher:'🔬',coder:'💻',ops:'⚙️',planner:'🗺️',general:'🤖'}[role]||'🤖';}
+
+// ── v9.0: Research Mode ────────────────────────────────────────────────────
+let _rmEnabled = false;
+async function loadResearchMode(){
+  try{
+    const s = await fetch('/api/research-mode/status').then(r=>r.json());
+    _rmEnabled = s.enabled;
+    const dot = document.getElementById('rm-status-dot');
+    const lbl = document.getElementById('rm-status-label');
+    const btn = document.getElementById('rm-toggle-btn');
+    const nxt = document.getElementById('rm-next-run');
+    const topic = document.getElementById('rm-last-topic');
+    document.getElementById('rm-sessions').textContent = s.total_sessions;
+    document.getElementById('rm-interval').textContent = s.interval_minutes;
+    document.getElementById('rm-interval-input').value = s.interval_minutes;
+    if(s.enabled){
+      dot.style.background='var(--success)';dot.style.boxShadow='0 0 7px rgba(18,194,133,.65)';
+      lbl.textContent='Active';lbl.style.color='var(--success)';
+      btn.textContent='⏹ Stop';btn.style.background='rgba(240,82,82,.15)';btn.style.borderColor='rgba(240,82,82,.3)';btn.style.color='var(--danger)';
+      if(s.next_run_in_seconds>0){
+        const m=Math.floor(s.next_run_in_seconds/60),sec=s.next_run_in_seconds%60;
+        nxt.textContent=`Next in ${m}m ${sec}s`;
+      }else{nxt.textContent='Running soon…';}
+    }else{
+      dot.style.background='var(--muted)';dot.style.boxShadow='none';
+      lbl.textContent='Inactive';lbl.style.color='var(--text)';
+      btn.textContent='▶ Start';btn.style.background='';btn.style.borderColor='';btn.style.color='';
+      nxt.textContent='';
+    }
+    topic.textContent = s.last_topic ? `Last researched: "${s.last_topic}"` : 'No sessions yet';
+    // Seeds
+    const seedsEl = document.getElementById('rm-seeds-list');
+    if(!s.seed_topics||!s.seed_topics.length){
+      seedsEl.innerHTML='<div style="font-size:10.5px;color:var(--muted);font-style:italic">No seed topics — Arix picks from your history automatically.</div>';
+    }else{
+      seedsEl.innerHTML=s.seed_topics.map(t=>`
+        <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border2)">
+          <span style="font-size:11px;color:var(--text);flex:1">${escHtml(t)}</span>
+          <button class="panel-btn" style="font-size:10px;padding:2px 7px;color:var(--danger)" onclick="removeResearchSeed('${escHtml(t)}')">✕</button>
+        </div>`).join('');
+    }
+    // Findings
+    const fd = await fetch('/api/research-mode/findings?limit=10').then(r=>r.json());
+    const findEl = document.getElementById('rm-findings-list');
+    if(!fd.findings||!fd.findings.length){
+      findEl.innerHTML='<div class="panel-empty">No findings yet. Start Research Mode or click ⚡ Now.</div>';
+    }else{
+      findEl.innerHTML=fd.findings.map(f=>{
+        const d=new Date(f.created_at*1000);
+        const ts=d.toLocaleString();
+        return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:9px;margin-bottom:7px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <span style="font-size:11px;font-weight:700;color:var(--accent);flex:1">${escHtml(f.topic)}</span>
+            <span style="font-size:9px;color:var(--muted)">${ts}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text2);line-height:1.5">${escHtml((f.summary||'').slice(0,220))}${(f.summary||'').length>220?'…':''}</div>
+        </div>`;
+      }).join('');
+    }
+  }catch(e){console.error('Research Mode load error',e);}
+}
+async function toggleResearchMode(){
+  try{
+    const ep = _rmEnabled ? '/api/research-mode/stop' : '/api/research-mode/start';
+    const body = _rmEnabled ? {} : {interval_minutes: parseInt(document.getElementById('rm-interval-input').value)||45};
+    await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    showToast(_rmEnabled?'Research Mode stopped':'Research Mode started 🔬','ok');
+    await loadResearchMode();
+  }catch(e){showToast('Error toggling Research Mode','err');}
+}
+async function runResearchNow(){
+  showToast('Running research session…','info');
+  try{
+    const r=await fetch('/api/research-mode/run-now',{method:'POST'});
+    if(r.ok){const f=await r.json();showToast(`Researched: "${f.topic}"`, 'ok');await loadResearchMode();}
+    else{showToast('Research session failed','err');}
+  }catch(e){showToast('Error: '+e.message,'err');}
+}
+async function addResearchSeed(){
+  const inp=document.getElementById('rm-seed-input');
+  const topic=inp.value.trim();
+  if(!topic)return;
+  try{
+    await fetch('/api/research-mode/seeds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
+    inp.value='';showToast('Seed topic added','ok');await loadResearchMode();
+  }catch(e){showToast('Error adding seed','err');}
+}
+async function removeResearchSeed(topic){
+  try{
+    await fetch(`/api/research-mode/seeds/${encodeURIComponent(topic)}`,{method:'DELETE'});
+    showToast('Seed removed','ok');await loadResearchMode();
+  }catch(e){showToast('Error removing seed','err');}
+}
+async function updateResearchInterval(){
+  const v=parseInt(document.getElementById('rm-interval-input').value)||45;
+  try{
+    await fetch('/api/research-mode/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({interval_minutes:v})});
+    showToast(`Interval set to ${v} minutes`,'ok');await loadResearchMode();
+  }catch(e){showToast('Error updating interval','err');}
+}
 
 // ── v8.4: Curator ──────────────────────────────────────────────────────────
 async function loadCurator(){

@@ -51,6 +51,7 @@ from routers import (
     notion,
     personal,
     plugins,
+    research_mode,
     skillhub,
     slack,
     spotify,
@@ -89,6 +90,20 @@ async def lifespan(app_: FastAPI):
         mgr = get_channel_manager()
         mgr.set_command_fn(_channel_run_fn)
 
+        # Wire autonomous researcher
+        from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+        from arix.intelligence.parallel_dispatch import get_dispatcher
+        _agent_instance = get_agent()
+        _researcher = get_autonomous_researcher()
+        _researcher.set_command_fn(_channel_run_fn)
+        if hasattr(_agent_instance, 'llm_client'):
+            _researcher.set_llm_client(_agent_instance.llm_client)
+            _dispatcher = get_dispatcher()
+            _dispatcher.set_command_fn(_channel_run_fn)
+            _dispatcher.set_llm_client(_agent_instance.llm_client)
+        if hasattr(_agent_instance, 'memory'):
+            _researcher.set_memory_manager(_agent_instance.memory)
+
         # Auto-start any bots configured via environment variables
         import os
         if os.environ.get("TELEGRAM_BOT_TOKEN"):
@@ -116,7 +131,7 @@ async def lifespan(app_: FastAPI):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Arix", version="8.4.0", lifespan=lifespan)
+app = FastAPI(title="Arix", version="9.0.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -227,6 +242,7 @@ app.include_router(whatsapp.router)
 app.include_router(workflows.router)
 app.include_router(ws.router)
 app.include_router(youtube.router)
+app.include_router(research_mode.router)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

@@ -326,6 +326,113 @@ ANALYST_HAND = Hand(
     ),
 )
 
+PREDICTOR_HAND = Hand(
+    hand_id="predictor-hand",
+    name="Predictor",
+    icon="🔮",
+    description="Trend analysis, forecasting, and predictive insights. Analyzes patterns in data and history to surface likely future outcomes and proactive recommendations.",
+    version="1.0.0",
+    category="Intelligence",
+    tool_domains=["research", "file", "document", "coding"],
+    knowledge=[
+        "Base predictions on cited data — never speculate without evidence",
+        "State confidence level: High (>80%), Medium (50-80%), Low (<50%)",
+        "Always specify the time horizon: 'within 3 months', 'by Q4 2026'",
+        "Identify the top 3 driving factors behind each prediction",
+        "Compare current state vs. predicted state with specific metrics",
+        "Flag black-swan risks that could invalidate the prediction",
+        "Include a 'what to watch' indicator list for validation",
+        "Save forecasts as dated markdown files for retrospective review",
+    ],
+    plans=[
+        HandPlan(
+            name="Trend Forecast",
+            trigger_keywords=["predict", "forecast", "trend", "future of", "what will"],
+            description="Evidence-based trend forecast with confidence levels",
+            steps=[
+                "search the web for {topic} latest trends and data 2026",
+                "search the web for {topic} expert predictions and analyst forecasts",
+                "create file ~/research/{topic}_forecast.md with structured forecast and confidence ratings",
+            ],
+            estimated_duration_s=75,
+        ),
+        HandPlan(
+            name="Pattern Analysis",
+            trigger_keywords=["pattern", "analyze history", "what causes", "why does"],
+            description="Identify patterns and causal factors from data",
+            steps=[
+                "search the web for {topic} research studies and data",
+                "analyze data patterns in {topic}",
+                "create file ~/research/{topic}_patterns.md with findings",
+            ],
+            estimated_duration_s=60,
+        ),
+    ],
+    persona=(
+        "You are Arix's Prediction Hand — a senior strategic analyst with expertise in "
+        "trend analysis, forecasting, and pattern recognition. You are rigorous about "
+        "evidence, transparent about uncertainty, and always ground predictions in data."
+    ),
+)
+
+WRITER_HAND = Hand(
+    hand_id="writer-hand",
+    name="Writer",
+    icon="✍️",
+    description="Content creation, copywriting, editing, and document drafting. Produces polished, audience-appropriate writing from blog posts to technical docs to marketing copy.",
+    version="1.0.0",
+    category="Creative",
+    tool_domains=["file", "document", "research"],
+    knowledge=[
+        "Know your audience: adapt vocabulary, tone, and depth to the reader",
+        "Lead with the most important information (inverted pyramid)",
+        "Use active voice; avoid passive constructions unless intentional",
+        "Break walls of text: use subheadings every 200-300 words",
+        "Vary sentence length: mix short punchy sentences with longer ones",
+        "Cut adjectives and adverbs by 30% — nouns and verbs carry meaning",
+        "End every section with a transition that pulls the reader forward",
+        "Always save final drafts as markdown for maximum portability",
+    ],
+    plans=[
+        HandPlan(
+            name="Blog Post",
+            trigger_keywords=["write a blog", "blog post", "article about", "write an article"],
+            description="SEO-optimised blog post with engaging structure",
+            steps=[
+                "search the web for {topic} to gather supporting facts and examples",
+                "create file ~/writing/{topic}_blog.md with a full blog post: hook, 3 sections, conclusion",
+            ],
+            estimated_duration_s=50,
+        ),
+        HandPlan(
+            name="Technical Doc",
+            trigger_keywords=["documentation", "write docs", "readme", "technical guide"],
+            description="Clear technical documentation with examples",
+            steps=[
+                "read file {source_file} to understand what to document",
+                "create file ~/docs/{name}.md with full technical documentation including examples",
+            ],
+            estimated_duration_s=40,
+        ),
+        HandPlan(
+            name="Edit & Polish",
+            trigger_keywords=["edit", "proofread", "improve writing", "polish", "rewrite"],
+            description="Edit and polish existing text for clarity and impact",
+            steps=[
+                "read file {file_path}",
+                "create file {file_path}_edited.md with improved version with tracked changes noted",
+            ],
+            estimated_duration_s=30,
+        ),
+    ],
+    persona=(
+        "You are Arix's Writing Hand — a senior content strategist and editor. You produce "
+        "clear, engaging, audience-appropriate writing. You know when to be formal vs. casual, "
+        "technical vs. accessible, and always prioritize clarity over cleverness."
+    ),
+)
+
+
 # ── Registry of all built-in Hands ────────────────────────────────────────────
 
 BUILTIN_HANDS: List[Hand] = [
@@ -333,6 +440,8 @@ BUILTIN_HANDS: List[Hand] = [
     CODER_HAND,
     OPS_HAND,
     ANALYST_HAND,
+    PREDICTOR_HAND,
+    WRITER_HAND,
 ]
 
 
