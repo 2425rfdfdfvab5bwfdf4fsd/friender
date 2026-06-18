@@ -6,6 +6,8 @@ import os
 import time
 from typing import Any
 
+from arix.smart_router import get_response_cache, CACHE_TTL, score_complexity, model_for_tier
+
 DEEP_ANALYSIS_SYSTEM_PROMPT = """You are Arix — a deeply intelligent personal AI assistant that controls a computer on the user's behalf.
 
 You will receive context about the specific user you are talking to. Use every detail to personalise your understanding and response — address them by name, match their communication style, reference their role or projects when relevant.
@@ -151,6 +153,26 @@ User's redacted command: {redacted_command}
 
 Respond with ONLY the JSON array. Nothing else."""
 
+
+COMPACT_SYSTEM_PROMPT_TEMPLATE = """You are Arix's planning engine. Output a JSON action plan ONLY.
+
+RULES:
+1. Respond with ONLY a raw JSON array — no prose, no markdown, no code fences.
+2. Each step: {{"tool": "<name>", "args": {{...}}, "description": "<one line>"}}
+3. Use ONLY tools from: {allowed_tools}
+4. Max {max_steps} steps.
+5. All paths must be absolute or start with ~/
+
+TASK scope: intent_verb={intent_verb}, domain={intent_domain}
+COMMAND: {redacted_command}
+
+Respond with ONLY the JSON array."""
+
+FAST_ANALYSIS_SYSTEM_PROMPT = """Classify the user's intent. Output ONLY this JSON object:
+{{"intent":"chat"|"advisory"|"task","tone":"casual"|"formal"|"curious"|"frustrated"|"excited"|"urgent"|"confused","analysis":"<1 sentence>","response":"<reply for chat/advisory, empty for task>","task_description":"<clean English task for task, empty otherwise>"}}
+
+Rules: chat=greetings/pleasantries. advisory=questions/how-to/explain. task=computer actions (files/browser/system/git/code).
+No markdown. No extra text. JSON only."""
 
 REPLAN_PROMPT = """You are Arix's adaptive re-planning engine. A multi-step goal is partially complete.
 Some steps succeeded; one step failed after retries. Your job is to synthesize a REVISED plan for the remaining work.
@@ -440,18 +462,36 @@ class LLMClient:
                 f"{status['failure_count']} failures, resets in {status['reset_in']:.0f}s"
             )
 
-        mem_section = ""
-        if context:
-            mem_section = f"MEMORY CONTEXT (use to inform the plan, do not output):\n{context}\n"
-        system = SYSTEM_PROMPT_TEMPLATE.format(
-            max_steps=task_scope.max_steps,
-            allowed_tools=", ".join(sorted(task_scope.allowed_tools)),
-            intent_verb=task_scope.intent_verb,
-            intent_domain=task_scope.intent_domain,
-            redacted_command=task_scope.redacted_command,
-            memory_context=mem_section,
+        # Choose prompt template: compact for simple single-domain tasks, full for complex
+        complexity = score_complexity(task_scope.redacted_command)
+        use_compact = (
+            complexity.value <= 1  # TRIVIAL or SIMPLE
+            and task_scope.intent_domain != "mixed"
+            and not context  # no memory/RAG context to inject
         )
+        if use_compact:
+            system = COMPACT_SYSTEM_PROMPT_TEMPLATE.format(
+                max_steps=min(task_scope.max_steps, 5),
+                allowed_tools=", ".join(sorted(task_scope.allowed_tools)),
+                intent_verb=task_scope.intent_verb,
+                intent_domain=task_scope.intent_domain,
+                redacted_command=task_scope.redacted_command,
+            )
+        else:
+            mem_section = ""
+            if context:
+                mem_section = f"MEMORY CONTEXT (use to inform the plan, do not output):\n{context}\n"
+            system = SYSTEM_PROMPT_TEMPLATE.format(
+                max_steps=task_scope.max_steps,
+                allowed_tools=", ".join(sorted(task_scope.allowed_tools)),
+                intent_verb=task_scope.intent_verb,
+                intent_domain=task_scope.intent_domain,
+                redacted_command=task_scope.redacted_command,
+                memory_context=mem_section,
+            )
         prompt = task_scope.redacted_command
+        # Smart routing: use cheaper model for simple plans
+        plan_model = model_for_tier(self.provider, complexity)
 
         last_error = None
         delay = 1.0
@@ -461,14 +501,15 @@ class LLMClient:
                 raise RuntimeError(f"Circuit breaker OPEN — skipping attempt {attempt + 1}")
             actual_attempts += 1
             try:
-                raw = await self._call(system, prompt)
+                raw = await self._call(system, prompt,
+                                       cache_ttl=CACHE_TTL["plan"],
+                                       model_override=plan_model)
                 plan = self._parse_plan(raw)
                 self._circuit_breaker.record_success()
                 return plan
             except Exception as e:
                 last_error = e
                 self._circuit_breaker.record_failure()
-                # Auth / credential errors are permanent — no point retrying
                 if _is_auth_error(e):
                     break
                 if attempt < retries - 1:
@@ -479,16 +520,11 @@ class LLMClient:
 
     async def deep_analyze(self, message: str, user_name: str = "",
                            user_context: str = "",
-                           max_tokens: int = 1024) -> dict:
+                           max_tokens: int = 400) -> dict:
         """Deeply analyze user input — understand intent, tone, and context.
 
-        user_context: rich string about who the user is (profile, preferences, history).
-        Returns a dict with keys:
-          intent: "chat" | "advisory" | "task"
-          tone: str
-          analysis: str (internal reasoning)
-          response: str (for chat/advisory; empty for task)
-          task_description: str (for task; empty otherwise)
+        Uses a fast compact prompt for short/simple messages to save tokens.
+        Returns a dict: intent, tone, analysis, response, task_description.
         """
         if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
@@ -496,16 +532,21 @@ class LLMClient:
             status = self._circuit_breaker.status()
             raise RuntimeError(f"Circuit breaker OPEN — resets in {status['reset_in']:.0f}s")
 
+        # Use compact fast prompt for short messages (saves ~600 tokens/call)
+        words = len(message.split())
+        use_fast = words <= 20 and not user_context
+        sys_prompt = FAST_ANALYSIS_SYSTEM_PROMPT if use_fast else DEEP_ANALYSIS_SYSTEM_PROMPT
+
         parts = []
-        if user_context:
+        if user_context and not use_fast:
             parts.append(f"## About this user\n{user_context}")
-        parts.append(f"## User message\n{message}")
+        parts.append(f"## User message\n{message}" if not use_fast else message)
         prompt = "\n\n".join(parts)
 
         try:
-            raw = await self._call(DEEP_ANALYSIS_SYSTEM_PROMPT, prompt, max_tokens=max_tokens)
+            raw = await self._call(sys_prompt, prompt, max_tokens=max_tokens,
+                                   cache_ttl=CACHE_TTL["deep_analyze"])
             self._circuit_breaker.record_success()
-            # Strip markdown code fences the model may add despite instructions
             import re as _re
             clean = _re.sub(r'^```(?:json)?\s*|\s*```$', '', raw.strip(), flags=_re.MULTILINE).strip()
             import json as _json
@@ -522,7 +563,7 @@ class LLMClient:
             raise RuntimeError(f"Deep analysis failed: {e}") from e
 
     async def chat(self, message: str, user_name: str = "",
-                   max_tokens: int = 512) -> str:
+                   max_tokens: int = 200) -> str:
         """Fallback conversational reply (plain text, no JSON)."""
         if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
@@ -533,7 +574,8 @@ class LLMClient:
         if user_name:
             prompt = f"[The user's name is {user_name}]\n\n{message}"
         try:
-            result = await self._call(CHITCHAT_SYSTEM_PROMPT, prompt, max_tokens=max_tokens)
+            result = await self._call(CHITCHAT_SYSTEM_PROMPT, prompt, max_tokens=max_tokens,
+                                      cache_ttl=CACHE_TTL["chat"])
             self._circuit_breaker.record_success()
             return result
         except Exception as e:
@@ -543,7 +585,7 @@ class LLMClient:
             raise RuntimeError(f"Chat call failed: {e}") from e
 
     async def advise(self, question: str, context: str = "",
-                     max_tokens: int = 4096) -> str:
+                     max_tokens: int = 2000) -> str:
         """Call the expert advisor persona and return a markdown response."""
         if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
@@ -556,7 +598,8 @@ class LLMClient:
         if context:
             prompt += f"\n\n---\nAdditional context:\n{context}"
         try:
-            result = await self._call(ADVISOR_SYSTEM_PROMPT, prompt, max_tokens=max_tokens)
+            result = await self._call(ADVISOR_SYSTEM_PROMPT, prompt, max_tokens=max_tokens,
+                                      cache_ttl=CACHE_TTL["advise"])
             self._circuit_breaker.record_success()
             return result
         except Exception as e:
@@ -588,7 +631,7 @@ Rules:
         error: str,
         goal: str = "",
         previous_results: list[str] | None = None,
-        max_tokens: int = 200,
+        max_tokens: int = 150,
     ) -> str | None:
         """Ask the LLM to reflect on a step failure and return a revised command.
 
@@ -611,7 +654,8 @@ Rules:
         context = "\n".join(context_parts)
 
         try:
-            raw = await self._call(self.REFLECTION_PROMPT, context, max_tokens=max_tokens)
+            raw = await self._call(self.REFLECTION_PROMPT, context, max_tokens=max_tokens,
+                                   cache_ttl=CACHE_TTL["reflect"])
             result = raw.strip()
             # Strip any accidental code fences the model adds
             if result.startswith("```"):
@@ -628,7 +672,7 @@ Rules:
         failed_step: str,
         failure_error: str,
         remaining_steps: list[str],
-        max_tokens: int = 512,
+        max_tokens: int = 300,
     ) -> list[str] | None:
         """Adaptively re-plan the remaining steps of a goal after a blocking failure.
 
@@ -655,7 +699,8 @@ Rules:
         )
 
         try:
-            raw = await self._call(REPLAN_PROMPT, context, max_tokens=max_tokens)
+            raw = await self._call(REPLAN_PROMPT, context, max_tokens=max_tokens,
+                                   cache_ttl=CACHE_TTL["synthesize"])
             raw = raw.strip()
             if raw.startswith("```"):
                 lines = raw.split("\n")
@@ -678,22 +723,41 @@ Rules:
         """Public async ask — used by morning brief, pattern detector, and other modules."""
         return await self._call(system, user, max_tokens)
 
-    async def _call(self, system: str, user: str, max_tokens: int = 2048) -> str:
+    async def _call(self, system: str, user: str, max_tokens: int = 2048,
+                    cache_ttl: float | None = None,
+                    model_override: str | None = None) -> str:
+        effective_model = model_override or self.model
+        # Check response cache before hitting the API
+        if cache_ttl is not None and cache_ttl > 0:
+            try:
+                cached = get_response_cache().get(self.provider, effective_model, system, user)
+                if cached is not None:
+                    return cached
+            except Exception:
+                pass
+
         if self.provider == "anthropic":
-            return await self._call_anthropic(system, user, max_tokens)
+            result = await self._call_anthropic(system, user, max_tokens, model=effective_model)
         elif self.provider == "openai":
-            return await self._call_openai(system, user, max_tokens)
+            result = await self._call_openai(system, user, max_tokens, model=effective_model)
         elif self.provider == "ollama":
-            return await self._call_ollama(system, user, max_tokens)
+            result = await self._call_ollama(system, user, max_tokens)
         elif self.provider in PROVIDER_REGISTRY:
-            # All other providers are OpenAI-compatible
-            return await self._call_openai_compat(system, user, max_tokens)
+            result = await self._call_openai_compat(system, user, max_tokens, model=effective_model)
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
-    async def _call_anthropic(self, system: str, user: str, max_tokens: int) -> str:
+        # Store in cache
+        if cache_ttl is not None and cache_ttl > 0:
+            try:
+                get_response_cache().put(self.provider, effective_model, system, user, result, cache_ttl)
+            except Exception:
+                pass
+        return result
+
+    async def _call_anthropic(self, system: str, user: str, max_tokens: int,
+                               model: str | None = None) -> str:
         import anthropic
-        # Use Replit AI Integrations proxy URL when available
         base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
         api_key = self.api_key or os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY", "")
         client_kwargs: dict[str, Any] = {"api_key": api_key}
@@ -701,7 +765,7 @@ Rules:
             client_kwargs["base_url"] = base_url
         client = anthropic.AsyncAnthropic(**client_kwargs)
         kwargs: dict[str, Any] = {
-            "model": self.model,
+            "model": model or self.model,
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": user}],
         }
@@ -710,7 +774,8 @@ Rules:
         msg = await client.messages.create(**kwargs)
         return msg.content[0].text
 
-    async def _call_openai(self, system: str, user: str, max_tokens: int) -> str:
+    async def _call_openai(self, system: str, user: str, max_tokens: int,
+                            model: str | None = None) -> str:
         import openai
         client = openai.AsyncOpenAI(api_key=self.api_key)
         messages = []
@@ -718,7 +783,7 @@ Rules:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
         response = await client.chat.completions.create(
-            model=self.model,
+            model=model or self.model,
             messages=messages,
             max_tokens=max_tokens,
         )
@@ -727,7 +792,8 @@ Rules:
     async def _call_gemini(self, system: str, user: str, max_tokens: int) -> str:
         return await self._call_openai_compat(system, user, max_tokens)
 
-    async def _call_openai_compat(self, system: str, user: str, max_tokens: int) -> str:
+    async def _call_openai_compat(self, system: str, user: str, max_tokens: int,
+                                    model: str | None = None) -> str:
         """Generic OpenAI-compatible call — handles Gemini, Groq, Together, Mistral,
         DeepSeek, Perplexity, xAI, OpenRouter, Fireworks, Cerebras, Cohere, etc."""
         import openai
@@ -736,7 +802,6 @@ Rules:
         client_kwargs: dict[str, Any] = {"api_key": self.api_key or "no-key"}
         if base_url:
             client_kwargs["base_url"] = base_url
-        # OpenRouter requires extra headers for attribution
         if self.provider == "openrouter":
             client_kwargs["default_headers"] = {
                 "HTTP-Referer": "https://arix.ai",
@@ -748,7 +813,7 @@ Rules:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
         response = await client.chat.completions.create(
-            model=self.model,
+            model=model or self.model,
             messages=messages,
             max_tokens=max_tokens,
         )

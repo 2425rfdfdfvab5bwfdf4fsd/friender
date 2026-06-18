@@ -60,6 +60,29 @@ async def status():
     }
 
 
+# ── Cache stats ───────────────────────────────────────────────────────────────
+
+@router.get("/api/cache/stats")
+async def cache_stats():
+    """Return hit/miss stats for the LLM response cache and tool result cache."""
+    from arix.smart_router import get_response_cache
+    from arix import tool_cache
+    return {
+        "response_cache": get_response_cache().stats(),
+        "tool_cache": tool_cache.stats(),
+    }
+
+
+@router.post("/api/cache/clear")
+async def cache_clear():
+    """Clear both caches (useful after config changes)."""
+    from arix.smart_router import get_response_cache
+    from arix import tool_cache
+    get_response_cache().clear()
+    tool_cache.invalidate()
+    return {"cleared": True}
+
+
 # ── Tools & disclosure ────────────────────────────────────────────────────────
 
 @router.get("/api/tools")

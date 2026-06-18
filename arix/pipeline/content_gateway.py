@@ -89,7 +89,7 @@ class ContentDataGateway:
         )
 
         try:
-            result = await self.llm_client.complete_text(prompt, max_tokens=500)
+            result = await self.llm_client.complete_text(prompt, max_tokens=200)
             parsed = json.loads(result)
             if not _validate_sanitizer_output(parsed):
                 return None

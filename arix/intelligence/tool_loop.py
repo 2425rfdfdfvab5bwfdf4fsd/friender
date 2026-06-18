@@ -329,7 +329,7 @@ class ToolCallingLoop:
     """
 
     MAX_ITERATIONS = 12
-    MAX_TOKENS = 4096
+    MAX_TOKENS = 2000
 
     def __init__(
         self,
@@ -342,12 +342,17 @@ class ToolCallingLoop:
         self.max_iterations = max_iterations
 
     async def _execute_tool(self, name: str, args: dict) -> Any:
-        """Execute a tool by name and return the result."""
+        """Execute a tool by name, checking the read-only cache first."""
+        from arix import tool_cache as _tc
+        cached = _tc.get(name, args)
+        if cached is not None:
+            return cached
         fn = self.tool_dispatch.get(name)
         if fn is None:
             return {"error": f"Tool '{name}' not found"}
         try:
             result = await asyncio.to_thread(fn, args)
+            _tc.put(name, args, result)
             return result
         except Exception as e:
             return {"error": str(e)}
