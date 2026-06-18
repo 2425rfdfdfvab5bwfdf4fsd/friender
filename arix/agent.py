@@ -39,6 +39,7 @@ from arix.intelligence.multi_agent_router import get_router
 from arix.memory.rag_ingester import get_knowledge_base
 from arix.hands.catalog import get_hand_manager
 from arix.mcp_client import get_mcp_manager
+from arix.intelligence.tool_loop import ToolCallingLoop
 
 import arix.tools.file_tools as file_tools
 import arix.tools.app_tools as app_tools
@@ -712,6 +713,96 @@ class ArixAgent:
                     "model": "demo",
                 })
                 return
+
+        # ── OpenClaw-style native tool-calling agentic loop ──────────────────────
+        # When an LLM is available, route tasks through the iterative tool-calling
+        # loop instead of the static plan→validate→execute path.
+        # The LLM drives execution: think → call_tool → see_result → think → …
+        _use_tool_loop = (
+            not dry_run
+            and not self.config.offline_mode
+            and self.llm_client is not None
+            and self.llm_client.is_available()
+        )
+
+        if _use_tool_loop:
+            # ── Detect matching Capability Hand ───────────────────────────────
+            active_hand = self.hand_manager.detect_hand(effective_cmd or raw_cmd)
+            if active_hand:
+                yield AgentEvent("hand_activated", {
+                    "task_id": task_id,
+                    "hand_id": active_hand.hand_id,
+                    "hand_name": active_hand.name,
+                    "hand_icon": active_hand.icon,
+                    "hand_persona": active_hand.persona[:120],
+                    "knowledge_count": len(active_hand.knowledge),
+                })
+
+            yield AgentEvent("status", {
+                "message": (
+                    f"🤖 Arix agent loop starting"
+                    + (f" · {active_hand.icon} {active_hand.name} Hand" if active_hand else "")
+                    + f" ({self.config.provider} / {self.config.model})"
+                ),
+                "task_id": task_id,
+            })
+
+            _loop = ToolCallingLoop(
+                llm_client=self.llm_client,
+                tool_dispatch=TOOL_DISPATCH,
+            )
+
+            _loop_start = time.time()
+            _had_error = False
+
+            try:
+                async for (evt_type, evt_data) in _loop.run(
+                    command=effective_cmd or raw_cmd,
+                    task_id=task_id,
+                    hand=active_hand,
+                    user_context=_user_context,
+                ):
+                    yield AgentEvent(evt_type, {**evt_data, "task_id": task_id})
+                    if evt_type == "tool_loop_error":
+                        _had_error = True
+            except Exception as _e:
+                _had_error = True
+                yield AgentEvent("error", {
+                    "task_id": task_id,
+                    "message": f"Agent loop error: {_e}",
+                })
+
+            _loop_duration = time.time() - _loop_start
+
+            # Record Hand metrics
+            if active_hand:
+                self.hand_manager.record_run(
+                    active_hand.hand_id,
+                    success=not _had_error,
+                    duration_s=_loop_duration,
+                )
+
+            # Record in memory
+            try:
+                self.memory.record_task(
+                    task_id=task_id,
+                    command=(raw_cmd)[:300],
+                    intent_verb="tool_loop",
+                    intent_domain="agentic",
+                    outcome="failed" if _had_error else "completed",
+                    steps_executed=0,
+                )
+            except Exception:
+                pass
+
+            if not _had_error:
+                yield AgentEvent("completed", {
+                    "task_id": task_id,
+                    "steps_executed": 0,
+                    "output": "",
+                })
+
+            return
 
         yield AgentEvent("status", {"message": "Parsing command...", "task_id": task_id})
 

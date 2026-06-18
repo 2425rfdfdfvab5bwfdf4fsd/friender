@@ -665,9 +665,64 @@ class HandManager:
         self._save_metrics()
         return hand.to_dict()
 
+    def detect_hand(self, command: str) -> Optional[Hand]:
+        """
+        Returns the single best-matching active Hand for a command, or None.
+
+        Scoring:
+          +3  for each trigger keyword that appears in the command
+          +1  bonus if a full HandPlan matches (trigger_keywords overlap)
+        The highest-scoring active Hand wins; returns None if score == 0.
+        """
+        lower = command.lower()
+        best: Optional[Hand] = None
+        best_score = 0
+
+        for hand in self.get_active_hands():
+            score = 0
+            # Check plan trigger keywords
+            for plan in hand.plans:
+                for kw in plan.trigger_keywords:
+                    if kw in lower:
+                        score += 3
+            # Small bonus for domain keywords
+            for domain in hand.tool_domains:
+                if domain in lower:
+                    score += 1
+
+            # Extra keywords per hand type
+            _HAND_KEYWORDS: dict[str, list[str]] = {
+                "researcher-hand": ["research", "find", "look up", "search", "investigate",
+                                    "what is", "how does", "summarize", "compare", "analyze"],
+                "coder-hand":      ["code", "write code", "generate code", "debug", "function",
+                                    "script", "program", "refactor", "test", "class"],
+                "ops-hand":        ["deploy", "server", "docker", "k8s", "nginx", "process",
+                                    "service", "monitor", "restart", "config"],
+                "analyst-hand":    ["analyze", "visualize", "chart", "graph", "data",
+                                    "csv", "excel", "spreadsheet", "statistics", "report"],
+                "predictor-hand":  ["predict", "forecast", "trend", "model", "ml",
+                                    "machine learning", "regression", "classify"],
+                "writer-hand":     ["write", "draft", "blog", "email", "document", "article",
+                                    "content", "post", "copy", "proofread", "edit"],
+                "browser-hand":    ["scrape", "crawl", "website", "webpage", "click",
+                                    "fill form", "automate browser", "web app"],
+                "clip-hand":       ["clip", "save link", "bookmark", "archive url",
+                                    "knowledge", "read later", "extract"],
+                "lead-hand":       ["lead", "prospect", "outreach", "sales", "email campaign",
+                                    "contact", "linkedin profile", "company research"],
+            }
+            for kw in _HAND_KEYWORDS.get(hand.hand_id, []):
+                if kw in lower:
+                    score += 2
+
+            if score > best_score:
+                best_score = score
+                best = hand
+
+        return best if best_score >= 2 else None
+
     def detect_relevant_hands(self, command: str) -> List[Hand]:
         """Returns active hands whose tool domains are relevant to this command."""
-        lower = command.lower()
         relevant = []
         for hand in self.get_active_hands():
             plan = hand.find_plan(command)

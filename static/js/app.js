@@ -114,6 +114,14 @@ function dispatch(type, data) {
     case 'help': onHelp(data); break;
     case 'tools_txt': onToolsTxt(data); break;
     case 'preference_updated': toast('Preference saved ✓', 'ok'); break;
+    // ── Tool-calling agentic loop events ──────────────────────────────────────
+    case 'hand_activated':   onHandActivated(data); break;
+    case 'tool_loop_start':  onToolLoopStart(data); break;
+    case 'tool_loop_thinking': onToolLoopThinking(data); break;
+    case 'tool_loop_call':   onToolLoopCall(data); break;
+    case 'tool_loop_result': onToolLoopResult(data); break;
+    case 'tool_loop_done':   onToolLoopDone(data); break;
+    case 'tool_loop_error':  onToolLoopError(data); break;
     default: break;
   }
 }
@@ -495,6 +503,135 @@ function onAdvisory(d) {
   showTextResponse(b, d.response || '');
   if (b) showContextualChips(b, d.response || '');
   S.activeBubble = null;
+}
+
+// ── Tool-calling agentic loop handlers (OpenClaw-style) ───────────────────────
+
+function _getLoopContainer(taskId) {
+  const b = taskId ? document.querySelector(`.msg-asst[data-task="${taskId}"]`) : S.activeBubble;
+  if (!b) return null;
+  const body = b.querySelector('.msg-body');
+  if (!body) return null;
+  // Hide thinking dots once loop starts
+  const thinkEl = body.querySelector('.msg-thinking');
+  if (thinkEl) thinkEl.style.display = 'none';
+  // Create or find loop container
+  let lc = body.querySelector('.msg-loop-container');
+  if (!lc) {
+    lc = document.createElement('div');
+    lc.className = 'msg-loop-container';
+    lc.innerHTML = '<div class="loop-steps"></div>';
+    body.insertBefore(lc, body.querySelector('.msg-text'));
+    body.querySelector('.msg-text').style.display = 'none';
+  }
+  return lc;
+}
+
+function _addLoopRow(taskId, html, cls) {
+  const lc = _getLoopContainer(taskId);
+  if (!lc) return;
+  const ls = lc.querySelector('.loop-steps');
+  const row = document.createElement('div');
+  row.className = 'loop-row ' + (cls || '');
+  row.innerHTML = html;
+  ls.appendChild(row);
+  scrollToBottom();
+}
+
+function onHandActivated(d) {
+  const b = S.activeBubble;
+  if (!b) return;
+  const badge = document.createElement('div');
+  badge.className = 'hand-badge';
+  badge.innerHTML = `${esc(d.hand_icon||'✋')} <strong>${esc(d.hand_name||'')} Hand</strong> activated`;
+  const body = b.querySelector('.msg-body');
+  if (body) {
+    const thinkEl = body.querySelector('.msg-thinking');
+    if (thinkEl) thinkEl.querySelector('.thinking-text').textContent =
+      `${d.hand_icon||'✋'} ${d.hand_name} Hand · thinking…`;
+    body.insertBefore(badge, body.querySelector('.msg-exec-card'));
+  }
+}
+
+function onToolLoopStart(d) {
+  // Nothing visible — loop container created lazily on first step
+}
+
+function onToolLoopThinking(d) {
+  _addLoopRow(d.task_id,
+    `<span class="loop-thinking-icon">💭</span><span class="loop-thinking-text">${esc((d.text||'').slice(0,200))}</span>`,
+    'loop-thinking'
+  );
+}
+
+function onToolLoopCall(d) {
+  const argsStr = Object.entries(d.args||{})
+    .map(([k,v]) => `<span class="lc-key">${esc(k)}</span>=<span class="lc-val">${esc(String(v).slice(0,60))}</span>`)
+    .join(' ');
+  _addLoopRow(d.task_id,
+    `<span class="loop-call-spin">⟳</span><span class="loop-tool-name">${esc(d.tool||'')}</span>` +
+    (argsStr ? `<span class="loop-tool-args">${argsStr}</span>` : ''),
+    'loop-call'
+  );
+}
+
+function onToolLoopResult(d) {
+  // Update the last loop-call row to done/err
+  const lc = _getLoopContainer(d.task_id);
+  if (lc) {
+    const rows = lc.querySelectorAll('.loop-call');
+    if (rows.length) {
+      const last = rows[rows.length - 1];
+      const spin = last.querySelector('.loop-call-spin');
+      if (spin) spin.textContent = d.success ? '✓' : '✗';
+      last.classList.add(d.success ? 'loop-call-done' : 'loop-call-err');
+      if (d.result_preview) {
+        const prev = document.createElement('div');
+        prev.className = 'loop-result-preview';
+        prev.textContent = d.result_preview.slice(0, 120) + (d.result_preview.length > 120 ? '…' : '');
+        last.appendChild(prev);
+      }
+    }
+  }
+  scrollToBottom();
+}
+
+function onToolLoopDone(d) {
+  S.running = false; setSendBtn(false);
+  const b = S.activeBubble || (d.task_id ? document.querySelector(`.msg-asst[data-task="${d.task_id}"]`) : null);
+  if (!b) return;
+  const lc = _getLoopContainer(d.task_id);
+  if (lc) {
+    const iters = d.iterations ? `<span class="loop-iter-badge">${d.iterations} step${d.iterations!==1?'s':''}</span>` : '';
+    const doneRow = document.createElement('div');
+    doneRow.className = 'loop-row loop-done-row';
+    doneRow.innerHTML = `<span class="loop-done-icon">✅</span>${iters}`;
+    lc.querySelector('.loop-steps').appendChild(doneRow);
+  }
+  if (d.text) {
+    const body = b.querySelector('.msg-body');
+    if (body) {
+      const mt = body.querySelector('.msg-text');
+      if (mt) { mt.innerHTML = renderMD(d.text); mt.style.display = 'block'; }
+    }
+  }
+  const meta = b.querySelector('.msg-meta');
+  if (meta) {
+    meta.style.display = 'flex';
+    const sl = meta.querySelector('.msg-steps-lbl');
+    if (sl && d.iterations) sl.textContent = `· ${d.iterations} loop step${d.iterations!==1?'s':''}`;
+  }
+  if (d.text) showContextualChips(b, d.text);
+  S.activeBubble = null;
+  refreshSidePanels();
+}
+
+function onToolLoopError(d) {
+  _addLoopRow(d.task_id,
+    `<span style="color:var(--danger)">⚠ ${esc(d.error||'Agent loop error')}</span>`,
+    'loop-err-row'
+  );
+  // Don't finalize yet — completed event will follow if not had_error
 }
 
 // ── Contextual action chips after assistant response ──────────────────────────
