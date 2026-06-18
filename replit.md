@@ -144,17 +144,17 @@ docs/                      Architecture, security, API, changelog docs
 
 ## Integrations (8 services)
 
-| Service | Tools | Required Env Vars | Get credentials |
-|---------|-------|-------------------|-----------------|
-| Gmail | 5 | GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN | [Enable API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
-| Google Drive | 4 | GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN | [Enable API](https://console.cloud.google.com/apis/library/drive.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
-| Google Calendar | 3 | GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET, GOOGLE_CALENDAR_REFRESH_TOKEN | [Enable API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
-| Notion | varies | NOTION_API_KEY | [notion.so/my-integrations](https://www.notion.so/my-integrations) |
-| Slack | varies | SLACK_BOT_TOKEN | [api.slack.com/apps](https://api.slack.com/apps) |
-| Trello | varies | TRELLO_API_KEY, TRELLO_API_TOKEN | [trello.com/power-ups/admin](https://trello.com/power-ups/admin) |
-| Spotify | varies | SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET | [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) |
-| YouTube | varies | YOUTUBE_API_KEY | [Enable API](https://console.cloud.google.com/apis/library/youtube.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
-| WhatsApp | 1 | WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID | [developers.facebook.com/apps](https://developers.facebook.com/apps/) |
+| Service | Tools | Required Env Vars | Credential type | Get credentials |
+|---------|-------|-------------------|-----------------|-----------------|
+| Gmail | 5 | GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN | OAuth client ID | [Enable API](https://console.cloud.google.com/apis/library/gmail.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
+| Google Drive | 4 | GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN | OAuth client ID | [Enable API](https://console.cloud.google.com/apis/library/drive.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
+| Google Calendar | 3 | GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET, GOOGLE_CALENDAR_REFRESH_TOKEN | OAuth client ID | [Enable API](https://console.cloud.google.com/apis/library/calendar-json.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
+| Notion | varies | NOTION_API_KEY | Integration token | [notion.so/my-integrations](https://www.notion.so/my-integrations) |
+| Slack | varies | SLACK_BOT_TOKEN | Bot token | [api.slack.com/apps](https://api.slack.com/apps) |
+| Trello | varies | TRELLO_API_KEY, TRELLO_API_TOKEN | API key + token | [trello.com/power-ups/admin](https://trello.com/power-ups/admin) |
+| Spotify | varies | SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET | OAuth client ID | [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) |
+| YouTube | varies | YOUTUBE_API_KEY | API key | [Enable API](https://console.cloud.google.com/apis/library/youtube.googleapis.com) → [Credentials](https://console.cloud.google.com/apis/credentials) |
+| WhatsApp | 1 | WHATSAPP_TOKEN, WHATSAPP_PHONE_NUMBER_ID | System user token | [developers.facebook.com/apps](https://developers.facebook.com/apps/) |
 
 ## Core AI Provider Keys
 
