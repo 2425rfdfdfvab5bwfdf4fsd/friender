@@ -1,6 +1,6 @@
-# Arix v9.3 — Personal AI Computer-Control Agent
+# Arix v9.5 — Personal AI Computer-Control Agent
 
-A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture, 100 tools, 20 domains, Ollama auto-fallback, and 8 third-party service integrations.
+A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture, 100 tools, 20 domains, Ollama auto-fallback, 8 third-party service integrations, and a full cost-optimization layer (response cache, tool cache, smart model routing, compact prompts).
 
 ## Running the App
 
@@ -10,9 +10,10 @@ The app runs via the `Start application` workflow. Access it at the web preview 
 
 ```
 User Command → TaskScope Derivation → Local Redaction Pipeline
-→ Content/Data Gateway → LLM Planner (CoT + self-healing retry)
+→ Content/Data Gateway → SmartRouter (complexity score + cache check)
+→ LLM Planner (CoT + self-healing retry, compact prompts, model tier)
 → Plan Validator → Cumulative Risk Evaluator → Policy Engine
-→ Runtime Step Validator → Tool Execution → Audit Log
+→ Runtime Step Validator → Tool Execution (ToolCache) → Audit Log
 ```
 
 ## Project Structure
@@ -24,6 +25,8 @@ arix/
   app_state.py             Shared singletons (agent, workflow manager)
   config.py                Config loader (~/.arix/config.json + env vars)
   llm_client.py            Anthropic/OpenAI/Gemini client with retry + fallback
+  smart_router.py          ResponseCache (TTL LRU), complexity classifier, model tier selector
+  tool_cache.py            Short-TTL cache for 18 read-only tools
   bridge_manager.py        Local bridge WebSocket manager
   cli.py                   CLI entry point (`arix` command)
   pipeline/                9-layer security pipeline
@@ -52,11 +55,12 @@ arix/
   intelligence/
     supervisor.py          GoalSupervisor — LLM goal decomposition + retry
     advisor.py             AdvisoryIntentDetector — expert advisor persona
+    tool_loop.py           ToolCallingLoop — native agentic loop (Anthropic + OpenAI)
     morning_brief.py
     notifications.py
     pattern_detector.py
   tools/
-    registry.py            75 tool definitions (ToolMetadata)
+    registry.py            100 tool definitions (ToolMetadata)
     file_tools.py
     browser_tools.py
     desktop_tools.py
@@ -103,7 +107,7 @@ arix/
     workflow_manager.py    Cron-based scheduled natural-language tasks
   ui/
     onboarding.py
-routers/                   18 FastAPI routers
+routers/                   FastAPI routers
   agent_api.py  ws.py  memory.py  intelligence.py
   gmail.py  drive.py  calendar.py  notion.py
   slack.py  spotify.py  trello.py  youtube.py
@@ -114,11 +118,11 @@ local_bridge/
 templates/
   index.html               Web terminal UI (xterm.js + marked.js)
 static/                    CSS, JS, images
-tests/                     12 tests covering security, memory, config, risk
+tests/                     Test suite covering security, memory, config, risk
 docs/                      Architecture, security, API, changelog docs
 ```
 
-## Tool Registry (75 tools across 15 domains)
+## Tool Registry (100 tools across 20 domains)
 
 | Domain | Count | Tools |
 |--------|-------|-------|
@@ -158,9 +162,40 @@ docs/                      Architecture, security, API, changelog docs
 |----------|---------|
 | `ANTHROPIC_API_KEY` | Claude (primary LLM) — starts with `sk-ant-` |
 | `OPENAI_API_KEY` | GPT + vector memory embeddings |
-| `GEMINI_API_KEY` | Google Gemini |
+| `GEMINI_API_KEY` | Google Gemini (default: gemini-2.0-flash-lite) |
 
-Without any key, Arix runs in **demo mode** using the heuristic planner.
+Without any key, Arix runs in **demo mode** using the heuristic planner. With a local Ollama instance, it auto-detects and uses it before falling back to the heuristic planner.
+
+## Cost Optimization Layer (v9.5)
+
+| Feature | Where | Effect |
+|---------|-------|--------|
+| **ResponseCache** | `arix/smart_router.py` | TTL LRU cache (1000 entries) — identical prompts return instantly, zero API cost |
+| **ToolCache** | `arix/tool_cache.py` | 18 read-only tools cached 10–600s — no redundant filesystem/API calls |
+| **Complexity Classifier** | `smart_router.py` | TRIVIAL/SIMPLE/MEDIUM/COMPLEX scored in microseconds (no LLM) |
+| **Model Tier Selector** | `smart_router.py` | Maps (provider, complexity) → cheapest capable model |
+| **Compact Planning Prompt** | `llm_client.py` | ~150 tokens vs ~400 for simple single-domain tasks |
+| **Fast Intent Prompt** | `llm_client.py` | ~100 tokens vs ~700 for messages ≤20 words |
+| **Reduced Token Budgets** | `llm_client.py` | deep_analyze 400, advise 2000, chat 200, reflect 150, synthesize 300 |
+| **Tool Loop Budget** | `tool_loop.py` | MAX_TOKENS 2000 (was 4096) |
+
+### Cache TTLs
+
+| Call type | TTL |
+|-----------|-----|
+| `advise` / `sanitize` | 600s |
+| `deep_analyze` / `chat` | 300s |
+| `plan` / `synthesize` | 120s |
+| `reflect` | 60s |
+| `list_directory` / `git_status` | 15–30s |
+| `system_monitor` | 10s |
+
+### Cache Stats API
+
+```
+GET  /api/cache/stats   → { response_cache: {...}, tool_cache: {...} }
+POST /api/cache/clear   → { cleared: true }
+```
 
 ## Security Model (PRD v5.2)
 
@@ -178,6 +213,8 @@ Without any key, Arix runs in **demo mode** using the heuristic planner.
 
 - **GoalSupervisor** — LLM-powered goal decomposition with progressive retry (self-heal → reflect → replan)
 - **AdvisoryIntentDetector** — expert advisor persona; routes knowledge questions to LLM with markdown overlay
+- **ToolCallingLoop** — native agentic loop; LLM drives tool selection iteratively (Anthropic tool_use + OpenAI function_calling)
+- **SmartRouter** — complexity-based model routing + TTL response cache
 - **Vector Memory** — semantic search via OpenAI `text-embedding-3-small` embeddings + TF-IDF fallback
 - **Morning Brief** — daily summary of tasks, events, and system status
 - **Pattern Detector** — learns recurring workflows from history

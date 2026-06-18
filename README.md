@@ -1,6 +1,6 @@
-# Arix v7.2 — Personal AI Computer-Control Agent
+# Arix v9.5 — Personal AI Computer-Control Agent
 
-> A security-first, LLM-powered agent that executes natural-language commands to control your computer — with a layered trust architecture, persistent multi-tier memory, and a web-based terminal interface.
+> A security-first, LLM-powered agent that executes natural-language commands to control your computer — with a layered trust architecture, 100 tools across 20 domains, persistent multi-tier memory, smart cost-optimization layer, and a web-based terminal interface.
 
 ---
 
@@ -54,15 +54,16 @@ Arix is built for power users, developers, and researchers who want an AI assist
 
 | Category | Details |
 |---|---|
-| **Planning** | LLM goal decomposition (Claude / GPT), multi-step plan generation, heuristic offline fallback |
-| **Security** | 9-layer pipeline, HMAC capability grants, grant replay prevention, TOCTOU checks, URL and payment blocklists |
+| **Planning** | LLM goal decomposition (13+ providers), native agentic tool loop, multi-step plan generation, heuristic + Ollama offline fallback |
+| **Security** | 9-layer pipeline, HMAC capability grants, grant replay prevention, TOCTOU checks, URL and payment blocklists, rate limiting |
 | **Risk management** | Cumulative risk scoring with three action gates: auto-proceed, acknowledge, explicit yes |
-| **Memory** | SQLite-backed episodic log, TF-IDF semantic search, neural vector index (OpenAI embeddings), skill library |
+| **Cost optimization** | ResponseCache (TTL LRU, saves API calls on repeated prompts), ToolCache (18 read-only tools), complexity-based model tier routing, compact prompts |
+| **Memory** | SQLite-backed episodic log, TF-IDF semantic search, neural vector index (OpenAI embeddings), skill library, RAG knowledge base |
 | **Interfaces** | Web terminal (xterm.js), REST + WebSocket API, WhatsApp remote control, advisory chat overlay |
-| **Tools** | 38+ tools across file, browser, git, document, system, code, research, and vision domains |
-| **Automation** | Natural-language workflow scheduler (cron), morning brief, pattern detector, undo manager |
+| **Tools** | 100 tools across 20 domains: file, browser, desktop, git, coding, Gmail, Drive, Calendar, Notion, Slack, Trello, Spotify, YouTube, and more |
+| **Automation** | Natural-language workflow scheduler (cron), morning brief, pattern detector, undo manager, Capability Hands |
 | **Personalization** | User profiles (role, company, timezone, communication style, work hours) |
-| **Observability** | Tamper-resistant audit log (0600), Insights panel, memory stats API, trace store |
+| **Observability** | Tamper-resistant audit log (0600), cache stats API (`/api/cache/stats`), Insights panel, memory stats API, trace store |
 
 ---
 

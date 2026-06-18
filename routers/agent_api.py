@@ -14,7 +14,7 @@ from arix.ui.onboarding import DISCLOSURE_TEXT, is_onboarding_complete, complete
 
 router = APIRouter(tags=["agent"])
 
-_VERSION = "8.0.0"
+_VERSION = "9.5.0"
 
 
 # ── Status ────────────────────────────────────────────────────────────────────

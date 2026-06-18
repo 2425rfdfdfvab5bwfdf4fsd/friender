@@ -5,6 +5,44 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.5.0] — 2026-06-18
+
+### Cost & Performance — Token Optimization Layer
+
+**New files:**
+- `arix/smart_router.py` — `ResponseCache` (TTL LRU, 1000 entries, SHA-256 keyed), `score_complexity()` heuristic (TRIVIAL/SIMPLE/MEDIUM/COMPLEX, no LLM), `model_for_tier()` (cheapest capable model per provider+complexity), `CACHE_TTL` constants
+- `arix/tool_cache.py` — Short-TTL in-memory cache for 18 read-only tools (list_directory, system_monitor, git_status, gmail_list_emails, list_calendar_events, etc.)
+
+**LLM client (`arix/llm_client.py`):**
+- `_call()` gains `cache_ttl` and `model_override` parameters; checks `ResponseCache` before every API call; stores result after
+- `_call_anthropic`, `_call_openai`, `_call_openai_compat` gain `model` parameter for thread-safe per-call model overrides
+- New `COMPACT_SYSTEM_PROMPT_TEMPLATE` (~150 tokens) used for TRIVIAL/SIMPLE single-domain planning calls (vs ~400 tokens for full template)
+- New `FAST_ANALYSIS_SYSTEM_PROMPT` (~100 tokens) used for `deep_analyze` when message ≤20 words (vs ~700 tokens for full DEEP_ANALYSIS_SYSTEM_PROMPT)
+- `plan()` — uses compact prompt + `model_for_tier()` routing + response cache (TTL 120s)
+- Token budget reductions:
+
+| Method | Before | After | Saving |
+|--------|--------|-------|--------|
+| `deep_analyze` | 1024 | 400 | −61% |
+| `advise` | 4096 | 2000 | −51% |
+| `chat` | 512 | 200 | −61% |
+| `reflect` | 200 | 150 | −25% |
+| `synthesize_remaining` | 512 | 300 | −41% |
+| content gateway sanitize | 500 | 200 | −60% |
+
+**Tool loop (`arix/intelligence/tool_loop.py`):**
+- `MAX_TOKENS` reduced 4096 → 2000
+- `_execute_tool` checks `ToolCache` before dispatch; writes successful results back to cache
+
+**API (`routers/agent_api.py`):**
+- `GET /api/cache/stats` — live hit/miss rates, sizes, API calls saved (both caches)
+- `POST /api/cache/clear` — flush both caches
+
+**Config (`arix/config.py`):**
+- New fields: `response_cache_enabled`, `response_cache_max_size`, `tool_cache_enabled`, `smart_routing_enabled`
+
+---
+
 ## [8.0.0] — 2026-06-15
 
 ### Security

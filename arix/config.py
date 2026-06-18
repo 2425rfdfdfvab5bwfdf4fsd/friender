@@ -40,6 +40,11 @@ class ArixConfig:
     allowed_ws_origins: list[str] = field(default_factory=list)  # empty = allow all origins
     api_rate_limit_per_minute: int = 120
     ws_command_rate_limit_per_minute: int = 20
+    # Cost optimization & caching
+    response_cache_enabled: bool = True
+    response_cache_max_size: int = 1000
+    tool_cache_enabled: bool = True
+    smart_routing_enabled: bool = True
 
     @classmethod
     def load(cls) -> "ArixConfig":

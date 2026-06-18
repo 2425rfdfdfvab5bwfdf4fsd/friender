@@ -26,11 +26,20 @@ These take priority over config file values.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `provider` | `str` | `"anthropic"` | LLM provider: `anthropic`, `openai`, `gemini` |
-| `model` | `str` | `"claude-opus-4-5"` | Model name for planning |
-| `sanitizer_provider` | `str` | `"anthropic"` | Provider for content gateway sanitizer |
-| `sanitizer_model` | `str` | `"claude-haiku-4-5"` | Model for sanitizer (use a cheaper/faster model) |
+| `provider` | `str` | `"gemini"` | LLM provider: `anthropic`, `openai`, `gemini`, `groq`, `ollama`, and 8 more |
+| `model` | `str` | `"gemini-2.0-flash-lite"` | Model name for planning |
+| `sanitizer_provider` | `str` | `"gemini"` | Provider for content gateway sanitizer |
+| `sanitizer_model` | `str` | `"gemini-2.0-flash-lite"` | Model for sanitizer (use a cheaper/faster model) |
 | `offline_mode` | `bool` | `false` | Skip all LLM calls; use heuristic planner only |
+
+### Cost Optimization & Caching
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `response_cache_enabled` | `bool` | `true` | Enable TTL LRU cache for LLM responses — identical prompts skip the API entirely |
+| `response_cache_max_size` | `int` | `1000` | Maximum entries in the response cache (LRU eviction when full) |
+| `tool_cache_enabled` | `bool` | `true` | Enable short-TTL cache for read-only tools (list_directory, system_monitor, etc.) |
+| `smart_routing_enabled` | `bool` | `true` | Route each call to the cheapest capable model tier (TRIVIAL/SIMPLE → lite/mini, COMPLEX → full model) |
 
 ### Security
 

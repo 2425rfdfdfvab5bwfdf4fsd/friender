@@ -1,4 +1,4 @@
-# Arix v8.0 — REST API Reference
+# Arix v9.5 — REST API Reference
 
 ## Authentication
 
@@ -25,15 +25,45 @@ Returns server status, LLM availability, tool count.
 
 ```json
 {
-  "version": "8.0.0",
-  "provider": "anthropic",
-  "model": "claude-opus-4-5",
+  "version": "9.5.0",
+  "provider": "gemini",
+  "model": "gemini-2.0-flash-lite",
   "offline_mode": false,
   "llm_available": true,
   "llm_error": null,
-  "tool_count": 38,
-  "circuit_breaker": "closed"
+  "tool_count": 100,
+  "circuit_breaker": {"state": "closed", "failure_count": 0}
 }
+```
+
+### `GET /api/cache/stats`
+Returns live hit/miss statistics for both the LLM response cache and the tool result cache.
+
+```json
+{
+  "response_cache": {
+    "hits": 42,
+    "misses": 18,
+    "hit_rate": 0.7,
+    "api_calls_saved": 42,
+    "size": 12,
+    "max_size": 1000
+  },
+  "tool_cache": {
+    "hits": 15,
+    "misses": 31,
+    "hit_rate": 0.326,
+    "size": 8,
+    "cached_tools": ["list_directory", "system_monitor", "git_status", "..."]
+  }
+}
+```
+
+### `POST /api/cache/clear`
+Flushes both the LLM response cache and the tool cache. Useful after changing provider/model or editing files that would make cached results stale.
+
+```json
+{ "cleared": true }
 ```
 
 ### `GET /api/tools`
