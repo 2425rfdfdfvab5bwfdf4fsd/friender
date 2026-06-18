@@ -140,12 +140,13 @@ The ecosystem as a whole is worth monitoring closely: the Q1 2026 inflection poi
 
 ---
 
-# Part II — Arix v8.2 vs The Claw Ecosystem
+# Part II — Arix v9.2 vs The Claw Ecosystem
 ## Is Arix Better Than OpenClaw? A Positioned Competitive Analysis
 
-> **Analysis date:** June 18, 2026  
-> **Scope:** Arix v8.2 vs OpenClaw (flagship) vs OpenFang (security leader) vs PicoClaw (performance leader) vs nanobot (simplicity leader) vs LangGraph 0.4+ / CrewAI 0.105+ / AutoGen 1.0 GA  
+> **Analysis date:** June 18, 2026 — **updated for Arix v9.2**
+> **Scope:** Arix v9.2 vs OpenClaw (flagship) vs OpenFang (security leader) vs PicoClaw (performance leader) vs nanobot (simplicity leader) vs LangGraph 0.4+ / CrewAI 0.105+ / AutoGen 1.0 GA
 > **Perspective:** Single power-user deploying a personal AI computer-control agent on a real machine with real data
+> **Prior version:** v8.2 analysis (same date, same file). Sections updated since v8.2 are marked *(updated)*.
 
 ---
 
@@ -154,22 +155,24 @@ The ecosystem as a whole is worth monitoring closely: the Q1 2026 inflection poi
 | If you want… | Winner |
 |---|---|
 | Maximum security on a real machine with sensitive data | **Arix** |
-| Broadest built-in tool coverage (75 tools, 15 domains) | **Arix** |
+| Broadest built-in tool coverage (76 tools, 15 domains) | **Arix** |
 | Gmail + Drive + Calendar + Notion + Slack + Trello + Spotify + YouTube | **Arix** |
-| Best AI planning quality (CoT + 3-level retry + memory few-shot) | **Arix** |
-| Proactive channels (Telegram, Discord, IRC, Signal, LINE) | **Arix** |
+| Best AI planning quality (CoT + 3-level retry + RAG injection + memory few-shot) | **Arix** |
+| Proactive channels (Telegram, Discord, IRC, Signal, LINE, Matrix) | **Arix** |
+| Multi-provider LLM with local Ollama support (13 providers) | **Arix** *(improved)* |
+| Autonomous background research with configurable topic interests | **Arix / HermitClaw** *(improved)* |
 | Zero-setup / non-technical user | **OpenClaw** |
-| Local LLM / true air-gapped operation | **OpenClaw / PicoClaw / NullClaw** |
+| True air-gapped operation (no cloud API required) | **OpenClaw / PicoClaw / NullClaw** |
 | Smallest binary (<1 MB), embedded/edge hardware | **NullClaw (Zig)** |
 | Kernel-enforced sandbox, absolute isolation | **Autobot / OpenFang** |
 | Largest community + 700+ skill marketplace | **OpenClaw (ClawHub)** |
 | Complex stateful multi-agent pipelines (enterprise) | **LangGraph / AutoGen** |
 | Broadest IM platform coverage (QQ, WeChat, Feishu…) | **AstrBot** |
-| Self-improving agent with autonomous skill curation | **Hermes Agent** |
+| Self-improving agent with autonomous skill curation | **Hermes Agent** (leader), **Arix** (emerging) |
 
 ---
 
-## 1. Arix v8.2 — Full Capability Profile
+## 1. Arix v9.2 — Full Capability Profile *(updated)*
 
 Arix is a **secure, LLM-powered personal AI computer-control agent** built on FastAPI with a WebSocket terminal UI. Unlike OpenClaw (viral, local-first consumer product) or LangGraph/CrewAI/AutoGen (developer frameworks you assemble yourself), Arix prioritizes **security depth**, **integration breadth**, and **intelligence quality** for a power user running it as a "digital employee."
 
@@ -182,9 +185,9 @@ User Command → TaskScope Derivation → Local Redaction Pipeline
 → Runtime Step Validator → Tool Execution → Audit Log
 ```
 
-9 discrete security layers gate every command before any tool executes.
+9 discrete security layers gate every command before any tool executes. The planner now additionally receives RAG passages from the local knowledge base and memory few-shot examples before generating a plan.
 
-### Tool Coverage — 75 tools, 15 domains
+### Tool Coverage — 76 tools, 15 domains *(updated: +1 tool)*
 
 | Domain | Count | Notable capabilities |
 |---|---|---|
@@ -200,7 +203,7 @@ User Command → TaskScope Derivation → Local Redaction Pipeline
 | App | 4 | open/close/list/find installed apps (100+ app registry) |
 | Web apps | 3 | open, navigate, list |
 | Vision | 2 | analyze image, capture-and-analyze |
-| Research | 2 | research topic, summarize URL |
+| Research | **3** | research topic, summarize URL, **search_knowledge_base** *(new)* |
 | System | 2 | monitor, cleanup temp files |
 | Messaging | 1 | WhatsApp send |
 
@@ -223,14 +226,16 @@ Arix implements the full OWASP Agentic AI Top 10 (December 2025):
 | ASI05 Unexpected Code Execution | Sandboxed run_code + RuntimeValidator | ❌ Unrestricted | Container isolation | WASM sandbox | ❌ | ❌ |
 | ASI06 Excessive Resource Use | Tool timeout + system monitor | ❌ | ❌ | Partial | ❌ | ❌ |
 | ASI07 Unauditable Actions | Tamper-resistant audit.log (0600) | ❌ | ❌ | Merkle audit trail | ❌ | ❌ |
-| ASI08 Prompt Leakage | LocalTextRedactor | ❌ | Secret scanning | Secret zeroization | ❌ | ❌ |
+| ASI08 Prompt Leakage | LocalTextRedactor + credential output scanning | ❌ | Secret scanning | Secret zeroization | ❌ | ❌ |
 | ASI10 Rogue Agents | CumulativePlanRiskEvaluator | ❌ | ❌ | Partial | ❌ | ❌ |
 
 **Arix: 9/9 mitigated (most comprehensive outside OpenFang's 16-layer model)**
 
 The unique element in Arix is the **CapabilityGrant system**: every tool call requires a single-use HMAC-signed token encoding the exact tool, exact resource, and expiry. The UsedGrantRegistry (WAL-mode SQLite, persistent across restarts) prevents replay attacks. No Claw-family project outside OpenFang has an equivalent mechanism — and OpenFang's is even stronger (adds Merkle trail + WASM sandboxing).
 
-### 2.2 Intelligence & Planning
+The sandbox layer was hardened in v9.2: `setrlimit` caps CPU, memory, open files, and subprocesses; `unshare --net` provides network namespace isolation for sandboxed code runs; and credential output scanning (8 regex patterns) blocks accidental secret leakage into tool results. Arix now auto-detects the available sandbox method (bubblewrap → unshare → Docker → setrlimit-only) at startup and reports it in `/api/status`.
+
+### 2.2 Intelligence & Planning *(updated)*
 
 OpenClaw uses a **single-shot LLM call with no planning layer**. Arix uses chain-of-thought reasoning, goal decomposition via GoalSupervisor, and a three-level progressive retry:
 
@@ -243,22 +248,28 @@ Step fails →
   Level 3 (replan): full replan with failure history as negative examples
 ```
 
-The Hermes Agent Curator (self-improving skill loop every 15 tasks) is the strongest intelligence feature in the entire ecosystem and goes beyond what Arix currently implements — but Hermes has no security pipeline and no computer-control tools.
+**New in v9.2 — RAG auto-injection:** Every LLM planning call now automatically queries the local knowledge base for the top-3 relevant passages and injects them as `RELEVANT PASSAGES FROM YOUR KNOWLEDGE BASE` context before plan generation. This means documents you upload to the KB directly shape planning without any explicit user prompt — the agent knows what you know.
 
-| Intelligence Dimension | Arix | OpenClaw | OpenFang | nanobot | Hermes Agent |
-|---|---|---|---|---|---|
-| Chain-of-thought planning | **Yes** | No | Partial | No | Yes |
-| Goal decomposition | **GoalSupervisor (LLM)** | No | Hand routing | No | Full |
-| Failure recovery | **3-level progressive retry** | None | Partial | None | Curator self-repair |
-| Vector memory | **OpenAI embeddings + TF-IDF fallback** | No | Per-agent workspaces | No | Yes |
-| Few-shot from memory | **Yes (trace injection)** | No | No | No | Yes |
-| Skill self-improvement | No | Community plugins | FangHub | No | **Autonomous Curator** |
-| Advisory / knowledge mode | **AdvisoryIntentDetector** | No | No | No | No |
-| Offline fallback | **Heuristic regex planner** | **Local LLM** | No | No | No |
+**New in v9.2 — Active Curator loop:** An OpenFang-Hand-style Curator runs every 15 tasks: it extracts action patterns from recent task history, creates and refines named skills, prunes underperforming ones, and promotes high-performing skills to "core" status (injected into future planning contexts automatically). This is Arix's first step toward the self-improvement loop pioneered by Hermes Agent.
+
+**New in v9.2 — Autonomous Researcher:** Inspired by HermitClaw's continuous-research design, an autonomous background researcher runs on an APScheduler schedule, picks topics from user-configured interests, performs parallel web research (asyncio.gather), and accumulates a research journal. The user configures seed interests via the Researcher panel or `POST /api/researcher/interests`; the agent enriches them autonomously.
+
+| Intelligence Dimension | Arix v9.2 | OpenClaw | OpenFang | nanobot | Hermes Agent | HermitClaw |
+|---|---|---|---|---|---|---|
+| Chain-of-thought planning | **Yes** | No | Partial | No | Yes | No |
+| Goal decomposition | **GoalSupervisor (LLM)** | No | Hand routing | No | Full | No |
+| Failure recovery | **3-level progressive retry** | None | Partial | None | Curator self-repair | None |
+| RAG document injection | **Yes — auto every plan** *(new)* | No | No | No | No | No |
+| Vector memory | **OpenAI embeddings + TF-IDF fallback** | No | Per-agent workspaces | No | Yes | No |
+| Few-shot from memory | **Yes (trace injection)** | No | No | No | Yes | No |
+| Skill self-improvement | **Active Curator (15-task cycle)** *(new)* | Community plugins | FangHub | No | **Autonomous Curator** | No |
+| Autonomous background research | **Yes — configurable interests** *(new)* | No | Researcher Hand | No | No | **Continuous** |
+| Advisory / knowledge mode | **AdvisoryIntentDetector** | No | No | No | No | No |
+| Offline fallback | **Heuristic regex planner** | **Local LLM** | No | No | No | No |
 
 ### 2.3 Tool & Integration Breadth
 
-This is the starkest gap. OpenClaw ships ~15–20 built-in tools, heavily weighted toward messaging and file operations. Arix ships 75. No other framework in the ecosystem ships anything close.
+This is the starkest gap. OpenClaw ships ~15–20 built-in tools, heavily weighted toward messaging and file operations. Arix ships 76. No other framework in the ecosystem ships anything close.
 
 | Integration | Arix | OpenClaw | OpenFang | PicoClaw | AstrBot | LangGraph |
 |---|---|---|---|---|---|---|
@@ -291,10 +302,12 @@ Arix manages OAuth refresh token rotation automatically for Gmail, Drive, and Ca
 
 | Dimension | Arix | OpenClaw | PicoClaw | nanobot | LangGraph |
 |---|---|---|---|---|---|
-| REST API | **18 FastAPI routers** | No | Partial | Partial | No (library) |
+| REST API | **23 FastAPI routers** *(updated)* | No | Partial | Partial | No (library) |
 | WebSocket streaming | **Yes** | No | Yes | No | No |
+| SSE streaming (Live Canvas) | **Yes** *(new)* | No | No | No | No |
 | Multi-tenant | No | No | No | No | **Yes** |
 | Embeddable in existing apps | **Yes (HTTP)** | No | Yes | No | **Yes (library)** |
+| MCP client | **Yes** *(new)* | No | **Yes** | No | No |
 
 ### 2.6 Scheduling & Automation
 
@@ -303,77 +316,105 @@ Arix manages OAuth refresh token rotation automatically for Gmail, Drive, and Ca
 | Cron scheduler | **APScheduler (persistent)** | File-watch only | Partial | Basic | Yes |
 | Natural-language task definitions | **Yes** | No | No | No | No |
 | Scheduled workflow CRUD API | **Yes** | No | No | No | No |
+| Autonomous background research | **Yes (configurable)** *(new)* | No | Researcher Hand | No | No |
 
-### 2.7 Local LLM & Offline Mode
+### 2.7 Local LLM & Offline Mode *(updated — significantly improved)*
 
-This is OpenClaw and its derivatives' strongest ground. Arix's offline mode uses a heuristic regex planner — functional for common tasks but far less capable than a local 70B LLM.
+This was OpenClaw and its derivatives' strongest ground in v8.2. v9.2 substantially closes the gap with a 13-provider architecture and first-class Ollama integration.
 
-| Dimension | Arix | OpenClaw | PicoClaw | NullClaw | nanobot |
+| Dimension | Arix v9.2 | OpenClaw | PicoClaw | NullClaw | nanobot |
 |---|---|---|---|---|---|
-| Local LLM (Ollama/llama.cpp) | Demo mode only | **Primary design target** | **Yes** | **Yes** | **Yes** |
-| True air-gap (no outbound calls) | No | **Yes** | **Yes** | **Yes** | **Yes** |
-| Multi-provider (Claude/OpenAI/Gemini) | **Yes (3 cloud)** | OpenAI + Claude | 50+ providers | 50+ providers | OpenAI-compat |
+| Local LLM (Ollama) | **Yes — auto-detect, model browser, pull API** *(new)* | **Primary design target** | Yes | Yes | Yes |
+| True air-gap (no outbound LLM calls) | No (heuristic fallback only) | **Yes** | **Yes** | **Yes** | **Yes** |
+| Provider count | **13 providers** *(updated)* | 2 (OpenAI + Claude) | 50+ | 50+ | OpenAI-compat |
+| Providers supported | Claude, OpenAI, Gemini, Groq, Together, Mistral, DeepSeek, Perplexity, xAI, OpenRouter, Fireworks, Cerebras, Cohere, **Ollama** | OpenAI, Claude | 50+ via adapters | 50+ via adapters | OpenAI-compat |
+| Provider switching UI | **Yes — clickable card grid** *(new)* | Dropdown | Config file | Config file | Config file |
 | Offline fallback quality | Regex heuristic | **Full LLM** | **Full LLM** | **Full LLM** | **Full LLM** |
+| Model pull/management | **Yes (`POST /api/providers/ollama/pull`)** *(new)* | Built-in | N/A | N/A | N/A |
+
+The gap narrows from "Arix cannot use local LLMs at all" to "Arix supports Ollama as a first-class provider with auto-detection and management, but still falls back to a heuristic planner — not a local LLM — when no API key is present." Users running Ollama locally can now point Arix at it via a single provider switch with no code changes.
+
+### 2.8 Knowledge Base & RAG *(new in v9.2)*
+
+AstrBot and OpenFang's Researcher Hand are the only other ecosystem members with production-grade document retrieval. Arix v9.2 brings this capability to parity for single-user deployments.
+
+| Dimension | Arix v9.2 | AstrBot | OpenFang | OpenClaw | nanobot |
+|---|---|---|---|---|---|
+| Document ingestion | **PDF, DOCX, TXT, MD, code, CSV, JSON (drag-drop)** | PDF, DOCX, MD (BM25 + dense) | Per-Hand knowledge | No | No |
+| Retrieval method | **BM25 + OpenAI embeddings + TF-IDF fallback** | BM25 + pgvector dense | Per-Hand context | No | No |
+| Auto-injection into planning | **Yes — every plan call** | No (user-triggered) | No | No | No |
+| Explicit search tool | **`search_knowledge_base` (tool #76)** | No | No | No | No |
+| Upload API | **`POST /api/knowledge/upload` (multipart)** | WebUI only | N/A | N/A | N/A |
+
+The key differentiator is **automatic injection**: Arix queries the KB before every plan and silently enriches the LLM's context. Users don't need to say "search my docs first" — it happens by default.
 
 ---
 
-## 3. Scored Comparison (1–10 per dimension)
+## 3. Scored Comparison (1–10 per dimension) *(updated)*
 
-| Dimension | **Arix** | **OpenClaw** | **OpenFang** | **PicoClaw** | **nanobot** | **LangGraph** | **AutoGen** |
+| Dimension | **Arix v9.2** | **OpenClaw** | **OpenFang** | **PicoClaw** | **nanobot** | **LangGraph** | **AutoGen** |
 |---|---|---|---|---|---|---|---|
 | Security depth | **9** | 1 | **10** | 3 | 2 | 3 | 4 |
 | Tool breadth (built-in) | **9** | 3 | 7 | 5 | 4 | 1 | 3 |
 | Integration depth | **9** | 3 | 4 | 3 | 3 | 2 | 2 |
-| Planning quality | **8** | 3 | 6 | 4 | 3 | 7 | 7 |
-| Multi-agent | 6 | 2 | **9** | 5 | 3 | **10** | **10** |
-| Memory depth | **8** | 2 | 7 | 4 | 4 | 3 | 3 |
-| Local LLM / offline | 2 | **9** | 4 | **9** | **8** | 4 | 4 |
+| Planning quality | **9** *(↑ from 8)* | 3 | 6 | 4 | 3 | 7 | 7 |
+| Multi-agent | **7** *(↑ from 6)* | 2 | **9** | 5 | 3 | **10** | **10** |
+| Memory depth | **9** *(↑ from 8)* | 2 | 7 | 4 | 4 | 3 | 3 |
+| Local LLM / offline | **6** *(↑ from 2)* | **9** | 4 | **9** | **8** | 4 | 4 |
 | Resource efficiency | 4 | 5 | 7 | **9** | 6 | 5 | 5 |
-| Setup simplicity | 5 | **9** | 4 | 7 | **8** | 3 | 5 |
+| Setup simplicity | **6** *(↑ from 5)* | **9** | 4 | 7 | **8** | 3 | 5 |
 | Community ecosystem | 2 | **10** | 5 | 6 | 6 | 8 | 8 |
 | REST API / embeddability | **9** | 1 | 5 | 5 | 4 | 6 | 5 |
 | Scheduling | **9** | 3 | 5 | 4 | 6 | 2 | 2 |
-| **Weighted total** | **7.2** | 4.3 | 6.2 | 5.8 | 4.8 | 5.2 | 5.2 |
+| **Weighted total** | **7.8** *(↑ from 7.2)* | 4.3 | 6.2 | 5.8 | 4.8 | 5.2 | 5.2 |
 
 *Weights: Security ×1.5, Tool breadth ×1.2, Integration ×1.2, Planning ×1.2, all others ×1.0*
 
+*Score changes since v8.2:* Planning 8→9 (RAG auto-injection), Multi-agent 6→7 (router + parallel dispatch + A2A protocol), Memory 8→9 (KB upload + RAG + vector), Local LLM 2→6 (13 providers + Ollama first-class), Setup simplicity 5→6 (provider grid + Ollama auto-detect).
+
 ---
 
-## 4. Where Arix Wins Definitively
+## 4. Where Arix Wins Definitively *(updated)*
 
 ### Security on a real machine — no contest
-If you are running an AI agent on a laptop or workstation with real credentials, email, files, and SSH keys, Arix is the only non-enterprise option (alongside OpenFang) that has thought seriously about what happens when the LLM is compromised, prompt-injected, or fed malicious content. OpenClaw's April 2026 advisory proved this risk is not hypothetical.
+If you are running an AI agent on a laptop or workstation with real credentials, email, files, and SSH keys, Arix is the only non-enterprise option (alongside OpenFang) that has thought seriously about what happens when the LLM is compromised, prompt-injected, or fed malicious content. OpenClaw's April 2026 advisory proved this risk is not hypothetical. Arix's credential output scanning catches the case where a tool result accidentally contains a secret — a category not addressed by most security-focused agents.
 
-### Built-in tool coverage — 75 vs ~20
+### Built-in tool coverage — 76 vs ~20
 You do not assemble anything. Browser, desktop, file, email, calendar, drive, code execution, document creation, app control, vision, research, system monitoring — all wired and working out of the box. No other agent in this survey matches it for a single-user power-user deployment.
 
 ### OAuth service integrations — 8 services, production-grade
 Gmail, Drive, Calendar, Notion, Slack, Trello, Spotify, YouTube with automatic token refresh. OpenClaw ships zero of these. LangGraph and AutoGen ship them as optional plugins with no managed OAuth flow.
 
 ### REST API for embedding
-18 FastAPI routers means Arix is a backend service you can call from anything — a mobile app, a browser extension, another agent. OpenClaw is a desktop GUI that cannot be called programmatically.
+23 FastAPI routers means Arix is a backend service you can call from anything — a mobile app, a browser extension, another agent. OpenClaw is a desktop GUI that cannot be called programmatically.
 
-### Intelligent planning with recovery
-The GoalSupervisor's 3-level progressive retry means Arix recovers from failures without user intervention. OpenClaw re-prompts the user on failure.
+### Intelligent planning with recovery + RAG *(updated)*
+The GoalSupervisor's 3-level progressive retry means Arix recovers from failures without user intervention. The addition of automatic RAG injection means the planner also leverages the user's own documents without any extra prompt — a capability not present in any other Claw-family project.
+
+### Knowledge base with auto-injection *(new)*
+While AstrBot also has a RAG pipeline, Arix auto-injects KB results into every single plan generation call, not just on explicit user request. Drop a PDF into the Knowledge panel and the agent immediately starts using it to inform planning — without changing how you issue commands.
 
 ---
 
-## 5. Where the Claw Ecosystem Wins
+## 5. Where the Claw Ecosystem Wins *(updated)*
 
-### Local LLM & air-gap (OpenClaw / PicoClaw / NullClaw)
-Arix requires a cloud API key for full intelligence. If your threat model includes sending prompts to Anthropic or OpenAI, these frameworks win. NullClaw in particular achieves this in a 678 KB binary.
+### True air-gap (OpenClaw / PicoClaw / NullClaw)
+Arix now supports Ollama as a first-class provider, closing the local-LLM gap significantly. However, it still requires network access for full intelligence — without any API key, it falls back to a heuristic planner, not a local model. OpenClaw, PicoClaw, and NullClaw are genuinely air-gapped: they can run with a local 70B model and no internet connection at all. This distinction matters for high-security environments, offline deployments, or users whose threat model explicitly excludes sending prompts to cloud endpoints.
 
 ### Community & plugin ecosystem (OpenClaw)
 700+ ClawHub skills, 250,000 GitHub stars, NVIDIA integration, third-party reviews, community bug reports. Arix is a private custom deployment with no public ecosystem.
 
 ### Setup simplicity (OpenClaw, nanobot)
-GUI installer vs environment variable configuration. OpenClaw is accessible to non-developers; Arix requires technical setup.
+GUI installer vs environment variable configuration. OpenClaw is accessible to non-developers; Arix requires technical setup even with the improved provider grid.
 
 ### Kernel-level sandbox (OpenFang, Autobot)
-OpenFang's WASM sandbox + Merkle audit trail is more rigorous than Arix's HMAC grant system for tool execution isolation. Autobot's Linux mount namespaces approach is the most tamper-proof of all. If you need production-hardened execution isolation at the OS level, these two lead.
+Arix v9.2 added `setrlimit` + `unshare --net` sandbox hardening, which meaningfully improves code execution isolation. However, OpenFang's WASM sandbox + Merkle audit trail and Autobot's Linux mount namespaces remain more rigorous. Arix's sandbox depends on application-level controls for filesystem access; OpenFang and Autobot enforce isolation at the kernel level with no application bypass path.
 
 ### Self-improving intelligence (Hermes Agent)
-No framework in the survey matches Hermes Agent's autonomous Curator loop for long-run skill refinement. Arix's memory few-shot injection is valuable but static — Hermes actively rewrites its own skill library.
+Arix v9.2 adds an active Curator loop (pattern extraction → skill creation → pruning), meaningfully closing the gap with Hermes Agent. However, Hermes Agent's Curator has 18+ months of production use and promotes skills to "core" status that affect all future planning contexts globally. Arix's implementation is newer and operates within narrower scope. Hermes remains the ecosystem leader for autonomous self-improvement.
+
+### Autonomous continuous research (HermitClaw)
+Arix v9.2 adds a background autonomous researcher with configurable interests — directly inspired by HermitClaw. The research journal, topic diversity, and parallel-search approach match HermitClaw's core design. However, HermitClaw's "emergent personality" model — where the agent's accumulated body of work develops a recognizable character over weeks — goes further than Arix's interest-scoped research. For users who want an agent that discovers topics on its own, HermitClaw remains the archetype.
 
 ### Embedded / edge deployment (NullClaw, MiniClaw, zclaw)
 678 KB binary on a $5 board. Arix requires Python, FastAPI, and a network connection to a cloud LLM — categorically incompatible with embedded targets.
@@ -383,26 +424,52 @@ QQ, WeChat, Feishu, DingTalk, LINE, Matrix, Mattermost — platforms that Arix d
 
 ---
 
-## 6. The Positioning Summary
+## 6. The Positioning Summary *(updated)*
 
-Arix sits in a niche the Claw ecosystem largely leaves unoccupied: **a security-hardened, integration-rich, intelligent personal agent for a single power user on a real production machine**. It is not the right choice for:
+Arix sits in a niche the Claw ecosystem largely leaves unoccupied: **a security-hardened, integration-rich, intelligent personal agent for a single power user on a real production machine**. The v9.2 upgrade strengthens this position by closing the two biggest gaps identified in the v8.2 analysis: local LLM support (Ollama, 13 providers) and knowledge-augmented planning (RAG auto-injection).
+
+It is not the right choice for:
 
 - Non-technical users who want a GUI installer → OpenClaw
-- Air-gapped environments → PicoClaw / NullClaw
+- True air-gapped environments where no cloud API is acceptable → PicoClaw / NullClaw
 - Embedded hardware → NullClaw / MiniClaw
 - Teams building multi-agent pipelines → LangGraph / AutoGen
 - Chinese IM platform deployments → AstrBot
 - Maximum OS-level sandboxing → OpenFang / Autobot
+- Continuous emergent-personality research agent → HermitClaw
 
 It is the right choice for:
 
 - Anyone who needs all of Gmail + Drive + Calendar + Notion + Slack in a single agent
 - Anyone running the agent on a machine where a prompt-injection attack via WhatsApp message would be a serious security incident
 - Anyone who wants a full REST API to embed the agent in other systems
-- Anyone who wants 75 pre-built tools rather than assembling a tool library from scratch
+- Anyone who wants 76 pre-built tools rather than assembling a tool library from scratch
 - Anyone who wants scheduled natural-language workflows with cron reliability
 - Anyone who wants an agent that recovers from failures without human intervention
+- Anyone who wants the LLM planner to automatically use their own uploaded documents when making plans
+- Anyone who wants Ollama or a cloud provider with a single provider-switch, no code changes
 
 ---
 
-*Part II analysis compiled June 18, 2026. Based on the Awesome Claws ecosystem research (Part I), live web research into OpenClaw security advisories and framework benchmarks, and the Arix v8.2 architecture (replit.md, PRD v5.2, memory notes).*
+## 7. What Changed: v8.2 → v9.2
+
+This section documents the competitive delta since the v8.2 analysis was compiled.
+
+| Area | v8.2 state | v9.2 state | Ecosystem benchmark |
+|---|---|---|---|
+| LLM providers | 3 (Claude, OpenAI, Gemini) | 13 (+ Groq, Together, Mistral, DeepSeek, Perplexity, xAI, OpenRouter, Fireworks, Cerebras, Cohere, Ollama) | PicoClaw/NullClaw: 50+ |
+| Local LLM | Not supported | Ollama: auto-detect at startup, model browser, pull API, first-class provider | OpenClaw: primary design target |
+| Knowledge base | Path-based ingest only | Drag-drop file upload (PDF/DOCX/TXT/MD/code/CSV/JSON), `search_knowledge_base` tool | AstrBot: BM25 + dense; OpenFang: per-Hand |
+| RAG in planning | No | Auto-injected top-3 KB passages into every LLM plan call | No other Claw project does this |
+| Skill self-improvement | None | Active Curator: 4-stage loop every 15 tasks | Hermes Agent: production-mature |
+| Autonomous research | None | Configurable interests, parallel research, research journal, run-now API | HermitClaw: continuous |
+| Sandbox method | setrlimit only | Auto-detect bwrap/unshare/Docker + network isolation + credential output scan | OpenFang: WASM; Autobot: namespaces |
+| Provider UI | Text config | 13-card clickable provider grid in Settings | PicoClaw/NullClaw: config files |
+| Channels | Telegram, Discord | + IRC, Signal, LINE, Matrix | AstrBot: 15+ platforms |
+| Tool count | 75 | 76 (`search_knowledge_base` added) | OpenFang: ~30 via Hands |
+| Multi-agent | Basic router | Parallel dispatch, A2A protocol support, 11 Capability Hands | LangGraph/AutoGen: full framework |
+| Weighted score | 7.2 | **7.8** | OpenFang: 6.2 |
+
+---
+
+*Part II analysis compiled June 18, 2026; updated for Arix v9.2 same day. Based on the Awesome Claws ecosystem research (Part I), live web research into OpenClaw security advisories and framework benchmarks, and the Arix v9.2 architecture (replit.md, memory notes, live codebase inspection).*
