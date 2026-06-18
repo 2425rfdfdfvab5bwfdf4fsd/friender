@@ -1329,7 +1329,12 @@ const PANEL_TITLES = {
   gmail:'📧 Gmail', drive:'📁 Drive', notion:'📒 Notion',
   slack:'💬 Slack', trello:'📋 Trello', spotify:'🎵 Spotify',
   youtube:'▶️ YouTube', plugins:'🔌 Plugins',
-  settings:'⚙️ Settings', audit:'🔍 Audit', sysmon:'📊 System Monitor'
+  settings:'⚙️ Settings', audit:'🔍 Audit', sysmon:'📊 System Monitor',
+  marketplace:'🏪 ClawHub Marketplace', workspaces:'🗂️ Agent Workspaces',
+  'research-mode':'🔬 Autonomous Research', agents:'🤖 Multi-Agent Router',
+  hands:'✋ Capability Hands', curator:'🧬 Skill Curator',
+  knowledge:'📚 Knowledge Base', mcp:'🔗 MCP Servers',
+  channels:'📡 Channels', canvas:'🎨 Live Canvas', skillhub:'🛒 SkillHub',
 };
 
 function switchPanel(name) {
@@ -1352,6 +1357,11 @@ function switchPanel(name) {
   else if (name === 'calendar') loadCalendar();
   else if (name === 'assistant') loadAssistantPanel();
   else if (name === 'apps') loadAppsPanel();
+  else if (name === 'marketplace') loadMarketplace();
+  else if (name === 'workspaces') loadWorkspaces();
+  else if (name === 'research-mode') loadResearchMode();
+  else if (name === 'agents') loadAgents();
+  else if (name === 'hands') loadHands();
 }
 
 function openDetailSidebar(name) {
@@ -2778,6 +2788,10 @@ const PAL_ITEMS = [
   {icon:'💼', label:'Open LinkedIn', desc:'Launch LinkedIn in browser', action:()=>{prefill('Open LinkedIn feed');closePalette();}},
   {icon:'📊', label:'Open Excel', desc:'Launch Microsoft Excel', action:()=>{prefill('Open Microsoft Excel');closePalette();}},
   {icon:'🎥', label:'Open OBS Studio', desc:'Launch OBS Studio for recording/streaming', action:()=>{prefill('Open OBS Studio');closePalette();}},
+  {icon:'🏪', label:'ClawHub Marketplace', desc:'Browse and install community Hands & Skills', action:()=>{switchPanel('marketplace');closePalette();}},
+  {icon:'🗂️', label:'Agent Workspaces', desc:'View per-agent isolated work directories', action:()=>{switchPanel('workspaces');closePalette();}},
+  {icon:'🔬', label:'Research Mode', desc:'Autonomous background research loop', action:()=>{switchPanel('research-mode');closePalette();}},
+  {icon:'✋', label:'Capability Hands', desc:'OpenFang-style autonomous capability packs', action:()=>{switchPanel('hands');closePalette();}},
   {icon:'📊', label:'System Monitor', desc:'Open system panel', action:()=>{switchPanel('sysmon');closePalette();}},
   {icon:'🧠', label:'Memory', desc:'View task memory', action:()=>{switchPanel('memory');closePalette();}},
   {icon:'📈', label:'Insights', desc:'Activity analytics', action:()=>{switchPanel('insights');closePalette();}},

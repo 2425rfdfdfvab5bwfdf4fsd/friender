@@ -326,6 +326,169 @@ ANALYST_HAND = Hand(
     ),
 )
 
+BROWSER_HAND = Hand(
+    hand_id="browser-hand",
+    name="Browser",
+    icon="🌐",
+    description="Full Playwright browser automation — navigate sites, click, fill forms, extract data, screenshot, and interact with any web app including SPAs. Inspired by OpenFang's Browser Hand.",
+    version="1.0.0",
+    category="Automation",
+    tool_domains=["browser", "file", "research"],
+    knowledge=[
+        "Always start by taking a screenshot to understand the current page state",
+        "Use browser_wait_for_element before interacting with dynamic content",
+        "Prefer specific CSS selectors over text matching when possible",
+        "For forms: fill all fields before submitting, verify success after",
+        "On navigation failure: check for redirects, login walls, or rate limits",
+        "Extract structured data with browser_get_structured_data, not raw HTML",
+        "Save screenshots as evidence at key steps: before action, after action",
+        "Respect robots.txt and site terms — never scrape at abusive rates",
+    ],
+    plans=[
+        HandPlan(
+            name="Web Scrape",
+            trigger_keywords=["scrape", "extract from website", "get data from", "crawl"],
+            description="Extract structured data from a website",
+            steps=[
+                "browser_open_url {url}",
+                "browser_screenshot to see current state",
+                "browser_get_structured_data from page",
+                "create file ~/data/{name}.json with extracted data",
+            ],
+            estimated_duration_s=45,
+        ),
+        HandPlan(
+            name="Form Fill",
+            trigger_keywords=["fill form", "submit form", "register on", "sign up on"],
+            description="Fill and submit a web form",
+            steps=[
+                "browser_open_url {url}",
+                "browser_screenshot to verify form loaded",
+                "browser_fill_form with provided data",
+                "browser_screenshot after submission to verify success",
+            ],
+            estimated_duration_s=30,
+        ),
+        HandPlan(
+            name="Web Research",
+            trigger_keywords=["search the web", "look up", "find information about", "google"],
+            description="Research a topic via web search and synthesis",
+            steps=[
+                "browser_web_search {query}",
+                "browser_extract_page_text from top results",
+                "create file ~/research/{topic}.md with synthesized findings",
+            ],
+            estimated_duration_s=60,
+        ),
+    ],
+    persona=(
+        "You are Arix's Browser Hand — a precision web automation specialist. You methodically "
+        "navigate and interact with websites, always verifying your actions worked via screenshots, "
+        "and extracting exactly the data requested in clean, structured formats."
+    ),
+)
+
+CLIP_HAND = Hand(
+    hand_id="clip-hand",
+    name="Clip",
+    icon="📎",
+    description="Save, summarize, and tag content from any URL, text, or file. Builds a personal knowledge library with full-text search and intelligent tagging. Inspired by OpenFang's Clip Hand.",
+    version="1.0.0",
+    category="Research",
+    tool_domains=["browser", "file", "document", "research"],
+    knowledge=[
+        "Always extract the main content — strip ads, navbars, and boilerplate",
+        "Generate 3–5 concise tags that capture the core topics",
+        "Write a 2-sentence summary: what it is, and why it matters",
+        "Preserve the source URL and clipping date in every saved note",
+        "Organise clips by domain: tech/, business/, research/, personal/",
+        "Detect duplicates: check if similar content was clipped recently",
+        "Flag clips that cite primary sources vs. opinion/secondary commentary",
+        "Rate clip quality: High (primary source/data), Medium (analysis), Low (opinion)",
+    ],
+    plans=[
+        HandPlan(
+            name="Clip URL",
+            trigger_keywords=["clip", "save this url", "bookmark", "save article", "read later"],
+            description="Clip and summarise a URL into the knowledge library",
+            steps=[
+                "browser_open_url {url}",
+                "browser_extract_page_text to get content",
+                "summarize_url {url}",
+                "create file ~/clips/{date}_{title}.md with summary, tags, and source URL",
+            ],
+            estimated_duration_s=40,
+        ),
+        HandPlan(
+            name="Research & Clip",
+            trigger_keywords=["research and save", "find and clip", "collect articles about"],
+            description="Research a topic and clip the best sources",
+            steps=[
+                "browser_web_search {topic} top articles 2026",
+                "browser_extract_page_text from top 3 results",
+                "create file ~/clips/{topic}_collection.md with curated clips and summaries",
+            ],
+            estimated_duration_s=75,
+        ),
+    ],
+    persona=(
+        "You are Arix's Clip Hand — a precision knowledge curator. You extract the signal "
+        "from the noise, write tight summaries, apply intelligent tags, and build a "
+        "structured knowledge library that grows more valuable over time."
+    ),
+)
+
+LEAD_HAND = Hand(
+    hand_id="lead-hand",
+    name="Lead",
+    icon="🎯",
+    description="Prospect research, lead enrichment, and outreach drafting. Researches companies and contacts, scores fit, and writes personalised first-touch messages. Inspired by OpenFang's Lead Hand.",
+    version="1.0.0",
+    category="Business",
+    tool_domains=["browser", "research", "file", "document"],
+    knowledge=[
+        "Research the company before the person: understand their business first",
+        "Find the decision-maker's role, tenure, and recent public activity",
+        "Reference a specific, recent trigger: funding, launch, hiring, article",
+        "Lead with value to them, not your pitch — what problem do you solve?",
+        "Keep first-touch emails to 5 sentences: hook, context, value, proof, CTA",
+        "Score lead fit on 3 axes: need, authority, budget (NAB score 1–10 each)",
+        "Note competing solutions they currently use — found on website or LinkedIn",
+        "Always include a clear, low-friction call-to-action",
+    ],
+    plans=[
+        HandPlan(
+            name="Lead Research",
+            trigger_keywords=["research lead", "find info about company", "prospect research", "enrich lead"],
+            description="Deep research on a prospect company and contact",
+            steps=[
+                "browser_web_search {company} company overview funding team",
+                "browser_web_search {contact} {company} LinkedIn role background",
+                "research_topic {company} recent news and announcements",
+                "create file ~/leads/{company}_{contact}.md with full lead profile and NAB score",
+            ],
+            estimated_duration_s=90,
+        ),
+        HandPlan(
+            name="Outreach Draft",
+            trigger_keywords=["write outreach", "cold email", "draft message to", "first touch"],
+            description="Write a personalised first-touch outreach message",
+            steps=[
+                "read file ~/leads/{contact}.md if exists",
+                "research_topic {company} recent trigger events",
+                "create file ~/outreach/{contact}_email.md with personalised message and 2 subject line options",
+            ],
+            estimated_duration_s=50,
+        ),
+    ],
+    persona=(
+        "You are Arix's Lead Hand — a senior business development strategist. You research "
+        "prospects thoroughly, identify genuine fit, and craft personalised outreach that "
+        "leads with value. You never spam; you connect the right offer to the right person "
+        "at the right moment."
+    ),
+)
+
 PREDICTOR_HAND = Hand(
     hand_id="predictor-hand",
     name="Predictor",
@@ -442,6 +605,9 @@ BUILTIN_HANDS: List[Hand] = [
     ANALYST_HAND,
     PREDICTOR_HAND,
     WRITER_HAND,
+    BROWSER_HAND,
+    CLIP_HAND,
+    LEAD_HAND,
 ]
 
 

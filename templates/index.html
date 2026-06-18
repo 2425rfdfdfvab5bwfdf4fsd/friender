@@ -108,6 +108,8 @@
       <button class="snav-btn" data-panel="curator" onclick="switchPanel('curator')"><span class="snav-icon">🧬</span>Curator</button>
       <button class="snav-btn" data-panel="knowledge" onclick="switchPanel('knowledge')"><span class="snav-icon">📚</span>Knowledge</button>
       <button class="snav-btn" data-panel="hands" onclick="switchPanel('hands')"><span class="snav-icon">✋</span>Hands</button>
+      <button class="snav-btn" data-panel="marketplace" onclick="switchPanel('marketplace')"><span class="snav-icon">🏪</span>ClawHub</button>
+      <button class="snav-btn" data-panel="workspaces" onclick="switchPanel('workspaces')"><span class="snav-icon">🗂️</span>Workspaces</button>
       <button class="snav-btn" data-panel="mcp" onclick="switchPanel('mcp')"><span class="snav-icon">🔗</span>MCP</button>
       <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="settings" onclick="switchPanel('settings')"><span class="snav-icon">⚙️</span>Settings</button>
@@ -717,6 +719,84 @@
           Inspired by OpenFang — each Hand bundles expert knowledge, tool permissions, and pre-built execution plans for a specific capability domain.
         </div>
         <div id="hands-grid"></div>
+      </div>
+
+      <!-- ── ClawHub Marketplace panel ──────────────────────────────── -->
+      <div id="panel-marketplace" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🏪</span>
+          <span class="intg-title">ClawHub</span>
+          <button class="panel-btn" onclick="loadMarketplace()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Inspired by OpenClaw ClawHub &amp; OpenFang FangHub — browse and install community Hands and Skills.
+        </div>
+
+        <!-- Stats bar -->
+        <div id="mp-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px"></div>
+
+        <!-- Search + filters -->
+        <input class="panel-search" id="mp-search" placeholder="Search skills &amp; hands…"
+          oninput="filterMarketplace()" style="margin-bottom:7px">
+        <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="panel-btn mp-type-btn active" data-type="" onclick="setMpType(this,'')">All</button>
+          <button class="panel-btn mp-type-btn" data-type="hand" onclick="setMpType(this,'hand')">✋ Hands</button>
+          <button class="panel-btn mp-type-btn" data-type="skill" onclick="setMpType(this,'skill')">⚡ Skills</button>
+          <button class="panel-btn mp-type-btn" data-type="installed" onclick="loadMpInstalled()">📦 Installed</button>
+        </div>
+        <div id="mp-cats" style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap;overflow-x:auto"></div>
+
+        <!-- Featured carousel -->
+        <div id="mp-featured-section">
+          <div class="qa-section-title" style="margin-bottom:6px">⭐ Featured</div>
+          <div id="mp-featured" style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px"></div>
+        </div>
+
+        <!-- All items grid -->
+        <div class="qa-section-title" id="mp-list-title" style="margin-bottom:6px">All Items</div>
+        <div id="mp-list" style="display:flex;flex-direction:column;gap:6px"></div>
+      </div>
+
+      <!-- ── Workspaces panel ──────────────────────────────────────── -->
+      <div id="panel-workspaces" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🗂️</span>
+          <span class="intg-title">Agent Workspaces</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="panel-btn" onclick="loadWorkspaces()" title="Refresh">↺</button>
+            <button class="panel-btn" onclick="wsGarbageCollect()" title="Delete expired">🗑️ GC</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Inspired by OpenFang &amp; Moxxy — each agent task gets an isolated workspace with a private journal and artifact store.
+        </div>
+
+        <!-- Stats -->
+        <div id="ws-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:12px"></div>
+
+        <!-- Create workspace -->
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:12px">
+          <div style="font-size:11px;font-weight:700;color:var(--text);margin-bottom:7px">New Workspace</div>
+          <input class="panel-input" id="ws-task" placeholder="Task description…" style="margin-bottom:5px">
+          <select id="ws-role" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;margin-bottom:7px;outline:none">
+            <option value="general">🤖 General</option>
+            <option value="researcher">🔬 Researcher</option>
+            <option value="coder">💻 Coder</option>
+            <option value="ops">⚙️ Ops</option>
+            <option value="analyst">📊 Analyst</option>
+            <option value="browser">🌐 Browser</option>
+          </select>
+          <button class="panel-btn primary" onclick="createWorkspace()" style="width:100%;flex:unset">+ Create Workspace</button>
+        </div>
+
+        <!-- Filter -->
+        <div style="display:flex;gap:5px;margin-bottom:8px">
+          <button class="panel-btn ws-filter active" data-status="" onclick="setWsFilter(this,'')">All</button>
+          <button class="panel-btn ws-filter" data-status="active" onclick="setWsFilter(this,'active')">Active</button>
+          <button class="panel-btn ws-filter" data-status="archived" onclick="setWsFilter(this,'archived')">Archived</button>
+        </div>
+
+        <div id="ws-list"></div>
       </div>
 
       <!-- ── MCP panel ───────────────────────────────────────────────── -->
@@ -1383,6 +1463,213 @@ async function loadHands(){
 async function toggleHand(id){
   await fetch('/api/hands/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hand_id:id})});
   await loadHands();
+}
+
+// ── v9.0: ClawHub Marketplace ─────────────────────────────────────────────
+let _mpType = '', _mpCategory = '', _mpData = null;
+
+async function loadMarketplace(){
+  try{
+    const [stats, d] = await Promise.all([
+      fetch('/api/marketplace/stats').then(r=>r.json()),
+      fetch('/api/marketplace').then(r=>r.json()),
+    ]);
+    _mpData = d;
+
+    // Stats
+    const st = document.getElementById('mp-stats');
+    st.innerHTML = [
+      {label:'Items',val:stats.total_catalog},
+      {label:'Installed',val:stats.installed_count},
+      {label:'Featured',val:stats.featured_count},
+    ].map(s=>`<div style="text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px">
+      <div style="font-size:16px;font-weight:800;color:var(--accent)">${s.val}</div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${s.label}</div>
+    </div>`).join('');
+
+    // Category pills
+    const cats = document.getElementById('mp-cats');
+    cats.innerHTML = ['All',...d.categories].map(c=>`
+      <button class="panel-btn mp-cat-btn${_mpCategory===c||(!_mpCategory&&c==='All')?' active':''}"
+        onclick="setMpCategory(this,'${c==='All'?'':c}')"
+        style="font-size:10px;padding:3px 9px;white-space:nowrap">${c}</button>`).join('');
+
+    renderMpFeatured(d.featured||[]);
+    renderMpList(d.items||[]);
+  }catch(e){console.error('Marketplace load error',e);}
+}
+
+function mpCardHtml(item, compact=false){
+  const stars = '★'.repeat(Math.round(item.rating))+'☆'.repeat(5-Math.round(item.rating));
+  const badge = item.item_type==='hand'
+    ? `<span style="font-size:9px;background:rgba(99,102,241,.2);color:#a5b4fc;border-radius:3px;padding:1px 6px;border:1px solid rgba(99,102,241,.3)">✋ HAND</span>`
+    : `<span style="font-size:9px;background:rgba(245,158,11,.15);color:#fcd34d;border-radius:3px;padding:1px 6px;border:1px solid rgba(245,158,11,.3)">⚡ SKILL</span>`;
+  const instBtn = item.installed
+    ? `<button class="panel-btn" style="font-size:10px;padding:3px 10px;color:var(--danger)" onclick="mpUninstall('${item.item_id}')">✕ Remove</button>`
+    : `<button class="panel-btn primary" style="font-size:10px;padding:3px 10px" onclick="mpInstall('${item.item_id}')">+ Install</button>`;
+  return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px${item.installed?';border-color:var(--accent)':''}">
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <span style="font-size:${compact?18:22}px;flex-shrink:0">${item.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px">
+          <span style="font-size:12px;font-weight:700;color:var(--text)">${escHtml(item.name)}</span>
+          ${badge}
+          ${item.featured?'<span style="font-size:9px;color:#fbbf24">★ Featured</span>':''}
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${escHtml(item.category)} · by ${escHtml(item.author)} · v${item.version}</div>
+        ${compact?'':`<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:5px">${escHtml(item.description)}</div>`}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:10px;color:#fbbf24">${stars}</span>
+          <span style="font-size:10px;color:var(--muted)">⭐${item.rating.toFixed(1)} · ⬇${(item.installs/1000).toFixed(1)}k</span>
+          <div style="margin-left:auto">${instBtn}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function renderMpFeatured(items){
+  const el=document.getElementById('mp-featured');
+  if(!items.length){el.innerHTML='';document.getElementById('mp-featured-section').style.display='none';return;}
+  document.getElementById('mp-featured-section').style.display='';
+  el.innerHTML=items.slice(0,4).map(i=>mpCardHtml(i,true)).join('');
+}
+
+function renderMpList(items){
+  const el=document.getElementById('mp-list');
+  if(!items.length){el.innerHTML='<div class="panel-empty">No items match your search.</div>';return;}
+  el.innerHTML=items.map(i=>mpCardHtml(i,false)).join('');
+}
+
+async function filterMarketplace(){
+  if(!_mpData)return;
+  const q=document.getElementById('mp-search').value.trim().toLowerCase();
+  let items=_mpData.items||[];
+  if(q) items=items.filter(i=>i.name.toLowerCase().includes(q)||i.description.toLowerCase().includes(q)||i.tags.some(t=>t.includes(q)));
+  if(_mpCategory) items=items.filter(i=>i.category.toLowerCase()===_mpCategory.toLowerCase());
+  if(_mpType) items=items.filter(i=>i.item_type===_mpType);
+  document.getElementById('mp-list-title').textContent=`${items.length} item${items.length!==1?'s':''}`;
+  renderMpList(items);
+}
+
+function setMpType(btn, type){
+  _mpType=type;
+  document.querySelectorAll('.mp-type-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterMarketplace();
+}
+function setMpCategory(btn, cat){
+  _mpCategory=cat;
+  document.querySelectorAll('.mp-cat-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  filterMarketplace();
+}
+
+async function loadMpInstalled(){
+  try{
+    const d=await fetch('/api/marketplace/installed').then(r=>r.json());
+    document.getElementById('mp-featured-section').style.display='none';
+    document.getElementById('mp-list-title').textContent=`${d.installed.length} Installed`;
+    renderMpList(d.installed);
+  }catch(e){showToast('Error loading installed','err');}
+}
+
+async function mpInstall(itemId){
+  try{
+    const r=await fetch(`/api/marketplace/${itemId}/install`,{method:'POST'});
+    if(r.ok){showToast('Installed!','ok');}else{showToast('Install failed','err');}
+    await loadMarketplace();
+  }catch(e){showToast('Error installing','err');}
+}
+async function mpUninstall(itemId){
+  try{
+    await fetch(`/api/marketplace/${itemId}/install`,{method:'DELETE'});
+    showToast('Removed','ok');
+    await loadMarketplace();
+  }catch(e){showToast('Error removing','err');}
+}
+
+// ── v9.0: Agent Workspaces ────────────────────────────────────────────────
+let _wsFilter = '';
+
+async function loadWorkspaces(){
+  try{
+    const [stats, d] = await Promise.all([
+      fetch('/api/workspaces/stats').then(r=>r.json()),
+      fetch('/api/workspaces').then(r=>r.json()),
+    ]);
+    // Stats
+    document.getElementById('ws-stats').innerHTML=[
+      {label:'Total',val:stats.total,color:'var(--accent)'},
+      {label:'Active',val:stats.active,color:'var(--success)'},
+      {label:'Artifacts',val:stats.total_artifacts,color:'var(--accent2)'},
+    ].map(s=>`<div style="text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:7px">
+      <div style="font-size:16px;font-weight:800;color:${s.color}">${s.val}</div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">${s.label}</div>
+    </div>`).join('');
+    // List
+    const roleIcon={researcher:'🔬',coder:'💻',ops:'⚙️',analyst:'📊',browser:'🌐',general:'🤖'};
+    const list=document.getElementById('ws-list');
+    const items=d.workspaces||[];
+    if(!items.length){list.innerHTML='<div class="panel-empty">No workspaces yet. Create one above or run an agent task.</div>';return;}
+    list.innerHTML=items.map(ws=>{
+      const icon=roleIcon[ws.agent_role]||'🤖';
+      const age=Math.round((Date.now()/1000-ws.created_at)/3600);
+      const ageStr=age<1?'<1h':age<24?`${age}h`:`${Math.floor(age/24)}d`;
+      const statusColor={active:'var(--success)',archived:'var(--muted)',idle:'var(--accent2)'}[ws.status]||'var(--muted)';
+      const expired=ws.expired?'<span style="font-size:9px;color:var(--danger);margin-left:5px">EXPIRED</span>':'';
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px">
+          <span style="font-size:18px">${icon}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(ws.task_summary||'Unnamed task')}</div>
+            <div style="font-size:10px;color:var(--muted)">${ws.agent_role} · ${ws.workspace_id} · ${ageStr} ago${expired}</div>
+          </div>
+          <div style="width:7px;height:7px;border-radius:50%;background:${statusColor};flex-shrink:0"></div>
+        </div>
+        <div style="font-size:10px;color:var(--text2);margin-bottom:7px">📄 ${ws.artifact_count} artifacts · 📝 ${ws.journal_lines} journal entries</div>
+        ${ws.journal_preview?`<div style="font-size:10px;color:var(--muted);font-style:italic;background:var(--surface2);border-radius:var(--radius-sm);padding:5px;margin-bottom:7px;max-height:50px;overflow:hidden">${escHtml(ws.journal_preview.slice(0,200))}</div>`:''}
+        <div style="display:flex;gap:5px">
+          ${ws.status!=='archived'?`<button class="panel-btn" style="font-size:10px;padding:2px 8px" onclick="wsArchive('${ws.workspace_id}')">Archive</button>`:''}
+          <button class="panel-btn" style="font-size:10px;padding:2px 8px;color:var(--danger)" onclick="wsDelete('${ws.workspace_id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){console.error('Workspaces load error',e);}
+}
+
+async function createWorkspace(){
+  const task=document.getElementById('ws-task').value.trim();
+  const role=document.getElementById('ws-role').value;
+  if(!task){showToast('Enter a task description','err');return;}
+  try{
+    await fetch('/api/workspaces',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({agent_role:role,task_summary:task,ttl_hours:48})});
+    document.getElementById('ws-task').value='';
+    showToast('Workspace created','ok');
+    await loadWorkspaces();
+  }catch(e){showToast('Error creating workspace','err');}
+}
+async function wsArchive(id){
+  await fetch(`/api/workspaces/${id}/archive`,{method:'PATCH'});
+  await loadWorkspaces();
+}
+async function wsDelete(id){
+  if(!confirm('Delete this workspace and all its artifacts?'))return;
+  await fetch(`/api/workspaces/${id}`,{method:'DELETE'});
+  showToast('Workspace deleted','ok');
+  await loadWorkspaces();
+}
+async function wsGarbageCollect(){
+  const r=await fetch('/api/workspaces/gc',{method:'POST'}).then(r=>r.json());
+  showToast(`GC: removed ${r.removed} expired workspace${r.removed!==1?'s':''}`,r.removed>0?'ok':'info');
+  await loadWorkspaces();
+}
+function setWsFilter(btn,status){
+  _wsFilter=status;
+  document.querySelectorAll('.ws-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  loadWorkspaces();
 }
 
 // ── v8.4: MCP Client ──────────────────────────────────────────────────────

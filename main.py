@@ -45,6 +45,7 @@ from routers import (
     hands,
     intelligence,
     knowledge,
+    marketplace,
     mcp,
     memory,
     multi_agent,
@@ -59,6 +60,7 @@ from routers import (
     vision,
     whatsapp,
     workflows,
+    workspaces,
     ws,
     youtube,
 )
@@ -243,6 +245,8 @@ app.include_router(workflows.router)
 app.include_router(ws.router)
 app.include_router(youtube.router)
 app.include_router(research_mode.router)
+app.include_router(marketplace.router)
+app.include_router(workspaces.router)
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
