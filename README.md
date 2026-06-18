@@ -54,7 +54,7 @@ Arix is built for power users, developers, and researchers who want an AI assist
 
 | Category | Details |
 |---|---|
-| **Planning** | LLM goal decomposition (13+ providers), native agentic tool loop, multi-step plan generation, heuristic + Ollama offline fallback |
+| **Planning** | LLM goal decomposition (13+ providers — Claude, Gemini, GPT-4o, Groq, Mistral, DeepSeek, and more), native agentic tool loop, multi-step plan generation, heuristic + Ollama offline fallback |
 | **Security** | 9-layer pipeline, HMAC capability grants, grant replay prevention, TOCTOU checks, URL and payment blocklists, rate limiting |
 | **Risk management** | Cumulative risk scoring with three action gates: auto-proceed, acknowledge, explicit yes |
 | **Cost optimization** | ResponseCache (TTL LRU, saves API calls on repeated prompts), ToolCache (18 read-only tools), complexity-based model tier routing, compact prompts |
@@ -388,10 +388,12 @@ playwright install chromium
 # 4. (Optional) Set an LLM API key for full planning capability
 export ANTHROPIC_API_KEY="sk-ant-..."   # Recommended — uses Claude
 # or
-export OPENAI_API_KEY="sk-..."          # Alternative — uses GPT + enables neural vector memory
+export GEMINI_API_KEY="AIza..."         # Google Gemini (flash-lite default, free tier)
+# or
+export OPENAI_API_KEY="sk-..."          # GPT-4o + enables neural vector memory embeddings
 ```
 
-> **No API key?** Arix runs fully in **offline / demo mode** using the built-in heuristic planner. All 38+ tools, the security pipeline, memory system, and audit log remain completely functional.
+> **No API key?** Arix runs fully in **offline / demo mode** using the built-in heuristic planner. All 100 tools, the security pipeline, memory system, and audit log remain completely functional. If [Ollama](https://ollama.com) is running locally, Arix auto-detects and uses it.
 
 ---
 
@@ -427,12 +429,25 @@ Arix writes `~/.arix/config.json` on first run. All values can be overridden the
 | `grant_ttl_seconds` | `300` | Seconds before an unused capability grant expires |
 | `browser_headless` | `true` | Run Playwright in headless mode |
 
-### Environment Variables
+### AI Provider API Keys
 
-| Variable | Effect |
-|---|---|
-| `ANTHROPIC_API_KEY` | Enables Claude planning (default provider) |
-| `OPENAI_API_KEY` | Enables GPT planning **and** neural vector memory embeddings |
+Add to Replit Secrets (🔒) or export in your shell. Arix auto-detects which key is present.
+
+| Variable | Provider | Get your key |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Claude — recommended primary | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+| `GEMINI_API_KEY` | Google Gemini (default: flash-lite) | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
+| `OPENAI_API_KEY` | GPT-4o / 4o-mini + vector embeddings | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `GROQ_API_KEY` | Llama 3.3 70B (very fast, free tier) | [console.groq.com/keys](https://console.groq.com/keys) |
+| `MISTRAL_API_KEY` | Mistral Large / Small | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys/) |
+| `DEEPSEEK_API_KEY` | DeepSeek Chat / Reasoner | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) |
+| `PERPLEXITY_API_KEY` | Sonar (web-grounded search) | [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) |
+| `XAI_API_KEY` | xAI Grok | [console.x.ai](https://console.x.ai/) |
+| `OPENROUTER_API_KEY` | OpenRouter (access any model) | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `TOGETHER_API_KEY` | Together AI (Llama, FLUX, etc.) | [api.together.xyz/settings/api-keys](https://api.together.xyz/settings/api-keys) |
+| `FIREWORKS_API_KEY` | Fireworks AI (fast inference) | [fireworks.ai/account/api-keys](https://fireworks.ai/account/api-keys) |
+| `CEREBRAS_API_KEY` | Cerebras (ultra-fast Llama) | [cloud.cerebras.ai](https://cloud.cerebras.ai/platform) |
+| `COHERE_API_KEY` | Cohere Command R+ | [dashboard.cohere.com/api-keys](https://dashboard.cohere.com/api-keys) |
 
 ---
 

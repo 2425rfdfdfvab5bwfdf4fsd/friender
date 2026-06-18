@@ -158,13 +158,25 @@ docs/                      Architecture, security, API, changelog docs
 
 ## Core AI Provider Keys
 
-| Variable | Purpose |
-|----------|---------|
-| `ANTHROPIC_API_KEY` | Claude (primary LLM) — starts with `sk-ant-` |
-| `OPENAI_API_KEY` | GPT + vector memory embeddings |
-| `GEMINI_API_KEY` | Google Gemini (default: gemini-2.0-flash-lite) |
+Add keys in **Replit Secrets** (🔒 sidebar). Arix auto-detects which key is present and switches provider automatically.
 
-Without any key, Arix runs in **demo mode** using the heuristic planner. With a local Ollama instance, it auto-detects and uses it before falling back to the heuristic planner.
+| Variable | Provider | Get your key |
+|----------|----------|-------------|
+| `ANTHROPIC_API_KEY` | Claude (primary recommended) | [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys) |
+| `GEMINI_API_KEY` | Google Gemini (default: gemini-2.0-flash-lite) | [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey) |
+| `OPENAI_API_KEY` | GPT-4o / GPT-4o-mini + vector embeddings | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
+| `GROQ_API_KEY` | Llama 3.3 70B (very fast, free tier) | [console.groq.com/keys](https://console.groq.com/keys) |
+| `MISTRAL_API_KEY` | Mistral Large / Small | [console.mistral.ai/api-keys](https://console.mistral.ai/api-keys/) |
+| `DEEPSEEK_API_KEY` | DeepSeek Chat / Reasoner | [platform.deepseek.com/api_keys](https://platform.deepseek.com/api_keys) |
+| `PERPLEXITY_API_KEY` | Sonar (web-grounded search) | [perplexity.ai/settings/api](https://www.perplexity.ai/settings/api) |
+| `XAI_API_KEY` | xAI Grok | [console.x.ai](https://console.x.ai/) |
+| `OPENROUTER_API_KEY` | OpenRouter (any model via one key) | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| `TOGETHER_API_KEY` | Together AI (Llama, FLUX, etc.) | [api.together.xyz/settings/api-keys](https://api.together.xyz/settings/api-keys) |
+| `FIREWORKS_API_KEY` | Fireworks AI (fast inference) | [fireworks.ai/account/api-keys](https://fireworks.ai/account/api-keys) |
+| `CEREBRAS_API_KEY` | Cerebras (ultra-fast Llama) | [cloud.cerebras.ai](https://cloud.cerebras.ai/platform) |
+| `COHERE_API_KEY` | Cohere Command R+ | [dashboard.cohere.com/api-keys](https://dashboard.cohere.com/api-keys) |
+
+Without any key, Arix runs in **demo mode** using the heuristic planner. With a local [Ollama](https://ollama.com) instance running on `localhost:11434`, it auto-detects and uses it before falling back to the heuristic planner.
 
 ## Cost Optimization Layer (v9.5)
 
