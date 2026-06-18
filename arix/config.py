@@ -80,10 +80,37 @@ class ArixConfig:
                 return False  # OAuth token, not an AI Studio key
             return True
 
+        # Priority-ordered provider → env-var map (includes all 13 providers)
         key_map = {
             "anthropic": "ANTHROPIC_API_KEY",
             "openai": "OPENAI_API_KEY",
             "gemini": "GEMINI_API_KEY",
+            "groq": "GROQ_API_KEY",
+            "together": "TOGETHER_API_KEY",
+            "mistral": "MISTRAL_API_KEY",
+            "deepseek": "DEEPSEEK_API_KEY",
+            "perplexity": "PERPLEXITY_API_KEY",
+            "xai": "XAI_API_KEY",
+            "openrouter": "OPENROUTER_API_KEY",
+            "fireworks": "FIREWORKS_API_KEY",
+            "cerebras": "CEREBRAS_API_KEY",
+            "cohere": "COHERE_API_KEY",
+        }
+        # Default model for each provider
+        default_models = {
+            "anthropic": "claude-opus-4-5",
+            "openai": "gpt-4o",
+            "gemini": cfg.gemini_default_model,
+            "groq": "llama-3.3-70b-versatile",
+            "together": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            "mistral": "mistral-large-latest",
+            "deepseek": "deepseek-chat",
+            "perplexity": "llama-3.1-sonar-large-128k-online",
+            "xai": "grok-3-fast",
+            "openrouter": "anthropic/claude-opus-4-5",
+            "fireworks": "accounts/fireworks/models/llama-v3p1-70b-instruct",
+            "cerebras": "llama3.1-70b",
+            "cohere": "command-r-plus",
         }
         current_key = os.environ.get(key_map.get(cfg.provider, ""), "")
         if not _key_valid(cfg.provider, current_key):
@@ -91,10 +118,7 @@ class ArixConfig:
                 val = os.environ.get(env, "")
                 if _key_valid(prov, val):
                     cfg.provider = prov
-                    if prov == "gemini":
-                        cfg.model = cfg.gemini_default_model
-                    elif prov == "openai":
-                        cfg.model = "gpt-4o"
+                    cfg.model = default_models.get(prov, cfg.model)
                     break
 
         return cfg

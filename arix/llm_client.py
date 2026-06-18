@@ -226,6 +226,149 @@ class CircuitBreaker:
         }
 
 
+# ── Provider registry — all OpenAI-compatible providers ───────────────────────
+# Each entry: base_url, env_key, default_model, description
+PROVIDER_REGISTRY: dict[str, dict] = {
+    "anthropic": {
+        "base_url": None,  # uses native SDK
+        "env_key": "ANTHROPIC_API_KEY",
+        "default_model": "claude-opus-4-5",
+        "description": "Anthropic Claude — best reasoning & planning",
+        "models": ["claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5",
+                   "claude-opus-4-1", "claude-3-5-sonnet-20241022"],
+    },
+    "openai": {
+        "base_url": None,  # uses native SDK
+        "env_key": "OPENAI_API_KEY",
+        "default_model": "gpt-4o",
+        "description": "OpenAI GPT — versatile, strong tool use",
+        "models": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "o1", "o1-mini", "o3-mini"],
+    },
+    "gemini": {
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "env_key": "GEMINI_API_KEY",
+        "default_model": "gemini-2.0-flash",
+        "description": "Google Gemini — multimodal, large context",
+        "models": ["gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-pro",
+                   "gemini-1.5-flash", "gemini-2.5-pro-preview-06-05"],
+    },
+    "groq": {
+        "base_url": "https://api.groq.com/openai/v1",
+        "env_key": "GROQ_API_KEY",
+        "default_model": "llama-3.3-70b-versatile",
+        "description": "Groq — ultra-fast inference (LPU hardware)",
+        "models": ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile",
+                   "mixtral-8x7b-32768", "gemma2-9b-it", "llama3-70b-8192"],
+    },
+    "together": {
+        "base_url": "https://api.together.xyz/v1",
+        "env_key": "TOGETHER_API_KEY",
+        "default_model": "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+        "description": "Together AI — open models, competitive pricing",
+        "models": ["meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+                   "meta-llama/Meta-Llama-3.1-405B-Instruct-Turbo",
+                   "Qwen/Qwen2.5-72B-Instruct-Turbo",
+                   "mistralai/Mixtral-8x7B-Instruct-v0.1"],
+    },
+    "mistral": {
+        "base_url": "https://api.mistral.ai/v1",
+        "env_key": "MISTRAL_API_KEY",
+        "default_model": "mistral-large-latest",
+        "description": "Mistral AI — efficient European models",
+        "models": ["mistral-large-latest", "mistral-medium-latest",
+                   "mistral-small-latest", "codestral-latest",
+                   "open-mixtral-8x22b", "open-mistral-nemo"],
+    },
+    "deepseek": {
+        "base_url": "https://api.deepseek.com/v1",
+        "env_key": "DEEPSEEK_API_KEY",
+        "default_model": "deepseek-chat",
+        "description": "DeepSeek — strong reasoning, very low cost",
+        "models": ["deepseek-chat", "deepseek-reasoner"],
+    },
+    "perplexity": {
+        "base_url": "https://api.perplexity.ai",
+        "env_key": "PERPLEXITY_API_KEY",
+        "default_model": "llama-3.1-sonar-large-128k-online",
+        "description": "Perplexity — web-grounded answers, live search",
+        "models": ["llama-3.1-sonar-large-128k-online",
+                   "llama-3.1-sonar-small-128k-online",
+                   "llama-3.1-sonar-huge-128k-online"],
+    },
+    "xai": {
+        "base_url": "https://api.x.ai/v1",
+        "env_key": "XAI_API_KEY",
+        "default_model": "grok-3-fast",
+        "description": "xAI Grok — real-time knowledge, witty responses",
+        "models": ["grok-3-fast", "grok-3", "grok-3-mini", "grok-2-1212"],
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "env_key": "OPENROUTER_API_KEY",
+        "default_model": "anthropic/claude-opus-4-5",
+        "description": "OpenRouter — meta-provider, 200+ models unified",
+        "models": ["anthropic/claude-opus-4-5", "openai/gpt-4o",
+                   "google/gemini-2.0-flash", "meta-llama/llama-3.3-70b-instruct",
+                   "deepseek/deepseek-r1", "x-ai/grok-3-fast"],
+    },
+    "fireworks": {
+        "base_url": "https://api.fireworks.ai/inference/v1",
+        "env_key": "FIREWORKS_API_KEY",
+        "default_model": "accounts/fireworks/models/llama-v3p1-70b-instruct",
+        "description": "Fireworks AI — fast open-source model inference",
+        "models": ["accounts/fireworks/models/llama-v3p1-70b-instruct",
+                   "accounts/fireworks/models/llama-v3p1-405b-instruct",
+                   "accounts/fireworks/models/mixtral-8x7b-instruct"],
+    },
+    "cerebras": {
+        "base_url": "https://api.cerebras.ai/v1",
+        "env_key": "CEREBRAS_API_KEY",
+        "default_model": "llama3.1-70b",
+        "description": "Cerebras — wafer-scale chip, fastest tokens/sec",
+        "models": ["llama3.1-70b", "llama3.1-8b", "llama-3.3-70b"],
+    },
+    "cohere": {
+        "base_url": "https://api.cohere.ai/compatibility/v1",
+        "env_key": "COHERE_API_KEY",
+        "default_model": "command-r-plus",
+        "description": "Cohere — enterprise RAG & embeddings specialist",
+        "models": ["command-r-plus", "command-r", "command-r7b-12-2024"],
+    },
+    "ollama": {
+        "base_url": None,  # handled separately
+        "env_key": None,
+        "default_model": "llama3.2",
+        "description": "Ollama — local LLM, fully air-gapped, no API key needed",
+        "models": [],  # populated at runtime via /api/tags
+    },
+}
+
+
+def list_providers() -> list[dict]:
+    """Return all providers with configured status and available models."""
+    result = []
+    for name, cfg in PROVIDER_REGISTRY.items():
+        configured = False
+        if name == "ollama":
+            configured = True  # always available (local)
+        elif name == "anthropic":
+            configured = bool(
+                os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
+                or os.environ.get("ANTHROPIC_API_KEY")
+            )
+        else:
+            env_key = cfg.get("env_key")
+            configured = bool(os.environ.get(env_key, "")) if env_key else False
+        result.append({
+            "name": name,
+            "description": cfg["description"],
+            "default_model": cfg["default_model"],
+            "models": cfg["models"],
+            "configured": configured,
+        })
+    return result
+
+
 class LLMClient:
     def __init__(self, provider: str = "anthropic", model: str = "claude-opus-4-5",
                  api_key: str | None = None):
@@ -236,11 +379,15 @@ class LLMClient:
 
     def _get_api_key(self, provider: str) -> str | None:
         if provider == "anthropic":
-            # Prefer Replit AI Integrations managed key, fall back to user-supplied key
             return (
                 os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY")
                 or os.environ.get("ANTHROPIC_API_KEY")
             )
+        if provider == "ollama":
+            return None  # no key needed
+        cfg = PROVIDER_REGISTRY.get(provider)
+        if cfg and cfg.get("env_key"):
+            return os.environ.get(cfg["env_key"])
         return {
             "openai": os.environ.get("OPENAI_API_KEY"),
             "gemini": os.environ.get("GEMINI_API_KEY"),
@@ -251,17 +398,23 @@ class LLMClient:
             return not self._circuit_breaker.is_tripped()
         if not self.api_key:
             return False
-        # Gemini keys must start with "AIza" — OAuth tokens (AQ.*, ya29.*) always 401
         if self.provider == "gemini" and not self.api_key.startswith("AIza"):
             return False
         return not self._circuit_breaker.is_tripped()
 
     def key_error(self) -> str | None:
         """Return a human-readable explanation if the key is known to be invalid."""
+        if self.provider == "ollama":
+            if self._circuit_breaker.is_tripped():
+                s = self._circuit_breaker.status()
+                return f"Ollama circuit breaker open — resets in {s['reset_in']:.0f}s. Is Ollama running?"
+            return None
         if not self.api_key:
+            prov_cfg = PROVIDER_REGISTRY.get(self.provider, {})
+            env_key = prov_cfg.get("env_key", f"{self.provider.upper()}_API_KEY")
             return (
-                "No API key configured. Add ANTHROPIC_API_KEY (or OPENAI_API_KEY / GEMINI_API_KEY) "
-                "to your .env file, then restart the server."
+                f"No API key for '{self.provider}'. Add {env_key} to Replit Secrets (🔒). "
+                "Or switch to Anthropic (auto-configured via Replit integration)."
             )
         if self.provider == "gemini" and not self.api_key.startswith("AIza"):
             return (
@@ -530,10 +683,11 @@ Rules:
             return await self._call_anthropic(system, user, max_tokens)
         elif self.provider == "openai":
             return await self._call_openai(system, user, max_tokens)
-        elif self.provider == "gemini":
-            return await self._call_gemini(system, user, max_tokens)
         elif self.provider == "ollama":
             return await self._call_ollama(system, user, max_tokens)
+        elif self.provider in PROVIDER_REGISTRY:
+            # All other providers are OpenAI-compatible
+            return await self._call_openai_compat(system, user, max_tokens)
         else:
             raise ValueError(f"Unknown provider: {self.provider}")
 
@@ -571,11 +725,24 @@ Rules:
         return response.choices[0].message.content
 
     async def _call_gemini(self, system: str, user: str, max_tokens: int) -> str:
+        return await self._call_openai_compat(system, user, max_tokens)
+
+    async def _call_openai_compat(self, system: str, user: str, max_tokens: int) -> str:
+        """Generic OpenAI-compatible call — handles Gemini, Groq, Together, Mistral,
+        DeepSeek, Perplexity, xAI, OpenRouter, Fireworks, Cerebras, Cohere, etc."""
         import openai
-        client = openai.AsyncOpenAI(
-            api_key=self.api_key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-        )
+        prov_cfg = PROVIDER_REGISTRY.get(self.provider, {})
+        base_url = prov_cfg.get("base_url")
+        client_kwargs: dict[str, Any] = {"api_key": self.api_key or "no-key"}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        # OpenRouter requires extra headers for attribution
+        if self.provider == "openrouter":
+            client_kwargs["default_headers"] = {
+                "HTTP-Referer": "https://arix.ai",
+                "X-Title": "Arix Agent",
+            }
+        client = openai.AsyncOpenAI(**client_kwargs)
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
@@ -614,18 +781,34 @@ Rules:
 
     async def _call_ollama(self, system: str, user: str, max_tokens: int) -> str:
         import httpx
+        ollama_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
         messages = []
         if system:
             messages.append({"role": "system", "content": system})
         messages.append({"role": "user", "content": user})
-        async with httpx.AsyncClient(timeout=120) as client:
+        async with httpx.AsyncClient(timeout=180) as client:
             r = await client.post(
-                "http://localhost:11434/api/chat",
+                f"{ollama_url}/api/chat",
                 json={"model": self.model, "stream": False, "messages": messages,
                       "options": {"num_predict": max_tokens}},
             )
             r.raise_for_status()
-            return r.json()["message"]["content"]
+            data = r.json()
+            return data.get("message", {}).get("content", "") or data.get("response", "")
+
+    @staticmethod
+    async def list_ollama_models() -> list[str]:
+        """Return locally available Ollama model names, or empty list if Ollama is not running."""
+        import httpx
+        ollama_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                r = await client.get(f"{ollama_url}/api/tags")
+                r.raise_for_status()
+                data = r.json()
+                return [m["name"] for m in data.get("models", [])]
+        except Exception:
+            return []
 
     def update_key(self, api_key: str) -> None:
         self.api_key = api_key

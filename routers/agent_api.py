@@ -268,3 +268,64 @@ async def update_settings(body: dict):
             "risk_proceed_threshold": cfg.risk_proceed_threshold,
         },
     }
+
+
+# ── Providers ─────────────────────────────────────────────────────────────────
+
+@router.get("/api/providers")
+async def list_providers():
+    """List all 13 supported LLM providers with configuration status and models."""
+    from arix.llm_client import list_providers, LLMClient
+    providers = list_providers()
+    agent = get_agent()
+    current_provider = agent.config.provider
+    current_model = agent.config.model
+
+    # Check Ollama models dynamically
+    ollama_models = []
+    try:
+        ollama_models = await LLMClient.list_ollama_models()
+    except Exception:
+        pass
+
+    for p in providers:
+        if p["name"] == "ollama":
+            p["configured"] = len(ollama_models) > 0
+            p["models"] = ollama_models if ollama_models else ["llama3.2", "llama3.1", "mistral"]
+            p["ollama_running"] = len(ollama_models) > 0
+        p["active"] = p["name"] == current_provider
+
+    return {
+        "providers": providers,
+        "current_provider": current_provider,
+        "current_model": current_model,
+        "total": len(providers),
+        "configured_count": sum(1 for p in providers if p["configured"]),
+    }
+
+
+@router.post("/api/providers/switch")
+async def switch_provider(body: dict):
+    """Switch the active LLM provider and model."""
+    provider = body.get("provider", "").strip()
+    model = body.get("model", "").strip()
+
+    from arix.llm_client import PROVIDER_REGISTRY
+    if provider not in PROVIDER_REGISTRY:
+        return {"error": f"Unknown provider '{provider}'. Valid: {list(PROVIDER_REGISTRY.keys())}"}
+
+    cfg = ArixConfig.load()
+    cfg.provider = provider
+    if model:
+        cfg.model = model
+    else:
+        cfg.model = PROVIDER_REGISTRY[provider].get("default_model", cfg.model)
+    cfg.save()
+    reset_agent()
+
+    return {
+        "status": "ok",
+        "provider": cfg.provider,
+        "model": cfg.model,
+        "message": f"Switched to {provider} / {cfg.model}",
+    }
