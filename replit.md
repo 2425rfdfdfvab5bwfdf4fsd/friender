@@ -1,6 +1,6 @@
-# Arix v8.2 — Personal AI Computer-Control Agent
+# Arix v9.3 — Personal AI Computer-Control Agent
 
-A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture, 75 tools, and 8 third-party service integrations.
+A secure, LLM-powered agent that executes natural-language computer-control commands with a layered security architecture, 100 tools, 20 domains, Ollama auto-fallback, and 8 third-party service integrations.
 
 ## Running the App
 

@@ -285,3 +285,131 @@ def cleanup_temp_files(
         "max_age_days": max_age_days,
         "summary": summary,
     }
+
+
+# ── diff_files ────────────────────────────────────────────────────────────────
+
+import difflib
+import subprocess
+
+
+def diff_files(path_a: str, path_b: str, context_lines: int = 3) -> dict:
+    """Compare two text files and return a unified diff.
+
+    Args:
+        path_a: Path to the first file (the "original").
+        path_b: Path to the second file (the "modified").
+        context_lines: Lines of surrounding context in the diff (default 3).
+
+    Returns a dict with:
+        diff: Unified-diff string.
+        changed_lines: Number of added/removed lines (excluding headers).
+        identical: True if files are byte-for-byte equal.
+    """
+    pa = Path(path_a).expanduser()
+    pb = Path(path_b).expanduser()
+    if not pa.exists():
+        return {"error": f"File not found: {path_a}"}
+    if not pb.exists():
+        return {"error": f"File not found: {path_b}"}
+    lines_a = pa.read_text(errors="replace").splitlines(keepends=True)
+    lines_b = pb.read_text(errors="replace").splitlines(keepends=True)
+    diff_lines = list(difflib.unified_diff(
+        lines_a, lines_b,
+        fromfile=str(pa), tofile=str(pb),
+        n=context_lines,
+    ))
+    changed = len([
+        ln for ln in diff_lines
+        if ln.startswith(("+", "-")) and not ln.startswith(("+++", "---"))
+    ])
+    return {
+        "diff": "".join(diff_lines),
+        "changed_lines": changed,
+        "identical": not diff_lines,
+        "path_a": str(pa),
+        "path_b": str(pb),
+    }
+
+
+# ── Clipboard tools ───────────────────────────────────────────────────────────
+
+def get_clipboard() -> dict:
+    """Return the current system clipboard text content.
+
+    Supports macOS (pbpaste), Windows (PowerShell Get-Clipboard), and
+    Linux (xclip / xsel / wl-paste).
+    """
+    sys_platform = platform.system().lower()
+    try:
+        if sys_platform == "darwin":
+            text = subprocess.check_output(["pbpaste"], text=True)
+        elif sys_platform == "windows":
+            text = subprocess.check_output(
+                ["powershell", "-command", "Get-Clipboard"],
+                text=True,
+                stderr=subprocess.DEVNULL,
+            ).rstrip("\n")
+        else:
+            for cmd in (
+                ["xclip", "-selection", "clipboard", "-o"],
+                ["xsel", "--clipboard", "--output"],
+                ["wl-paste", "--no-newline"],
+            ):
+                try:
+                    text = subprocess.check_output(
+                        cmd, text=True, stderr=subprocess.DEVNULL
+                    )
+                    break
+                except (FileNotFoundError, subprocess.CalledProcessError):
+                    continue
+            else:
+                return {
+                    "text": "",
+                    "length": 0,
+                    "note": "No clipboard utility found. Install xclip, xsel, or wl-clipboard.",
+                }
+        return {"text": text, "length": len(text)}
+    except Exception as exc:
+        return {"error": str(exc), "text": ""}
+
+
+def set_clipboard(text: str) -> dict:
+    """Copy the given text to the system clipboard.
+
+    Supports macOS (pbcopy), Windows (PowerShell Set-Clipboard), and
+    Linux (xclip / xsel / wl-copy).
+    """
+    sys_platform = platform.system().lower()
+    try:
+        if sys_platform == "darwin":
+            proc = subprocess.Popen(["pbcopy"], stdin=subprocess.PIPE)
+            proc.communicate(text.encode())
+        elif sys_platform == "windows":
+            subprocess.run(
+                ["powershell", "-command",
+                 f"[System.Windows.Forms.Clipboard]::SetText('{text}')"],
+                check=True, stderr=subprocess.DEVNULL,
+            )
+        else:
+            for cmd in (
+                ["xclip", "-selection", "clipboard"],
+                ["xsel", "--clipboard", "--input"],
+                ["wl-copy"],
+            ):
+                try:
+                    proc = subprocess.Popen(
+                        cmd, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL
+                    )
+                    proc.communicate(text.encode())
+                    break
+                except FileNotFoundError:
+                    continue
+            else:
+                return {
+                    "ok": False,
+                    "note": "No clipboard utility found. Install xclip, xsel, or wl-clipboard.",
+                }
+        return {"ok": True, "length": len(text)}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}

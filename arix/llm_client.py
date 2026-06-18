@@ -431,7 +431,7 @@ class LLMClient:
 
     async def plan(self, task_scope: Any, context: str = "",
                    retries: int = 3) -> list[dict]:
-        if not self.api_key:
+        if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
         if self._circuit_breaker.is_tripped():
             status = self._circuit_breaker.status()
@@ -490,7 +490,7 @@ class LLMClient:
           response: str (for chat/advisory; empty for task)
           task_description: str (for task; empty otherwise)
         """
-        if not self.api_key:
+        if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
         if self._circuit_breaker.is_tripped():
             status = self._circuit_breaker.status()
@@ -524,7 +524,7 @@ class LLMClient:
     async def chat(self, message: str, user_name: str = "",
                    max_tokens: int = 512) -> str:
         """Fallback conversational reply (plain text, no JSON)."""
-        if not self.api_key:
+        if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
         if self._circuit_breaker.is_tripped():
             status = self._circuit_breaker.status()
@@ -545,7 +545,7 @@ class LLMClient:
     async def advise(self, question: str, context: str = "",
                      max_tokens: int = 4096) -> str:
         """Call the expert advisor persona and return a markdown response."""
-        if not self.api_key:
+        if self.provider != "ollama" and not self.api_key:
             raise RuntimeError(f"No API key for provider '{self.provider}'")
         if self._circuit_breaker.is_tripped():
             status = self._circuit_breaker.status()

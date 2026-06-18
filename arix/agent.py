@@ -121,12 +121,17 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "research_topic": lambda args: research_tools.research_topic(**_clean(args)),
     "summarize_url": lambda args: research_tools.summarize_url(**_clean(args)),
     "search_knowledge_base": lambda args: research_tools.search_knowledge_base(**_clean(args)),
+    "fetch_json_api": lambda args: research_tools.fetch_json_api(**_clean(args)),
     # Sandbox code execution (Gap #1)
     "run_code": lambda args: code_tools.run_code(**_clean(args)),
     # Google Calendar tools
     "list_calendar_events": lambda args: calendar_tools.list_calendar_events(**_clean(args)),
     "create_calendar_event": lambda args: calendar_tools.create_calendar_event(**_clean(args)),
     "delete_calendar_event": lambda args: calendar_tools.delete_calendar_event(**_clean(args)),
+    # Utility tools — diff, clipboard, REST
+    "diff_files": lambda args: system_tools.diff_files(**_clean(args)),
+    "get_clipboard": lambda args: system_tools.get_clipboard(**_clean(args)),
+    "set_clipboard": lambda args: system_tools.set_clipboard(**_clean(args)),
     # Digital Employee tools
     "cleanup_temp_files": lambda args: system_tools.cleanup_temp_files(**_clean(args)),
     "open_web_app": lambda args: webapp_tools.open_web_app(**_clean(args)),
@@ -920,6 +925,24 @@ class ArixAgent:
             and self.llm_client.is_available()
         )
 
+        # ── Ollama auto-fallback ──────────────────────────────────────────────
+        # If no cloud key is configured but Ollama is running locally, use it
+        # as the planner before degrading to the heuristic regex planner.
+        # This closes the "true air-gap" competitive gap — users running a local
+        # 70B model get full LLM planning quality without any cloud API key.
+        _ollama_fallback: LLMClient | None = None
+        if not use_llm and not dry_run and not self.config.offline_mode:
+            try:
+                _models = await LLMClient.list_ollama_models()
+                if _models:
+                    _ollama_model = _models[0]
+                    _ollama_fallback = LLMClient(provider="ollama", model=_ollama_model)
+                    yield AgentEvent("status", {
+                        "message": f"🦙 No cloud key found — using local Ollama ({_ollama_model}) for planning"
+                    })
+            except Exception:
+                pass
+
         if use_llm:
             yield AgentEvent("status", {
                 "message": f"Planning with {self.config.provider} / {self.config.model}..."
@@ -996,11 +1019,27 @@ class ArixAgent:
                 })
                 plan = self.heuristic_planner.plan(scope)
         else:
-            mode = "dry-run" if dry_run else "demo"
-            yield AgentEvent("status", {
-                "message": f"⚠ Using heuristic planner ({mode} mode)"
-            })
-            plan = self.heuristic_planner.plan(scope)
+            if _ollama_fallback is not None:
+                # Try local Ollama before falling back to regex heuristics
+                yield AgentEvent("status", {
+                    "message": f"🦙 Planning with local Ollama ({_ollama_fallback.model})..."
+                })
+                try:
+                    plan = await _ollama_fallback.plan(scope, context="")
+                except Exception as _ollama_err:
+                    yield AgentEvent("warning", {
+                        "message": (
+                            f"Ollama planning failed ({_ollama_err}) "
+                            "— falling back to heuristic planner"
+                        )
+                    })
+                    plan = self.heuristic_planner.plan(scope)
+            else:
+                mode = "dry-run" if dry_run else "demo"
+                yield AgentEvent("status", {
+                    "message": f"⚠ Using heuristic planner ({mode} mode)"
+                })
+                plan = self.heuristic_planner.plan(scope)
 
         if not plan:
             yield AgentEvent("error", {

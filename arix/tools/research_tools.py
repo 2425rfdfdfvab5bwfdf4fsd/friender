@@ -486,3 +486,56 @@ async def search_knowledge_base(query: str, top_k: int = 5, dry_run: bool = Fals
         }
     except Exception as e:
         return {"error": str(e), "query": query}
+
+
+# ── fetch_json_api ────────────────────────────────────────────────────────────
+
+async def fetch_json_api(
+    url: str,
+    method: str = "GET",
+    headers: dict | None = None,
+    body: dict | None = None,
+    timeout: int = 30,
+) -> dict:
+    """Call any REST API endpoint and return the JSON response.
+
+    Useful for querying public APIs (weather, GitHub, Hacker News, CoinGecko,
+    custom webhooks, etc.) without opening a browser.
+
+    Args:
+        url: Full URL including query parameters.
+        method: HTTP method — GET, POST, PUT, PATCH, DELETE (default: GET).
+        headers: Extra HTTP headers as a dict (optional).
+        body: JSON request body for POST/PUT/PATCH (optional).
+        timeout: Request timeout in seconds (default: 30).
+
+    Returns a dict with:
+        status: HTTP status code.
+        ok: True if status < 400.
+        data: Parsed JSON response (or raw_text if not JSON).
+        url: The request URL.
+        method: The HTTP method used.
+    """
+    import httpx
+    method = method.upper()
+    send_body = body if method not in ("GET", "HEAD", "DELETE") and body else None
+    try:
+        async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+            resp = await client.request(
+                method, url,
+                headers=headers or {},
+                json=send_body,
+            )
+        try:
+            data = resp.json()
+        except Exception:
+            data = {"raw_text": resp.text[:4000]}
+        return {
+            "status": resp.status_code,
+            "ok": resp.status_code < 400,
+            "data": data,
+            "url": url,
+            "method": method,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "url": url, "method": method}
