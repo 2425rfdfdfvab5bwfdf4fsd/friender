@@ -150,3 +150,55 @@ def get_grant_secret_key() -> bytes:
     if _GRANT_SECRET_KEY is None:
         _GRANT_SECRET_KEY = secrets.token_bytes(32)
     return _GRANT_SECRET_KEY
+
+
+async def check_ollama_available(base_url: str = "http://localhost:11434") -> bool:
+    """Return True if a local Ollama instance is reachable and has models loaded."""
+    try:
+        import asyncio
+        import urllib.request
+        import urllib.error
+
+        def _check():
+            try:
+                req = urllib.request.urlopen(f"{base_url}/api/tags", timeout=2)
+                import json
+                data = json.loads(req.read())
+                return len(data.get("models", [])) > 0
+            except Exception:
+                return False
+
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _check)
+    except Exception:
+        return False
+
+
+async def auto_detect_and_switch_ollama(cfg: "ArixConfig") -> bool:
+    """If no cloud provider is configured, check Ollama and switch to it.
+
+    Returns True if switched to Ollama.
+    """
+    # Only auto-switch if currently in demo/heuristic mode (no real key)
+    if cfg.provider != "anthropic" or os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY"):
+        return False
+
+    # Check if any cloud key is present
+    cloud_keys = [
+        "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "GROQ_API_KEY",
+        "TOGETHER_API_KEY", "MISTRAL_API_KEY", "DEEPSEEK_API_KEY", "PERPLEXITY_API_KEY",
+        "XAI_API_KEY", "OPENROUTER_API_KEY", "FIREWORKS_API_KEY", "CEREBRAS_API_KEY",
+        "COHERE_API_KEY",
+    ]
+    if any(os.environ.get(k, "").strip() for k in cloud_keys):
+        return False
+
+    # No cloud keys — check Ollama
+    ollama_base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    if await check_ollama_available(ollama_base):
+        cfg.provider = "ollama"
+        cfg.model = os.environ.get("OLLAMA_DEFAULT_MODEL", "llama3.2")
+        cfg.save()
+        return True
+
+    return False

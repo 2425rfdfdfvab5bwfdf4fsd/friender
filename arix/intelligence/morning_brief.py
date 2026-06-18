@@ -49,6 +49,8 @@ async def generate_morning_brief(
     memory=None,
     nudges: list[dict] | None = None,
     llm_client=None,
+    curator=None,
+    researcher=None,
     force: bool = False,
 ) -> dict:
     """Generate (or return cached) morning brief."""
@@ -145,6 +147,46 @@ async def generate_morning_brief(
         except Exception:
             pass
 
+    # Curator stats — learned skills
+    if curator:
+        try:
+            cur_status = curator.get_status()
+            total_skills = cur_status.get("total_skills", 0)
+            core_skills = cur_status.get("core_skills", 0)
+            run_count = cur_status.get("run_count", 0)
+            goals_until = cur_status.get("goals_until_next_run", 0)
+            if total_skills > 0 or run_count > 0:
+                sections.append({
+                    "type": "curator",
+                    "title": "🧬 Skill Curator",
+                    "text": (
+                        f"{total_skills} skills learned · {core_skills} core"
+                        + (f" · next cycle in {goals_until} goals" if goals_until > 0 else "")
+                    ),
+                    "total_skills": total_skills,
+                    "core_skills": core_skills,
+                    "run_count": run_count,
+                })
+        except Exception:
+            pass
+
+    # Recent autonomous research
+    if researcher:
+        try:
+            recent_findings = researcher.get_findings(limit=3)
+            if recent_findings:
+                sections.append({
+                    "type": "research",
+                    "title": "🔬 Recent Research",
+                    "items": [
+                        {"text": f.get("topic", ""), "when": f.get("timestamp", "")}
+                        for f in recent_findings[:3]
+                    ],
+                    "count": len(recent_findings),
+                })
+        except Exception:
+            pass
+
     # Activity stats
     if memory:
         try:
@@ -176,11 +218,18 @@ async def generate_morning_brief(
                 context_parts.append(f"Reminders due: {len(due_rems)}")
             if other_pending:
                 context_parts.append(f"Open tasks: {len(other_pending)}")
+            # Include intelligence context
+            for s in sections:
+                if s.get("type") == "curator":
+                    context_parts.append(f"AI skills learned: {s.get('total_skills',0)} ({s.get('core_skills',0)} core)")
+                elif s.get("type") == "research":
+                    topics = [i.get("text","") for i in s.get("items",[])]
+                    context_parts.append(f"Recent auto-research: {', '.join(topics[:3])}")
             context = "\n".join(context_parts)
             resp = await llm_client.aask(
                 system=_BRIEF_SYSTEM,
                 user=f"Generate a morning brief for this data:\n{context}",
-                max_tokens=300,
+                max_tokens=350,
             )
             llm_summary = resp.strip() if resp else ""
         except Exception:

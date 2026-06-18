@@ -329,3 +329,69 @@ async def switch_provider(body: dict):
         "model": cfg.model,
         "message": f"Switched to {provider} / {cfg.model}",
     }
+
+
+# ── Curator endpoints ─────────────────────────────────────────────────────────
+
+@router.get("/api/curator")
+async def get_curator_status():
+    """Return Skill Curator status and stats."""
+    from arix.intelligence.curator import get_curator
+    return get_curator().get_status()
+
+
+@router.get("/api/curator/skills")
+async def get_curator_skills():
+    """Return all curated skills sorted by score."""
+    from arix.intelligence.curator import get_curator
+    return {"skills": get_curator().get_all_skills()}
+
+
+@router.post("/api/curator/run")
+async def run_curator_now():
+    """Trigger the full 4-stage Curator loop immediately."""
+    from arix.intelligence.curator import get_curator
+    curator = get_curator()
+    agent = get_agent()
+    if agent.llm_client:
+        curator.set_llm_client(agent.llm_client)
+    if agent.memory_manager:
+        curator.set_task_history(agent.memory_manager.task_history)
+    results = await curator.run_loop()
+    return results
+
+
+@router.delete("/api/curator/skills/{skill_id}")
+async def delete_curator_skill(skill_id: str):
+    """Remove a skill from the curator library."""
+    from arix.intelligence.curator import get_curator
+    ok = get_curator().delete_skill(skill_id)
+    if not ok:
+        raise HTTPException(404, "Skill not found")
+    return {"deleted": True, "skill_id": skill_id}
+
+
+@router.post("/api/curator/skills/{skill_id}/toggle-core")
+async def toggle_curator_core(skill_id: str):
+    """Toggle a skill's core status (core skills are injected into every planning context)."""
+    from arix.intelligence.curator import get_curator
+    skill = get_curator().toggle_core(skill_id)
+    if skill is None:
+        raise HTTPException(404, "Skill not found")
+    return skill
+
+
+# ── Research journal ──────────────────────────────────────────────────────────
+
+@router.get("/api/research/journal")
+async def get_research_journal(limit: int = 30):
+    """Return the autonomous researcher's full journal of findings with status."""
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+    researcher = get_autonomous_researcher()
+    findings = researcher.get_findings(limit=min(limit, 100))
+    status = researcher.get_status()
+    return {
+        "findings": findings,
+        "status": status,
+        "total": len(findings),
+    }

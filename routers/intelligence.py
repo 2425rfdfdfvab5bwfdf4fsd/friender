@@ -21,6 +21,8 @@ async def get_morning_brief(force: bool = False):
         projects_manager=projects,
         memory=agent.memory,
     )
+    from arix.intelligence.curator import get_curator
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
     return await generate_morning_brief(
         profile=profile,
         todos_data=todos_data,
@@ -29,6 +31,8 @@ async def get_morning_brief(force: bool = False):
         memory=agent.memory,
         nudges=nudges,
         llm_client=agent.llm_client,
+        curator=get_curator(),
+        researcher=get_autonomous_researcher(),
         force=force,
     )
 

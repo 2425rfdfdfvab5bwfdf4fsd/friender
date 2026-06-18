@@ -401,11 +401,24 @@ function addSystemMsg(html) {
 }
 
 // ── Event Handlers ────────────────────────────────────────────────────────────
+function _updateProviderBadge(provider, model, llmAvailable) {
+  const pb = document.getElementById('provider-badge');
+  if (!pb) return;
+  const isLocal = provider === 'ollama';
+  if (isLocal) {
+    pb.textContent = `🏠 LOCAL: ${model||'—'}`;
+    pb.className = llmAvailable ? 'live local' : 'local';
+    pb.title = 'Running on local Ollama — no cloud API needed';
+  } else {
+    pb.textContent = (provider||'—') + ' / ' + (model||'—');
+    pb.className = llmAvailable ? 'live' : '';
+    pb.title = 'Click to switch AI provider';
+  }
+}
+
 function onWelcome(d) {
   document.getElementById('status-dot').className = d.llm_available ? 'ok' : 'warn';
-  const pb = document.getElementById('provider-badge');
-  pb.textContent = (d.provider||'—') + ' / ' + (d.model||'—');
-  pb.className = d.llm_available ? 'live' : '';
+  _updateProviderBadge(d.provider, d.model, d.llm_available);
   if (d.memory_count) updateBadge('mem', d.memory_count);
 
   if (!d.llm_available && d.key_error) {
@@ -1156,9 +1169,7 @@ function cancelGoal() {
 function onMemoryData(d) { renderMemory(d); switchPanel('memory'); }
 function onStatusInfo(d) {
   document.getElementById('status-dot').className = d.llm_available ? 'ok' : 'warn';
-  const pb = document.getElementById('provider-badge');
-  pb.textContent = (d.provider||'—') + ' / ' + (d.model||'—');
-  pb.className = d.llm_available ? 'live' : '';
+  _updateProviderBadge(d.provider, d.model, d.llm_available);
   if (d.memory_count !== undefined) updateBadge('mem', d.memory_count);
   if (d.workflow_count !== undefined) updateBadge('wf', d.workflow_count);
 }
@@ -1653,6 +1664,7 @@ function switchPanel(name) {
   else if (name === 'research-mode') loadResearchMode();
   else if (name === 'agents') loadAgents();
   else if (name === 'hands') loadHands();
+  else if (name === 'curator') loadCurator();
 }
 
 function openDetailSidebar(name) {
@@ -2640,26 +2652,50 @@ function startSysmon() {
 // ── Settings panel ────────────────────────────────────────────────────────────
 async function loadSettings() {
   try {
-    const r = await fetch('/api/status');
-    const d = await r.json();
-    renderSettings(d);
+    const [statusRes, provRes] = await Promise.all([fetch('/api/status'), fetch('/api/providers')]);
+    const status = await statusRes.json();
+    const provData = await provRes.json();
+    renderSettings(status, provData);
   } catch(e){}
 }
 
-function renderSettings(d) {
+const _PROV_ICONS = {
+  anthropic:'🟣', openai:'🟢', gemini:'🔵', groq:'⚡', together:'🤝',
+  mistral:'💨', deepseek:'🐋', perplexity:'🔍', xai:'✕', openrouter:'🛣️',
+  fireworks:'🎆', cerebras:'🧠', cohere:'🌊', ollama:'🏠',
+};
+
+function renderSettings(d, provData) {
   const panel = document.getElementById('panel-settings');
+  const providers = (provData && provData.providers) || [];
+  const currentProvider = (provData && provData.current_provider) || d.provider;
+  const currentModel = (provData && provData.current_model) || d.model;
+
+  const provCards = providers.map(p => {
+    const icon = _PROV_ICONS[p.name] || '🤖';
+    const isActive = p.name === currentProvider;
+    const isLocal = p.name === 'ollama';
+    return `<div class="prov-card${isActive?' prov-active':''}${!p.configured&&!isLocal?' prov-unconfigured':''}"
+      onclick="switchProviderUI('${esc(p.name)}','${esc(p.default_model||'')}')"
+      title="${esc(p.description||p.name)}">
+      <div class="prov-card-top">
+        <span class="prov-card-icon">${icon}</span>
+        <span class="prov-card-name">${esc(p.name)}</span>
+        ${isActive ? '<span class="prov-card-active-dot">●</span>' : ''}
+      </div>
+      <div class="prov-card-status ${p.configured||isLocal?'ok':'err'}">
+        ${p.configured ? '✓ Ready' : (isLocal ? (p.ollama_running?'✓ Running':'⚪ Offline') : '✗ No key')}
+      </div>
+    </div>`;
+  }).join('');
+
   panel.innerHTML = `
-    <div class="setting-group">
-      <label class="setting-label">AI Provider</label>
-      <select class="setting-select" id="cfg-provider" onchange="updateProviderModel()">
-        <option value="anthropic" ${d.provider==='anthropic'?'selected':''}>Anthropic (Claude)</option>
-        <option value="openai" ${d.provider==='openai'?'selected':''}>OpenAI (GPT)</option>
-        <option value="gemini" ${d.provider==='gemini'?'selected':''}>Google (Gemini)</option>
-      </select>
-    </div>
-    <div class="setting-group">
+    <div class="setting-section-title">AI Provider <span style="color:var(--muted);font-weight:400;font-size:10px">(${(provData&&provData.configured_count)||0}/${providers.length} configured)</span></div>
+    <div class="prov-grid">${provCards}</div>
+    <div class="setting-group" style="margin-top:10px">
       <label class="setting-label">Model</label>
-      <input class="setting-input" id="cfg-model" value="${esc(d.model||'')}">
+      <input class="setting-input" id="cfg-model" value="${esc(currentModel)}">
+      <div class="setting-desc">Override model for current provider (leave blank for default)</div>
     </div>
     <div class="setting-divider"></div>
     <div class="setting-group">
@@ -2672,19 +2708,45 @@ function renderSettings(d) {
       <input class="setting-range" type="range" min="5" max="100" step="5" value="${d.risk_proceed_threshold||30}" oninput="document.getElementById('risk-proc-val').textContent=this.value" id="cfg-risk-proceed">
       <div class="setting-desc">Actions below this proceed without acknowledgment</div>
     </div>
-    <button class="settings-save-btn" onclick="saveSettings()">Save Settings</button>
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button class="settings-save-btn" onclick="saveSettings()" style="flex:1">Save Settings</button>
+      <button class="panel-btn" onclick="loadSettings()" style="flex:0;white-space:nowrap">↺</button>
+    </div>
     <div class="setting-divider"></div>
-    <div style="font-size:10px;color:var(--muted);line-height:1.6">
+    <div style="font-size:10px;color:var(--muted);line-height:1.7">
       <div>LLM: <span style="color:${d.llm_available?'var(--success)':'var(--danger)'}">${d.llm_available?'✓ Connected':'✗ Not connected'}</span></div>
       ${d.llm_error?`<div style="color:var(--danger);margin-top:3px">${esc(d.llm_error)}</div>`:''}
-      <div style="margin-top:6px">v${esc(d.version||'7.0.0')} · ${d.tool_count||0} tools</div>
+      <div style="margin-top:4px">v${esc(d.version||'8.0.0')} · ${d.tool_count||0} tools loaded</div>
+      <div style="margin-top:2px;color:var(--muted2)">Add API keys in Replit Secrets (🔒) to enable providers</div>
     </div>`;
 }
 
+async function switchProviderUI(provider, defaultModel) {
+  try {
+    const model = document.getElementById('cfg-model') ? document.getElementById('cfg-model').value.trim() : defaultModel;
+    const r = await fetch('/api/providers/switch', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({provider, model: model || defaultModel}),
+    });
+    const d = await r.json();
+    if (d.error) { toast(d.error, 'err'); return; }
+    toast(`Switched to ${d.provider} / ${d.model} ✓`, 'ok');
+    loadSettings();
+    // Update header badge
+    const pb = document.getElementById('provider-badge');
+    if (pb) {
+      const isLocal = provider === 'ollama';
+      pb.textContent = isLocal ? `🏠 LOCAL: ${d.model}` : `${d.provider} / ${d.model}`;
+      pb.className = isLocal ? 'live local' : 'live';
+    }
+  } catch(e) { toast('Failed to switch provider', 'err'); }
+}
+
 async function saveSettings() {
+  const model = document.getElementById('cfg-model') ? document.getElementById('cfg-model').value : '';
   const body = {
-    provider: document.getElementById('cfg-provider').value,
-    model: document.getElementById('cfg-model').value,
+    model: model,
     risk_confirm_threshold: parseFloat(document.getElementById('cfg-risk-confirm').value),
     risk_proceed_threshold: parseFloat(document.getElementById('cfg-risk-proceed').value),
   };
@@ -3174,6 +3236,118 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+
+// ── Skill Curator panel ───────────────────────────────────────────────────────
+async function loadCurator() {
+  const statsEl = document.getElementById('curator-stats');
+  const skillsEl = document.getElementById('curator-skills');
+  const countEl = document.getElementById('curator-skill-count');
+  if (statsEl) statsEl.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading…</div>';
+  if (skillsEl) skillsEl.innerHTML = '';
+  try {
+    const [statusRes, skillsRes] = await Promise.all([
+      fetch('/api/curator'),
+      fetch('/api/curator/skills'),
+    ]);
+    const status = await statusRes.json();
+    const skillsData = await skillsRes.json();
+    renderCurator(status, skillsData.skills || []);
+  } catch(e) {
+    if (statsEl) statsEl.innerHTML = '<div style="color:var(--danger);font-size:11px">Failed to load curator data</div>';
+  }
+}
+
+function renderCurator(status, skills) {
+  const statsEl = document.getElementById('curator-stats');
+  const skillsEl = document.getElementById('curator-skills');
+  const countEl = document.getElementById('curator-skill-count');
+
+  const goalsUntilNext = status.goals_until_next_run || 0;
+  const lastRun = status.last_run_at ? fmtRelTime(status.last_run_at) : 'Never';
+
+  if (statsEl) {
+    statsEl.innerHTML = [
+      {label:'Total Skills', val: status.total_skills||0, color:'var(--accent)'},
+      {label:'Core Skills', val: status.core_skills||0, color:'var(--success)'},
+      {label:'Auto-mined', val: status.auto_skills||0, color:'var(--accent2)'},
+    ].map(s => `
+      <div style="text-align:center;background:var(--surface3);border-radius:var(--radius-sm);padding:8px">
+        <div style="font-size:20px;font-weight:800;color:${s.color}">${s.val}</div>
+        <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">${s.label}</div>
+      </div>`).join('');
+  }
+
+  if (countEl) {
+    countEl.textContent = `(${skills.length}) · last run: ${lastRun} · next in ${goalsUntilNext} goals`;
+  }
+
+  if (!skillsEl) return;
+  if (!skills.length) {
+    skillsEl.innerHTML = `<div class="panel-empty">No skills yet. Complete ${status.interval||15} goals to trigger the first Curator run, or click ▶ Run.</div>`;
+    return;
+  }
+
+  const _CAT_COLORS = {
+    Productivity:'#4CAF50', Research:'#2196F3', Code:'#FF9800', System:'#9C27B0',
+    Communication:'#00BCD4', Creative:'#E91E63', DevOps:'#607D8B', General:'#757575',
+  };
+
+  skillsEl.innerHTML = skills.map(s => {
+    const scoreBar = Math.round((s.score / 5) * 100);
+    const catColor = _CAT_COLORS[s.category] || '#757575';
+    return `<div class="curator-skill-card${s.is_core?' curator-skill-core':''}">
+      <div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:5px">
+            ${s.is_core?'<span title="Core skill — injected into every planning context" style="font-size:9px;background:var(--success);color:#fff;padding:1px 5px;border-radius:10px;flex-shrink:0">CORE</span>':''}
+            <span style="font-size:12px;font-weight:700;color:var(--text)">${esc(s.name)}</span>
+            <span style="font-size:9px;background:${catColor}22;color:${catColor};padding:1px 5px;border-radius:10px;border:1px solid ${catColor}44">${esc(s.category)}</span>
+          </div>
+          <div style="font-size:10px;color:var(--muted);margin-top:2px">${esc(s.description)}</div>
+        </div>
+        <div style="display:flex;gap:3px;flex-shrink:0">
+          <button class="panel-btn" onclick="toggleCuratorCore('${s.id}')" title="${s.is_core?'Remove from core':'Promote to core'}" style="padding:2px 6px;font-size:10px">${s.is_core?'⬇ Uncore':'⬆ Core'}</button>
+          <button class="panel-btn" onclick="deleteCuratorSkill('${s.id}')" title="Delete skill" style="padding:2px 6px;font-size:10px;color:var(--danger)">✕</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="flex:1;height:3px;background:var(--surface3);border-radius:2px;overflow:hidden">
+          <div style="width:${scoreBar}%;height:100%;background:${s.score>=3.5?'var(--success)':s.score>=2?'var(--accent)':'var(--danger)'};transition:width .3s"></div>
+        </div>
+        <span style="font-size:9px;color:var(--muted);white-space:nowrap">${s.score}/5 · ${s.uses} uses · ${s.successes} ✓</span>
+      </div>
+      ${s.steps.length ? `<div style="font-size:10px;color:var(--text2);margin-top:4px">${s.steps.slice(0,3).map((st,i)=>`<div>${i+1}. ${esc(st)}</div>`).join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function triggerCuratorRun() {
+  toast('Running Curator cycle…', 'info', 3000);
+  try {
+    const r = await fetch('/api/curator/run', {method:'POST'});
+    const d = await r.json();
+    toast(`Curator: +${(d.stage_2_created||[]).length} created, +${(d.stage_4_promoted||[]).length} promoted`, 'ok', 5000);
+    loadCurator();
+  } catch(e) { toast('Curator run failed', 'err'); }
+}
+
+async function toggleCuratorCore(skillId) {
+  try {
+    const r = await fetch(`/api/curator/skills/${skillId}/toggle-core`, {method:'POST'});
+    if (!r.ok) throw new Error();
+    loadCurator();
+  } catch(e) { toast('Failed to update skill', 'err'); }
+}
+
+async function deleteCuratorSkill(skillId) {
+  try {
+    const r = await fetch(`/api/curator/skills/${skillId}`, {method:'DELETE'});
+    if (!r.ok) throw new Error();
+    toast('Skill removed', 'ok', 2000);
+    loadCurator();
+  } catch(e) { toast('Failed to delete skill', 'err'); }
+}
+
 connectWS();
 loadProfile();
 initVoice();

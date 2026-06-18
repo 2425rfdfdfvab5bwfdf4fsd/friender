@@ -1158,3 +1158,26 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 .a2ui-progress-val{color:var(--text-2)}
 .a2ui-progress-track{height:6px;background:rgba(0,0,0,.2);border-radius:3px;overflow:hidden}
 .a2ui-progress-bar{height:100%;border-radius:3px;transition:width .6s ease}
+
+/* ── Provider grid (Settings panel) ───────────────────────────────────────── */
+.setting-section-title{font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.prov-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:4px}
+.prov-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:8px 9px;cursor:pointer;transition:all .15s;user-select:none}
+.prov-card:hover{background:var(--surface3);border-color:var(--accent);transform:translateY(-1px)}
+.prov-card.prov-active{background:rgba(var(--accent-rgb),.12);border-color:var(--accent)}
+.prov-card.prov-unconfigured{opacity:.55}
+.prov-card-top{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.prov-card-icon{font-size:13px;line-height:1}
+.prov-card-name{font-size:11px;font-weight:700;color:var(--text);text-transform:capitalize;flex:1}
+.prov-card-active-dot{color:var(--success);font-size:10px}
+.prov-card-status{font-size:9.5px;font-weight:600}
+.prov-card-status.ok{color:var(--success)}
+.prov-card-status.err{color:var(--muted)}
+
+/* ── Curator skill cards ───────────────────────────────────────────────────── */
+.curator-skill-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:7px;transition:border-color .15s}
+.curator-skill-card:hover{border-color:var(--accent)}
+.curator-skill-core{border-color:rgba(var(--success-rgb),.4)!important;background:rgba(var(--success-rgb),.04)!important}
+
+/* ── Provider badge LOCAL mode ─────────────────────────────────────────────── */
+#provider-badge.local{background:rgba(76,175,80,.18)!important;color:#4CAF50!important;border-color:rgba(76,175,80,.35)!important}

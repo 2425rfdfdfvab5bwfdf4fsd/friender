@@ -74,6 +74,18 @@ async def lifespan(app_: FastAPI):
     wm.start_scheduler()
     set_workflow_manager(wm)
 
+    # Auto-detect Ollama if no cloud API keys are configured
+    try:
+        from arix.config import auto_detect_and_switch_ollama, ArixConfig
+        _cfg = ArixConfig.load()
+        switched = await auto_detect_and_switch_ollama(_cfg)
+        if switched:
+            import logging
+            logging.getLogger(__name__).info("Auto-switched to Ollama (local LLM)")
+    except Exception as _e:
+        import logging
+        logging.getLogger(__name__).debug("Ollama auto-detect skipped: %s", _e)
+
     # Wire agent's run_command into the channel manager so bots can call it
     try:
         from arix.channels.channel_manager import get_channel_manager
