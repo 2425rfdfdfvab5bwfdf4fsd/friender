@@ -1,209 +1,193 @@
-# Arix — Windows Setup Guide
+# Arix — Setup Guide
 
 > Your personal AI digital employee. Give it tasks in plain English — it plans, acts, and reports back.
 
 ---
 
-## Launcher Scripts (Easiest Way)
+## The Fastest Way — Launcher Scripts
 
-The project includes three double-clickable batch files — no Command Prompt knowledge needed:
+Six double-clickable files do everything for you. No command-line knowledge required.
 
-| File | What it does | When to use |
-|------|-------------|-------------|
-| `setup.bat` | Installs everything (venv, packages, .env) | **Once** on first run |
-| `launch.bat` | Starts Arix + opens browser automatically | **Every time** you want to use Arix |
-| `launch_bridge.bat` | Connects desktop control (mouse & keyboard) | When you want Arix to control your PC |
+| File | Platform | What it does | When to use |
+|------|----------|-------------|-------------|
+| `setup.bat` | Windows | Installs everything + creates `.env` | **Once**, on first run |
+| `launch.bat` | Windows | Starts Arix + opens browser | **Every day** |
+| `launch_bridge.bat` | Windows | Connects desktop control (mouse & keyboard) | When you want Arix to control your PC |
+| `setup.sh` | Mac / Linux | Installs everything + creates `.env` | **Once**, on first run |
+| `launch.sh` | Mac / Linux | Starts Arix + opens browser | **Every day** |
+| `launch_bridge.sh` | Mac / Linux | Connects desktop control | When you want Arix to control your PC |
 
 **First time:**
-1. Double-click `setup.bat` — follow the prompts, paste your API key when Notepad opens
-2. Double-click `launch.bat` — browser opens to http://localhost:5000 automatically
+
+- **Windows:** Double-click `setup.bat` → then `launch.bat`
+- **Mac/Linux:** Run `bash setup.sh` in a terminal → then `bash launch.sh`
 
 **Every day after that:**
-- Just double-click **`launch.bat`** — that's it.
+
+- **Windows:** Double-click `launch.bat`
+- **Mac/Linux:** `bash launch.sh`
 
 ---
 
 ## Table of Contents
 
-1. [Quick Start (5 minutes)](#1-quick-start-5-minutes)
-2. [Requirements](#2-requirements)
-3. [Install Python](#3-install-python)
-4. [Download Arix](#4-download-arix)
-5. [Install Dependencies](#5-install-dependencies)
-6. [Configure Your API Key](#6-configure-your-api-key)
-7. [Set Up Your .env File](#7-set-up-your-env-file)
-8. [Start the Server](#8-start-the-server)
-9. [Local Bridge (Desktop Control)](#9-local-bridge-desktop-control)
-10. [Integrations (Gmail, Notion, Slack…)](#10-integrations-optional)
-11. [Example Commands](#11-example-commands)
-12. [Configuration Reference](#12-configuration-reference)
-13. [Troubleshooting](#13-troubleshooting)
+1. [Requirements](#1-requirements)
+2. [Install Python](#2-install-python)
+3. [Download & Install Arix](#3-download--install-arix)
+4. [AI Provider Options](#4-ai-provider-options)
+5. [Configure Your .env File](#5-configure-your-env-file)
+6. [Start the Server](#6-start-the-server)
+7. [Local Bridge (Desktop Control)](#7-local-bridge-desktop-control)
+8. [Integrations](#8-integrations-optional)
+9. [Example Commands](#9-example-commands)
+10. [Configuration Reference](#10-configuration-reference)
+11. [Troubleshooting](#11-troubleshooting)
 
 ---
 
-## 1. Quick Start (5 minutes)
-
-> **Prefer clicking over typing?** Skip this section and use the [Launcher Scripts](#launcher-scripts-easiest-way) above instead.
-
-Already have Python 3.11+ installed? Here's the manual path via Command Prompt:
-
-```cmd
-cd C:\Users\Saif Khan\Downloads\friender
-
-py -3.11 -m venv .venv
-.venv\Scripts\activate
-
-pip install -r requirements.txt
-
-copy .env.example .env
-```
-
-Open `.env` in Notepad, paste your `ANTHROPIC_API_KEY`, save, then:
-
-```cmd
-python main.py
-```
-
-Open **http://localhost:5000** in your browser.
-
----
-
-## 2. Requirements
+## 1. Requirements
 
 | What | Minimum |
 |------|---------|
-| Windows | **Windows 10** (build 1903+) or **Windows 11** |
+| OS | Windows 10/11 · macOS 12+ · Ubuntu 20.04+ / Debian 11+ |
 | Python | **3.11** or newer |
-| pip | Latest (bundled with Python) |
 | RAM | 512 MB free |
-| Internet | Required for AI features |
+| Internet | Required for cloud AI features (not needed for local Ollama) |
 
 ---
 
-## 3. Install Python
+## 2. Install Python
 
-1. Go to **[python.org/downloads](https://www.python.org/downloads/)** and download the latest **Python 3.11** or **3.12** Windows installer.
-2. Run the installer (`python-3.11.x-amd64.exe`).
-3. **Critical:** On the first screen, tick **"Add Python to PATH"** before clicking Install Now.
+### Windows
 
-   ![Add to PATH checkbox](https://www.python.org/static/img/python-logo.png)
+1. Go to **[python.org/downloads](https://www.python.org/downloads/)** and download **Python 3.11** or newer.
+2. Run the installer. **Critical:** on the first screen tick **"Add Python to PATH"**.
+3. Verify: open Command Prompt and run `python --version` (should show 3.11+).
 
-4. Open a new **Command Prompt** and verify:
+### macOS
 
-   ```cmd
-   python --version
-   ```
+```bash
+# With Homebrew (recommended)
+brew install python@3.11
 
-   You should see `Python 3.11.x` or higher. If you see an error, restart your PC and try again.
+# Without Homebrew — download from python.org
+```
 
-5. Alternatively, if you have multiple Python versions installed, use the Python Launcher:
+### Linux (Ubuntu / Debian)
 
-   ```cmd
-   py -3.11 --version
-   ```
+```bash
+sudo apt update
+sudo apt install python3.11 python3.11-venv python3-pip
+```
 
 ---
 
-## 4. Download Arix
+## 3. Download & Install Arix
 
-### Option A — ZIP download (easiest)
+### Step 1 — Get the files
 
-1. Download the ZIP from Replit and unzip it.
-2. The unzipped folder will be named something like `friender` or `arix`.
-3. Open **Command Prompt** inside that folder:
+**Option A — ZIP from Replit (easiest)**
 
-   ```cmd
-   cd C:\Users\Saif Khan\Downloads\friender
-   ```
+Download the ZIP from Replit and unzip it to a folder of your choice (e.g. `C:\Users\You\arix` or `~/arix`).
 
-### Option B — Git clone
+**Option B — Git clone**
 
-If you have Git installed:
-
-```cmd
+```bash
 git clone https://github.com/your-username/arix.git
 cd arix
 ```
 
----
+### Step 2 — Run setup
 
-## 5. Install Dependencies
+**Windows:** Double-click `setup.bat`
 
-### Step 1 — Create a virtual environment
-
-A virtual environment keeps Arix's packages separate from other Python projects on your PC.
-
-```cmd
-py -3.11 -m venv .venv
+**Mac / Linux:**
+```bash
+cd /path/to/arix
+bash setup.sh
 ```
 
-### Step 2 — Activate it
-
-```cmd
-.venv\Scripts\activate
-```
-
-Your prompt will change to show `(.venv)` at the start — this means it's active. **Every time you open a new terminal to run Arix, you must activate the venv first.**
-
-### Step 3 — Install all packages
-
-```cmd
-pip install -r requirements.txt
-```
-
-This installs FastAPI, the Anthropic SDK, Playwright, document tools, and everything else Arix needs. It takes 1–3 minutes on first run.
-
-### Step 4 — Optional extras
-
-| Feature | Install command |
-|---------|----------------|
-| Desktop automation (mouse & keyboard control) | `pip install pyautogui` |
-| Browser automation (already in requirements.txt) | `playwright install chromium` |
+The setup script will:
+- Create a Python virtual environment (`.venv`)
+- Install all dependencies from `requirements.txt`
+- Install Playwright's Chromium browser (~130 MB)
+- Create your `.env` config file
+- Open `.env` for you to add an API key (optional — see below)
+- Offer to install `pyautogui` for desktop control
 
 ---
 
-## 6. Configure Your API Key
+## 4. AI Provider Options
 
-Arix needs at least one AI provider key to understand and plan your tasks.
+Arix works with any of these. **You don't need to pay for anything to get started.**
 
-### Option A — Anthropic Claude *(recommended — best results)*
+### Option A — Local Ollama *(free, fully private, no API key needed)*
 
-1. Go to **[console.anthropic.com](https://console.anthropic.com)** → sign up / log in.
-2. Click **API Keys** → **Create Key**.
-3. Copy the key — it starts with `sk-ant-...`.
+If you have [Ollama](https://ollama.com) installed and running, Arix automatically detects it and uses it — **no configuration needed at all.**
 
-### Option B — OpenAI GPT-4
+```bash
+# Install Ollama from https://ollama.com
+# Then pull a model (do this once):
+ollama pull llama3.2        # fast, good quality (~2 GB)
+# or: ollama pull mistral, gemma2, qwen2.5, etc.
 
-1. Go to **[platform.openai.com](https://platform.openai.com)** → sign up / log in.
-2. Go to **API Keys** → **Create new secret key**.
-3. Copy the key — it starts with `sk-...`.
+# Then just run Arix — it finds Ollama automatically:
+bash launch.sh
+```
 
-> **Bonus:** An OpenAI key also enables **vector memory search** — Arix can find similar past tasks using AI embeddings instead of just keyword matching.
+The terminal shows: `🦙 No cloud key found — using local Ollama (llama3.2) for planning`
 
-### Option C — Google Gemini *(free tier available)*
-
-1. Go to **[aistudio.google.com](https://aistudio.google.com)**.
-2. Click **Get API key** and copy it.
-
-> **No key at all?** Arix still runs in **demo mode** using its built-in heuristic planner — no API costs.
+Your prompts never leave your PC. No API costs.
 
 ---
 
-## 7. Set Up Your .env File
+### Option B — Anthropic Claude *(recommended for best results)*
 
-### Create the file
+1. Go to **[console.anthropic.com](https://console.anthropic.com)** → sign up / log in
+2. Click **API Keys** → **Create Key** (starts with `sk-ant-...`)
+3. Add to `.env`: `ANTHROPIC_API_KEY=sk-ant-your-key-here`
 
+---
+
+### Option C — OpenAI GPT-4
+
+1. Go to **[platform.openai.com](https://platform.openai.com)** → API Keys → Create new secret key
+2. Add to `.env`: `OPENAI_API_KEY=sk-your-key-here`
+
+> An OpenAI key also enables **vector memory search** — Arix finds similar past tasks using AI embeddings.
+
+---
+
+### Option D — Google Gemini *(free tier available)*
+
+1. Go to **[aistudio.google.com](https://aistudio.google.com)** → Get API Key
+2. Add to `.env`: `GEMINI_API_KEY=your-key-here`
+
+---
+
+### Option E — Demo mode *(no AI, no Ollama)*
+
+Run Arix with no keys at all — it uses a built-in heuristic planner for common tasks (file management, system info, etc.). Good for exploring the UI before committing to a provider.
+
+---
+
+## 5. Configure Your .env File
+
+### Create it
+
+**Windows:** `setup.bat` does this automatically, or run:
 ```cmd
 copy .env.example .env
-```
-
-Then open it in Notepad (or VS Code):
-
-```cmd
 notepad .env
 ```
 
-### Minimal .env (just paste your key)
+**Mac / Linux:** `setup.sh` does this automatically, or run:
+```bash
+cp .env.example .env
+nano .env     # or: code .env / open .env
+```
+
+### Minimal .env (single AI key)
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-your-key-here
@@ -212,100 +196,96 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 ### Full .env reference
 
 ```env
-# ── AI Providers (set at least one) ──────────────────────────────────────────
-ANTHROPIC_API_KEY=sk-ant-...        # Claude — default, best results
-# OPENAI_API_KEY=sk-...            # GPT-4 + enables vector memory
-# GEMINI_API_KEY=...               # Google Gemini
+# ── AI Providers (set at least one; or use local Ollama with no key) ──────────
+ANTHROPIC_API_KEY=sk-ant-...          # Claude — default, best results
+# OPENAI_API_KEY=sk-...              # GPT-4 + enables vector memory
+# GEMINI_API_KEY=...                 # Google Gemini (free tier available)
+# GROQ_API_KEY=...                   # Groq (very fast, free tier)
 
-# ── Security (optional — recommended if others can reach your PC) ─────────────
-# Protects all API endpoints with a Bearer token.
-# Generate one by running: python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Arix_ADMIN_TOKEN=
+# ── Security (recommended if others can access your network) ──────────────────
+# Arix_ADMIN_TOKEN=your-secret-token
+# Generate one: python -c "import secrets; print(secrets.token_urlsafe(32))"
 
-# Comma-separated allowed WebSocket origins (blank = allow all, fine for local use)
-# PACCA_ALLOWED_ORIGINS=localhost,127.0.0.1
-
-# ── Runtime Tuning ────────────────────────────────────────────────────────────
-# How many seconds before a tool call times out (default: 60)
-# PACCA_TOOL_TIMEOUT=60
-
-# ── Integrations (all optional — add only what you need) ──────────────────────
-# See Section 10 for how to obtain each credential
+# ── Integrations (all optional — add only what you need) ─────────────────────
+# Gmail / Drive / Calendar:  see Section 8 below for how to obtain credentials
+# GMAIL_CLIENT_ID=...
+# GMAIL_CLIENT_SECRET=...
+# GMAIL_REFRESH_TOKEN=...
+# NOTION_API_KEY=secret_...
+# SLACK_BOT_TOKEN=xoxb-...
+# TRELLO_API_KEY=...
+# TRELLO_API_TOKEN=...
+# SPOTIFY_CLIENT_ID=...
+# SPOTIFY_CLIENT_SECRET=...
+# YOUTUBE_API_KEY=...
 ```
 
-> **Never share your `.env` file.** It contains your private API keys. It is already listed in `.gitignore` so it won't be accidentally uploaded to GitHub.
+> `.env` is already in `.gitignore` — it won't be accidentally uploaded to GitHub.
 
 ---
 
-## 8. Start the Server
+## 6. Start the Server
 
-Make sure your virtual environment is activated (`(.venv)` shows in your prompt), then:
+**Windows:** Double-click `launch.bat`
 
-```cmd
+**Mac / Linux:**
+```bash
+bash launch.sh
+```
+
+**Manual (any OS):**
+```bash
+# Activate venv first:
+source .venv/bin/activate      # Mac/Linux
+.venv\Scripts\activate         # Windows
+
 python main.py
 ```
 
 Expected output:
-
 ```
-INFO:     Started server process [...]
-INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     Uvicorn running on http://0.0.0.0:5000
 ```
 
-Open your browser and go to:
+Open **http://localhost:5000** in your browser.
 
-```
-http://localhost:5000
-```
+On first visit you'll see the **onboarding screen** — enter your name, timezone, and preferred style. This personalises how Arix talks to you.
 
-On your first visit you'll see the **onboarding screen** — enter your name, timezone, and preferred communication style. This personalises how Arix talks to you.
+### To stop
 
-### To stop the server
-
-Press **Ctrl+C** in the Command Prompt window.
-
-### To restart after a reboot
-
-```cmd
-cd C:\Users\Saif Khan\Downloads\friender
-.venv\Scripts\activate
-python main.py
-```
+Press **Ctrl+C** in the terminal window.
 
 ---
 
-## 9. Local Bridge (Desktop Control)
+## 7. Local Bridge (Desktop Control)
 
-The **Local Bridge** gives Arix mouse and keyboard control over your PC — clicking buttons, typing text, reading the screen — just like a human would.
+The Local Bridge gives Arix mouse and keyboard control over your PC — clicking buttons, typing text, reading the screen — like a human would.
 
 | Without bridge | With bridge |
 |----------------|-------------|
-| File management, web browsing, integrations, code | Everything + click inside any app, fill forms, control OBS Studio, use TikTok/Instagram, type anywhere |
+| File management, web browsing, Gmail, Notion, Slack, code… | Everything + click inside any app, fill forms, control OBS Studio, use TikTok/Instagram, type anywhere |
 
 ### Setup
 
-**Step 1 — Install bridge dependency** *(one time only)*
+1. Make sure the **Arix server is already running** (`launch.bat` or `launch.sh`)
+2. Open a **second terminal** window
+3. Run the bridge:
 
-With your venv activated:
+**Windows:** Double-click `launch_bridge.bat`
 
-```cmd
-pip install pyautogui
+**Mac / Linux:**
+```bash
+bash launch_bridge.sh
 ```
 
-**Step 2 — Run the bridge in a second Command Prompt window**
-
-Keep `python main.py` running in your first window. Open a **second Command Prompt**, navigate to the project folder, activate the venv, then:
-
-```cmd
-cd C:\Users\Saif Khan\Downloads\friender
-.venv\Scripts\activate
+**Manual:**
+```bash
+source .venv/bin/activate   # or: .venv\Scripts\activate on Windows
 python local_bridge/bridge_agent.py --server ws://localhost:5000/ws/bridge
 ```
 
-You'll see:
-
+Expected output:
 ```
 ╔══════════════════════════════════════════╗
 ║   Arix Local Bridge Agent               ║
@@ -318,34 +298,35 @@ The header badge in the browser changes from **Bridge: Off** to **Bridge: On ✓
 
 ### Connecting to a cloud-hosted Arix (Replit)
 
-```cmd
+```bash
 python local_bridge/bridge_agent.py --server wss://your-app.replit.app/ws/bridge
 ```
 
-### Safety features
+### macOS note
 
-- **Failsafe:** Move your mouse to the **top-left corner** of the screen at any time to immediately stop all desktop automation.
-- **Disconnect:** Press `Ctrl+C` in the bridge terminal.
-- **Tip:** If something goes wrong mid-task, slam the mouse to the top-left — automation halts instantly.
-- **Admin token:** If you set `Arix_ADMIN_TOKEN` in `.env`, also pass `--token YOUR_TOKEN` when starting the bridge.
+Desktop automation requires **Accessibility permission**. Go to:
+**System Settings → Privacy & Security → Accessibility** → add your terminal app (Terminal, iTerm2, etc.).
 
----
+### Safety
 
-## 10. Integrations (Optional)
-
-These connect Arix to external services. Add the relevant lines to your `.env` file and restart the server — Arix auto-detects which services are configured.
+- **Failsafe:** Move mouse to the **top-left corner** to immediately stop all automation.
+- Press **Ctrl+C** in the bridge terminal to disconnect.
 
 ---
 
-### Gmail
+## 8. Integrations (Optional)
 
-Read, search, send, and delete emails.
+Add these lines to your `.env` and restart the server. Arix auto-detects which services are configured.
 
-**Get credentials:**
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services** → **Credentials**
-2. Enable the **Gmail API**
-3. Create an **OAuth 2.0 Client ID** (Application type: Desktop App)
-4. Download the JSON, run the OAuth flow to get a refresh token
+---
+
+### Gmail (5 tools)
+
+*Read, search, send, delete emails.*
+
+1. [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services** → Enable **Gmail API**
+2. Create **OAuth 2.0 Client ID** (Application type: Desktop App)
+3. Download the JSON, run the OAuth flow to get a refresh token
 
 ```env
 GMAIL_CLIENT_ID=your-client-id.apps.googleusercontent.com
@@ -353,44 +334,41 @@ GMAIL_CLIENT_SECRET=your-client-secret
 GMAIL_REFRESH_TOKEN=your-refresh-token
 ```
 
-**What you can say:** *"Show my unread emails"*, *"Search Gmail for invoices"*, *"Send an email to…"*
-
 ---
 
-### Google Drive
+### Google Drive (4 tools)
 
-List, search, read, and upload files.
+*List, read, search, upload files.*
+
+Same Google Cloud project as Gmail — just also enable the Drive API.
 
 ```env
-GOOGLE_DRIVE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_DRIVE_CLIENT_SECRET=your-client-secret
-GOOGLE_DRIVE_REFRESH_TOKEN=your-refresh-token
+GOOGLE_DRIVE_CLIENT_ID=...
+GOOGLE_DRIVE_CLIENT_SECRET=...
+GOOGLE_DRIVE_REFRESH_TOKEN=...
 ```
-
-*(Use the same Google Cloud project as Gmail — just also enable the Drive API.)*
 
 ---
 
-### Google Calendar
+### Google Calendar (3 tools)
 
-List, create, and delete calendar events.
+*List, create, delete events.*
+
+Same project — enable Calendar API.
 
 ```env
-GOOGLE_CALENDAR_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CALENDAR_CLIENT_SECRET=your-client-secret
-GOOGLE_CALENDAR_REFRESH_TOKEN=your-refresh-token
+GOOGLE_CALENDAR_CLIENT_ID=...
+GOOGLE_CALENDAR_CLIENT_SECRET=...
+GOOGLE_CALENDAR_REFRESH_TOKEN=...
 ```
-
-*(Same Google Cloud project — enable the Calendar API.)*
 
 ---
 
-### Notion
+### Notion (4 tools)
 
-Read and search your Notion workspace.
+*Search, read, create, append to pages.*
 
-1. Go to [notion.so/my-integrations](https://www.notion.so/my-integrations) → **New Integration**
-2. Copy the **Internal Integration Token**
+1. [notion.so/my-integrations](https://www.notion.so/my-integrations) → **New Integration** → copy the Internal Integration Token
 
 ```env
 NOTION_API_KEY=secret_your-notion-token-here
@@ -398,13 +376,13 @@ NOTION_API_KEY=secret_your-notion-token-here
 
 ---
 
-### Slack
+### Slack (4 tools)
 
-Send messages and interact with channels.
+*Send messages, list channels, search.*
 
-1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create App** → From Scratch
-2. Under **OAuth & Permissions**, add bot scopes: `chat:write`, `channels:read`, `users:read`
-3. Install to workspace → copy the **Bot User OAuth Token**
+1. [api.slack.com/apps](https://api.slack.com/apps) → **Create App** → **From Scratch**
+2. **OAuth & Permissions** → Bot Token Scopes: `chat:write`, `channels:read`, `channels:history`, `search:read`
+3. Install to workspace → copy **Bot User OAuth Token**
 
 ```env
 SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
@@ -412,12 +390,11 @@ SLACK_BOT_TOKEN=xoxb-your-slack-bot-token
 
 ---
 
-### Trello
+### Trello (4 tools)
 
-Manage boards, lists, and cards.
+*List boards, create cards, manage lists.*
 
-1. Go to [trello.com/app-key](https://trello.com/app-key) and copy your **API Key**
-2. Generate a **Token** on the same page
+1. [trello.com/app-key](https://trello.com/app-key) → copy **API Key**, generate **Token**
 
 ```env
 TRELLO_API_KEY=your-trello-api-key
@@ -426,12 +403,11 @@ TRELLO_API_TOKEN=your-trello-token
 
 ---
 
-### Spotify
+### Spotify (3 tools)
 
-Control playback, search music, manage playlists.
+*Search music, current track, play/pause.*
 
-1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → **Create App**
-2. Copy the **Client ID** and **Client Secret**
+1. [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard) → **Create App** → copy Client ID + Secret
 
 ```env
 SPOTIFY_CLIENT_ID=your-client-id
@@ -440,12 +416,11 @@ SPOTIFY_CLIENT_SECRET=your-client-secret
 
 ---
 
-### YouTube
+### YouTube (3 tools)
 
-Search videos, get channel info, manage playlists.
+*Search videos, get video info, search channels.*
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services**
-2. Enable **YouTube Data API v3** → create an **API Key**
+1. [console.cloud.google.com](https://console.cloud.google.com) → Enable **YouTube Data API v3** → create **API Key**
 
 ```env
 YOUTUBE_API_KEY=your-youtube-api-key
@@ -453,12 +428,11 @@ YOUTUBE_API_KEY=your-youtube-api-key
 
 ---
 
-### WhatsApp
+### WhatsApp (1 tool)
 
-Send WhatsApp messages via Twilio.
+*Send messages.*
 
-1. Sign up at [twilio.com](https://www.twilio.com) → enable the **WhatsApp Sandbox**
-2. Copy your Account SID and Auth Token
+1. [twilio.com](https://www.twilio.com) → enable **WhatsApp Sandbox** → copy Account SID + Auth Token
 
 ```env
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -469,17 +443,19 @@ WHATSAPP_RECIPIENT=whatsapp:+1your-number
 
 ---
 
-## 11. Example Commands
+## 9. Example Commands
 
-Once Arix is running, type in plain English in the browser terminal:
+Type in plain English in the browser terminal:
 
 ### Files & System
 ```
 Delete temp files from my PC
 Organize my Downloads folder by file type
 Find all PDFs in my Documents folder
-Zip the project folder
-Free up disk space and show me a report
+Zip the project folder and save it to Desktop
+Free up disk space and give me a report
+Compare the two config files and show differences
+Copy text from my clipboard and reformat it
 ```
 
 ### Web & Research
@@ -487,10 +463,10 @@ Free up disk space and show me a report
 Search the web for the best Python courses and save results to a file
 Summarize the article at https://example.com/article
 Download the file at https://example.com/report.pdf
-What's the latest news about AI?
+Fetch the GitHub API and show my latest repos
 ```
 
-### Apps & Desktop *(requires Local Bridge)*
+### Apps & Desktop  *(requires Local Bridge)*
 ```
 Open TikTok and go to the upload page
 Open OBS Studio and start recording
@@ -513,6 +489,7 @@ Create a calendar event for Friday at 3pm — Team standup
 Search my Notion for project notes
 Send a Slack message to #general: "Build passed!"
 Show my Trello boards
+Create a Trello card "Review PRs" in the To Do list
 ```
 
 ### Code & AI
@@ -521,160 +498,151 @@ Generate a Python script that renames files by date
 Explain what this code does
 Analyze the quality of main.py
 Run this snippet and show the output
-Analyze the screenshot I took
 ```
 
 ### Multi-step Goals
 ```
 Research the top 5 cloud storage services and create a comparison spreadsheet
 Read my latest unread emails and create a task list in Notion
-Clean up my PC, free disk space, and give me a report
+Clean up my PC, free disk space, and send me a summary
 Send a WhatsApp message to John saying I'll be 10 minutes late
 ```
 
 ---
 
-## 12. Configuration Reference
+## 10. Configuration Reference
 
-Arix's config is stored at **`C:\Users\Saif Khan\.arix\config.json`** and is created automatically on first run. You can also change most settings from the **Settings panel** inside the browser UI.
+Config file: `~/.arix/config.json` (created automatically on first run). Most settings are also editable from the **Settings panel** inside the browser UI.
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
-| `provider` | Which AI to use: `anthropic`, `openai`, `gemini` | `anthropic` |
-| `model` | Model name (auto-detected from your key) | `claude-sonnet-4-5` |
-| `risk_proceed_threshold` | Risk score below this → auto-proceed silently | `30` |
+| `provider` | AI provider: `anthropic`, `openai`, `gemini`, `ollama`, `groq`… | `anthropic` |
+| `model` | Model name (auto-selected from your key) | `claude-opus-4-5` |
+| `risk_proceed_threshold` | Risk score below this → auto-proceed | `30` |
 | `risk_confirm_threshold` | Risk score above this → must type YES | `100` |
-| `offline_mode` | Skip all LLM calls; use heuristic planner only | `false` |
+| `offline_mode` | Skip all LLM calls; heuristic planner only | `false` |
+| `browser_headless` | Run Playwright without a visible window | `true` |
+| `tool_timeout_seconds` | Kill a tool call after this many seconds | `60` |
 
-### Risk levels at a glance
+### Risk levels
 
-| Level | Example actions | What Arix does |
-|-------|----------------|----------------|
-| Low | Read file, list directory, web search | Auto-proceeds silently |
+| Level | Example | Behaviour |
+|-------|---------|-----------|
+| Low | Read file, web search | Auto-proceeds silently |
 | Medium | Move file, browser click, git add | Shows plan, waits for OK |
-| High | Delete files, send message, git commit | Shows plan + risk warning |
+| High | Delete file, send message, git commit | Shows plan + risk warning |
 | Critical | Bulk delete, send to many recipients | Requires typing **YES** |
 
 ---
 
-## 13. Troubleshooting
+## 11. Troubleshooting
 
-### "Module not found" or import errors
+### "Module not found" / import errors
 
-Make sure your virtual environment is active (`(.venv)` in your prompt), then reinstall:
+Activate the virtual environment first, then reinstall:
 
-```cmd
+```bash
+source .venv/bin/activate   # Mac/Linux
+.venv\Scripts\activate      # Windows
+
 pip install -r requirements.txt
 ```
 
 ---
 
-### "python is not recognized as an internal or external command"
+### "python is not recognized" (Windows)
 
-Python is not on your PATH. Either:
-- Re-run the Python installer and tick **"Add Python to PATH"**
-- Or use `py -3.11` instead of `python` in every command
+Python is not on your PATH. Re-run the installer and tick **"Add Python to PATH"**, or use `py -3.11` instead of `python`.
 
 ---
 
-### Internal Server Error at localhost:5000
+### Port 5000 already in use
 
-This usually means the server started but hit an error processing your first request. Check the Command Prompt window running `python main.py` for the full error message. Common causes:
-
-- Missing or malformed `.env` file
-- A dependency wasn't installed — run `pip install -r requirements.txt` again
-- Port 5000 is in use by another process (see next section)
-
----
-
-### Server won't start — port already in use
-
-Find and kill the process using port 5000:
-
-```cmd
-netstat -ano | findstr :5000
+**Mac/Linux:**
+```bash
+lsof -i :5000
+kill -9 <PID>
 ```
 
-Note the PID number in the last column, then:
-
+**Windows:**
 ```cmd
+netstat -ano | findstr :5000
 taskkill /PID 12345 /F
 ```
 
-Replace `12345` with the actual PID, then start `python main.py` again.
+---
+
+### AI not working (generic or no responses)
+
+1. Check the key is loaded:
+   - Mac/Linux: `echo $ANTHROPIC_API_KEY`
+   - Windows: `echo %ANTHROPIC_API_KEY%`
+
+   If blank, the `.env` file isn't loading — make sure it's in the same folder as `main.py`.
+
+2. Check you have credits/quota on your provider's dashboard.
+
+3. **Try local Ollama:** install Ollama, run `ollama pull llama3.2`, start Arix with no keys — it auto-detects Ollama.
 
 ---
 
-### AI not working — generic or no responses
+### Ollama not being detected
 
-1. Check your key is visible to the server:
-
-   ```cmd
-   echo %ANTHROPIC_API_KEY%
-   ```
-
-   If blank, the `.env` file isn't loading. Make sure it's in the project root folder (same folder as `main.py`).
-
-2. Verify you have credits/quota on your API provider's dashboard.
-3. Test offline mode — add `"offline_mode": true` to `C:\Users\Saif Khan\.arix\config.json` to confirm the rest of the app is working.
-
----
-
-### Virtual environment not activating
-
-If you see `".venv\Scripts\activate" is not recognized`:
-
-```cmd
-py -3.11 -m venv .venv
+Make sure Ollama is **running** (not just installed):
+```bash
+ollama serve        # starts the Ollama server (keep this running)
+ollama list         # should show your downloaded models
 ```
 
-Then try activating again. If PowerShell blocks it with an execution policy error:
+Then restart Arix — it probes `localhost:11434` at startup.
 
+---
+
+### Virtual environment issues (Mac/Linux)
+
+```bash
+# If venv creation fails with "ensurepip" error:
+sudo apt install python3.11-venv   # Ubuntu/Debian
+
+# If activation fails:
+source .venv/bin/activate
+```
+
+**PowerShell execution policy (Windows):**
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 ```
-
-Then run `.venv\Scripts\activate` again.
-
----
-
-### Bridge not connecting
-
-- The Arix server (`python main.py`) must be **running first** before you start the bridge
-- Use `ws://` for local connections (not `wss://`)
-- Use `wss://` only when connecting to a cloud/Replit-hosted server
-- Check the browser header badge — **Bridge: Off** means the bridge script isn't running
-
----
-
-### Desktop automation not working (click/type does nothing)
-
-- Confirm the bridge terminal shows **Connected to Arix server ✓**
-- Try running the bridge Command Prompt **as Administrator** (right-click → Run as administrator)
-- Move the mouse to the **top-left corner** to reset the failsafe if automation is stuck
 
 ---
 
 ### Browser (Playwright) errors
 
-```cmd
-playwright install chromium
-```
-
-If `playwright` isn't recognised, run it via Python:
-
-```cmd
+```bash
 python -m playwright install chromium
 ```
 
 ---
 
+### Bridge not connecting
+
+- The **Arix server must be running first** before you start the bridge
+- Use `ws://` for local connections, `wss://` for cloud/Replit
+- Check the browser header: **Bridge: Off** = bridge not running
+
+---
+
+### macOS: desktop automation does nothing
+
+Go to **System Settings → Privacy & Security → Accessibility** and add your terminal app to the allowed list.
+
+---
+
 ### Integration not responding (Gmail, Notion, Slack…)
 
-1. Open `.env` and confirm the variable is present and has no extra spaces or quotes around the value.
-2. **Restart the server** after editing `.env` — it only reads the file at startup.
-3. Open the **Integrations panel** in the browser UI for a live connection status.
-4. For Google services (Gmail, Drive, Calendar): all three variables must be set — `CLIENT_ID`, `CLIENT_SECRET`, and `REFRESH_TOKEN`.
+1. Confirm the variable is in `.env` with no extra spaces or quotes
+2. **Restart the server** — `.env` is only read at startup
+3. Open the **Integrations panel** in the browser UI for live status
+4. For Google services: all three variables must be set (`CLIENT_ID`, `CLIENT_SECRET`, `REFRESH_TOKEN`)
 
 ---
 
@@ -684,25 +652,22 @@ python -m playwright install chromium
 Core setup
 ─────────────────────────────────────────────────────────────
 [ ] Python 3.11+ installed — python --version confirms it
-[ ] Project folder opened in Command Prompt
-[ ] py -3.11 -m venv .venv  completed
-[ ] .venv\Scripts\activate  — prompt shows (.venv)
-[ ] pip install -r requirements.txt  — no errors
-[ ] copy .env.example .env  completed
-[ ] API key pasted into .env and file saved
-[ ] python main.py  running — "Application startup complete."
-[ ] http://localhost:5000  opens in browser
+[ ] Ran setup.bat (Windows) or bash setup.sh (Mac/Linux)
+[ ] .env file has at least one AI key  — OR — Ollama is running
+[ ] Ran launch.bat (Windows) or bash launch.sh (Mac/Linux)
+[ ] http://localhost:5000 opens in browser
 [ ] Onboarding completed (name, timezone, style)
 
 Optional features
 ─────────────────────────────────────────────────────────────
-[ ] pip install pyautogui              ← desktop control
-[ ] python local_bridge/bridge_agent.py running  ← bridge on
-[ ] playwright install chromium        ← browser automation
-[ ] Integration credentials added to .env  ← Gmail, Notion…
+[ ] Ollama installed + model pulled   ← free local AI, no key needed
+[ ] playwright install chromium       ← browser automation
+[ ] launch_bridge.bat / launch_bridge.sh running  ← desktop control
+[ ] Integration credentials added to .env  ← Gmail, Notion, Slack…
 ```
 
 ---
 
-*Arix v8.2 — Personal AI Computer-Control Agent · Windows 10/11*
-*For architecture details see `README.md` · For API docs see `docs/`*
+*Arix v9.3 — Personal AI Computer-Control Agent*
+*100 tools · 20 domains · 8 integrations · Ollama auto-fallback*
+*Windows 10/11 · macOS 12+ · Ubuntu 20.04+*
