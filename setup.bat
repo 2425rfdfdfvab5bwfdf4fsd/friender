@@ -1,4 +1,10 @@
 @echo off
+:: Re-launch inside a persistent cmd window so it never closes unexpectedly
+if not defined _ARIX_LAUNCHED (
+    set _ARIX_LAUNCHED=1
+    cmd /k ""%~f0""
+    exit /b
+)
 title Arix — First-Time Setup
 color 0A
 
