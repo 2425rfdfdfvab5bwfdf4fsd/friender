@@ -99,6 +99,9 @@
       <button class="snav-btn" data-panel="spotify" onclick="switchPanel('spotify')"><span class="snav-icon">🎵</span>Spotify</button>
       <button class="snav-btn" data-panel="youtube" onclick="switchPanel('youtube')"><span class="snav-icon">▶️</span>YouTube</button>
       <button class="snav-btn" data-panel="plugins" onclick="switchPanel('plugins')"><span class="snav-icon">🔌</span>Plugins<span class="snav-badge" id="badge-plugins" style="display:none">0</span></button>
+      <button class="snav-btn" data-panel="skillhub" onclick="switchPanel('skillhub')"><span class="snav-icon">🛒</span>SkillHub</button>
+      <button class="snav-btn" data-panel="channels" onclick="switchPanel('channels')"><span class="snav-icon">📡</span>Channels</button>
+      <button class="snav-btn" data-panel="canvas" onclick="switchPanel('canvas')"><span class="snav-icon">🎨</span>Live Canvas</button>
       <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="settings" onclick="switchPanel('settings')"><span class="snav-icon">⚙️</span>Settings</button>
       <button class="snav-btn" data-panel="audit" onclick="switchPanel('audit')"><span class="snav-icon">🔍</span>Audit</button>
@@ -483,6 +486,107 @@
         <input class="panel-search" id="youtube-search-input" placeholder="Search YouTube videos…" onkeydown="if(event.key==='Enter')searchYouTube(this.value)" style="margin-bottom:8px">
         <button class="panel-btn primary" onclick="searchYouTube(document.getElementById('youtube-search-input').value)" style="width:100%;margin-bottom:8px">🔍 Search</button>
         <div id="youtube-results"><div class="panel-empty">Search for videos to get started.</div></div>
+      </div>
+
+      <!-- SkillHub panel -->
+      <div id="panel-skillhub" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🛒</span>
+          <span class="intg-title">SkillHub</span>
+          <button class="panel-btn" onclick="loadSkillHub()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Curated skill packs — one-click to install as a named workflow.
+        </div>
+        <input class="panel-search" id="skillhub-search" placeholder="Search skills…" oninput="filterSkills(this.value)" style="margin-bottom:8px">
+        <div id="skillhub-cats" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px"></div>
+        <div id="skillhub-list"><div class="panel-empty">Loading skills…</div></div>
+      </div>
+
+      <!-- Channels panel -->
+      <div id="panel-channels" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📡</span>
+          <span class="intg-title">Channels</span>
+          <button class="panel-btn" onclick="loadChannels()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5">
+          Connect messaging platforms. Arix will reply to messages sent via these channels.
+        </div>
+
+        <!-- Telegram -->
+        <div class="channel-card" id="ch-telegram">
+          <div class="channel-card-header">
+            <span class="channel-icon">✈️</span>
+            <div class="channel-info">
+              <div class="channel-name">Telegram</div>
+              <div class="channel-handle" id="tg-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="tg-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="tg-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">1. Message <b>@BotFather</b> on Telegram → /newbot<br>2. Copy the bot token below</div>
+            <input class="panel-input" id="tg-token-input" type="password" placeholder="Bot token (123456:ABC-...)" style="margin-bottom:6px">
+            <button class="panel-btn primary" onclick="startTelegram()" style="width:100%">Connect Telegram</button>
+          </div>
+          <div class="channel-actions" id="tg-actions" style="display:none">
+            <span id="tg-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('telegram')" style="margin-left:auto">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Discord -->
+        <div class="channel-card" id="ch-discord">
+          <div class="channel-card-header">
+            <span class="channel-icon">🎮</span>
+            <div class="channel-info">
+              <div class="channel-name">Discord</div>
+              <div class="channel-handle" id="dc-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="dc-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="dc-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">1. discord.com/developers/applications → New Application → Bot<br>2. Enable Message Content Intent → copy token</div>
+            <input class="panel-input" id="dc-token-input" type="password" placeholder="Bot token" style="margin-bottom:6px">
+            <button class="panel-btn primary" onclick="startDiscord()" style="width:100%">Connect Discord</button>
+          </div>
+          <div class="channel-actions" id="dc-actions" style="display:none">
+            <span id="dc-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('discord')" style="margin-left:auto">Disconnect</button>
+          </div>
+        </div>
+
+        <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">
+          💡 Set <code>TELEGRAM_BOT_TOKEN</code> or <code>DISCORD_BOT_TOKEN</code> in Secrets to auto-connect on startup.
+        </div>
+      </div>
+
+      <!-- Live Canvas panel -->
+      <div id="panel-canvas" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🎨</span>
+          <span class="intg-title">Live Canvas</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="panel-btn" onclick="loadCanvas()" title="Refresh">↺</button>
+            <button class="panel-btn" onclick="clearCanvas()" title="Clear all cards" style="color:var(--danger)">🗑</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          The agent pushes structured output here — research results, charts, summaries, and plans appear as cards.
+        </div>
+        <div class="canvas-add-row">
+          <input class="panel-input" id="canvas-card-title" placeholder="Card title…" style="margin:0;flex:1">
+          <select id="canvas-card-type" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 7px;border-radius:var(--radius-sm);font-size:10.5px;font-family:var(--font)">
+            <option value="markdown">📝 Note</option>
+            <option value="research">🔬 Research</option>
+            <option value="plan">📋 Plan</option>
+            <option value="chart">📊 Chart</option>
+            <option value="code">💻 Code</option>
+          </select>
+        </div>
+        <textarea class="panel-textarea" id="canvas-card-content" placeholder="Card content (markdown supported)…" rows="3" style="margin-bottom:6px"></textarea>
+        <button class="panel-btn primary" onclick="pushCanvasCard()" style="width:100%;margin-bottom:12px">+ Add Card</button>
+        <div id="canvas-cards"><div class="panel-empty">No cards yet. The agent will push content here automatically.</div></div>
       </div>
 
     </div>

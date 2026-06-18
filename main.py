@@ -37,6 +37,8 @@ from routers import (
     agent_api,
     bridge,
     calendar,
+    canvas,
+    channels,
     drive,
     gmail,
     intelligence,
@@ -44,6 +46,7 @@ from routers import (
     notion,
     personal,
     plugins,
+    skillhub,
     slack,
     spotify,
     trello,
@@ -62,6 +65,35 @@ async def lifespan(app_: FastAPI):
     wm = WorkflowManager()
     wm.start_scheduler()
     set_workflow_manager(wm)
+
+    # Wire agent's run_command into the channel manager so bots can call it
+    try:
+        from arix.channels.channel_manager import get_channel_manager
+        from arix.app_state import get_agent
+
+        async def _channel_run_fn(command: str) -> str:
+            agent = get_agent()
+            chunks = []
+            async for chunk in agent.run_command(command):
+                if isinstance(chunk, str):
+                    chunks.append(chunk)
+                elif hasattr(chunk, "text"):
+                    chunks.append(chunk.text)
+            return "".join(chunks) or "(done)"
+
+        mgr = get_channel_manager()
+        mgr.set_command_fn(_channel_run_fn)
+
+        # Auto-start any bots configured via environment variables
+        import os
+        if os.environ.get("TELEGRAM_BOT_TOKEN"):
+            await mgr.start_telegram(os.environ["TELEGRAM_BOT_TOKEN"])
+        if os.environ.get("DISCORD_BOT_TOKEN"):
+            await mgr.start_discord(os.environ["DISCORD_BOT_TOKEN"])
+    except Exception as _e:
+        import logging
+        logging.getLogger(__name__).warning("Channel autostart skipped: %s", _e)
+
     yield
     wm.stop_scheduler()
     try:
@@ -161,6 +193,8 @@ async def index():
 app.include_router(agent_api.router)
 app.include_router(bridge.router)
 app.include_router(calendar.router)
+app.include_router(canvas.router)
+app.include_router(channels.router)
 app.include_router(drive.router)
 app.include_router(gmail.router)
 app.include_router(intelligence.router)
@@ -168,6 +202,7 @@ app.include_router(memory.router)
 app.include_router(notion.router)
 app.include_router(personal.router)
 app.include_router(plugins.router)
+app.include_router(skillhub.router)
 app.include_router(slack.router)
 app.include_router(spotify.router)
 app.include_router(trello.router)

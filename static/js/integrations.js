@@ -902,6 +902,328 @@ async function searchYouTube(q) {
     </div>`).join('') || '<div class="panel-empty">No videos found.</div>';
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// SkillHub
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _allSkills = [];
+let _skillCatFilter = '';
+
+async function loadSkillHub() {
+  const el = document.getElementById('skillhub-list');
+  if (el) el.innerHTML = '<div class="panel-empty">Loading…</div>';
+  try {
+    const res = await fetch('/api/skillhub');
+    const data = await res.json();
+    _allSkills = data.skills || [];
+    renderSkillCats(data.categories || []);
+    renderSkills(_allSkills);
+  } catch (e) {
+    if (el) el.innerHTML = `<div class="panel-empty" style="color:#f87171">Error loading skills</div>`;
+  }
+}
+
+function renderSkillCats(cats) {
+  const el = document.getElementById('skillhub-cats');
+  if (!el) return;
+  const all = ['All', ...cats];
+  el.innerHTML = all.map(c => `
+    <button class="skill-cat-btn${_skillCatFilter === c || (c === 'All' && !_skillCatFilter) ? ' active' : ''}"
+      onclick="setSkillCat('${c}')">${c}</button>`).join('');
+}
+
+function setSkillCat(cat) {
+  _skillCatFilter = cat === 'All' ? '' : cat;
+  renderSkillCats(_allSkills.length ? [...new Set(_allSkills.map(s => s.category))] : []);
+  const q = (document.getElementById('skillhub-search') || {}).value || '';
+  filterSkills(q);
+}
+
+function filterSkills(q) {
+  let skills = _allSkills;
+  if (_skillCatFilter) skills = skills.filter(s => s.category === _skillCatFilter);
+  if (q) {
+    const lq = q.toLowerCase();
+    skills = skills.filter(s =>
+      s.name.toLowerCase().includes(lq) ||
+      s.description.toLowerCase().includes(lq) ||
+      (s.tags || []).some(t => t.includes(lq))
+    );
+  }
+  renderSkills(skills);
+}
+
+function renderSkills(skills) {
+  const el = document.getElementById('skillhub-list');
+  if (!el) return;
+  if (!skills.length) { el.innerHTML = '<div class="panel-empty">No skills found.</div>'; return; }
+  el.innerHTML = skills.map(s => `
+    <div class="skill-card" id="skill-card-${s.id}">
+      <div class="skill-card-header">
+        <span class="skill-icon">${s.icon}</span>
+        <div style="flex:1;min-width:0">
+          <div class="skill-name">${esc(s.name)}</div>
+          <div class="skill-meta"><span class="skill-cat-tag">${esc(s.category)}</span> · v${esc(s.version)} · by ${esc(s.author)}</div>
+        </div>
+        <div class="skill-rating">⭐ ${s.rating}</div>
+      </div>
+      <div class="skill-desc">${esc(s.description)}</div>
+      <div class="skill-footer">
+        <span class="skill-installs">↓ ${s.installs.toLocaleString()}</span>
+        ${s.installed
+          ? `<button class="panel-btn skill-uninstall-btn" onclick="uninstallSkill('${s.id}')">Uninstall</button>`
+          : `<button class="panel-btn primary skill-install-btn" onclick="installSkill('${s.id}')">Install</button>`}
+      </div>
+    </div>`).join('');
+}
+
+async function installSkill(id) {
+  const btn = document.querySelector(`#skill-card-${id} .skill-install-btn`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Installing…'; }
+  try {
+    const res = await fetch(`/api/skillhub/${id}/install`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast(`✅ "${data.name}" installed as a workflow`, 'ok');
+      await loadSkillHub();
+    }
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to install skill', 'err');
+    if (btn) { btn.disabled = false; btn.textContent = 'Install'; }
+  }
+}
+
+async function uninstallSkill(id) {
+  try {
+    const res = await fetch(`/api/skillhub/${id}/uninstall`, { method: 'POST' });
+    const data = await res.json();
+    if (data.ok) {
+      if (typeof toast === 'function') toast('Skill uninstalled', 'info');
+      await loadSkillHub();
+    }
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to uninstall skill', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Channels (Telegram + Discord)
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function loadChannels() {
+  try {
+    const res = await fetch('/api/channels');
+    const data = await res.json();
+    const channels = data.channels || [];
+
+    const tg = channels.find(c => c.platform === 'telegram');
+    const dc = channels.find(c => c.platform === 'discord');
+
+    updateChannelUI('telegram', tg, data.telegram_configured);
+    updateChannelUI('discord', dc, data.discord_configured);
+  } catch (e) {
+    // silently ignore — channels endpoint may not be needed
+  }
+}
+
+function updateChannelUI(platform, ch, envConfigured) {
+  const prefix = platform === 'telegram' ? 'tg' : 'dc';
+  const badge = document.getElementById(`${prefix}-badge`);
+  const handle = document.getElementById(`${prefix}-handle`);
+  const setup = document.getElementById(`${prefix}-setup`);
+  const actions = document.getElementById(`${prefix}-actions`);
+  const routedEl = document.getElementById(`${prefix}-routed`);
+
+  if (!badge) return;
+
+  if (ch && ch.connected) {
+    badge.textContent = 'Live';
+    badge.className = 'channel-badge connected';
+    if (handle) handle.textContent = ch.bot_username || 'Connected';
+    if (setup) setup.style.display = 'none';
+    if (actions) actions.style.display = 'flex';
+    if (routedEl) routedEl.textContent = `${ch.messages_routed} messages routed`;
+  } else if (ch && ch.enabled && !ch.connected) {
+    badge.textContent = ch.error ? 'Error' : 'Connecting…';
+    badge.className = `channel-badge ${ch.error ? 'error' : 'connecting'}`;
+    if (handle) handle.textContent = ch.error || 'Connecting…';
+    if (setup) setup.style.display = 'block';
+    if (actions) actions.style.display = 'none';
+  } else {
+    badge.textContent = envConfigured ? 'Auto' : 'Off';
+    badge.className = `channel-badge ${envConfigured ? 'connecting' : 'disconnected'}`;
+    if (handle) handle.textContent = envConfigured ? 'Token from env' : 'Not connected';
+    if (setup) setup.style.display = envConfigured ? 'none' : 'block';
+    if (actions) actions.style.display = envConfigured ? 'flex' : 'none';
+  }
+}
+
+async function startTelegram() {
+  const tokenInput = document.getElementById('tg-token-input');
+  const token = (tokenInput && tokenInput.value.trim()) || '';
+  try {
+    const res = await fetch('/api/channels/telegram/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (typeof toast === 'function') toast('✈️ Telegram bot starting…', 'info');
+      setTimeout(loadChannels, 2000);
+    } else {
+      if (typeof toast === 'function') toast(`Telegram error: ${data.detail || 'unknown'}`, 'err');
+    }
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to start Telegram', 'err');
+  }
+}
+
+async function startDiscord() {
+  const tokenInput = document.getElementById('dc-token-input');
+  const token = (tokenInput && tokenInput.value.trim()) || '';
+  try {
+    const res = await fetch('/api/channels/discord/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      if (typeof toast === 'function') toast('🎮 Discord bot starting…', 'info');
+      setTimeout(loadChannels, 2000);
+    } else {
+      if (typeof toast === 'function') toast(`Discord error: ${data.detail || 'unknown'}`, 'err');
+    }
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to start Discord', 'err');
+  }
+}
+
+async function stopChannel(name) {
+  try {
+    await fetch(`/api/channels/${name}/stop`, { method: 'POST' });
+    if (typeof toast === 'function') toast(`${name} disconnected`, 'info');
+    await loadChannels();
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to stop channel', 'err');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Live Canvas
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _canvasSSE = null;
+
+function connectCanvasSSE() {
+  if (_canvasSSE) return;
+  _canvasSSE = new EventSource('/api/canvas/stream');
+  _canvasSSE.onmessage = (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      if (msg.event === 'card') prependCanvasCard(msg.data);
+      else if (msg.event === 'delete') removeCanvasCard(msg.id);
+      else if (msg.event === 'clear') document.getElementById('canvas-cards') && (document.getElementById('canvas-cards').innerHTML = '<div class="panel-empty">Canvas cleared.</div>');
+    } catch (_) {}
+  };
+  _canvasSSE.onerror = () => {
+    _canvasSSE = null;
+    setTimeout(connectCanvasSSE, 4000);
+  };
+}
+
+async function loadCanvas() {
+  const el = document.getElementById('canvas-cards');
+  if (!el) return;
+  try {
+    const res = await fetch('/api/canvas');
+    const data = await res.json();
+    const cards = (data.cards || []).reverse();
+    if (!cards.length) {
+      el.innerHTML = '<div class="panel-empty">No cards yet. The agent will push content here automatically.</div>';
+      return;
+    }
+    el.innerHTML = cards.map(c => renderCanvasCardHTML(c)).join('');
+    el.querySelectorAll('.canvas-card-body.md').forEach(el => {
+      if (typeof marked !== 'undefined') el.innerHTML = marked.parse(el.dataset.raw || '');
+    });
+  } catch (e) {
+    if (el) el.innerHTML = '<div class="panel-empty" style="color:#f87171">Failed to load canvas</div>';
+  }
+  connectCanvasSSE();
+}
+
+function renderCanvasCardHTML(c) {
+  const typeIcon = { markdown: '📝', research: '🔬', plan: '📋', chart: '📊', code: '💻' }[c.type] || '📝';
+  const colorMap = { research: 'var(--accent)', plan: 'var(--warn)', chart: 'var(--success)', code: 'var(--muted)' };
+  const borderColor = colorMap[c.type] || 'var(--border)';
+  const ts = c.ts ? new Date(c.ts * 1000).toLocaleTimeString() : '';
+  const isCode = c.type === 'code';
+  return `
+    <div class="canvas-card" id="cvs-${c.id}" style="border-left:3px solid ${borderColor}">
+      <div class="canvas-card-hdr">
+        <span style="font-size:13px">${typeIcon}</span>
+        <span class="canvas-card-title">${esc(c.title || c.type)}</span>
+        <span class="canvas-card-ts">${ts}</span>
+        <button class="canvas-card-del" onclick="deleteCanvasCard('${c.id}')" title="Remove">✕</button>
+      </div>
+      ${isCode
+        ? `<pre class="canvas-card-code"><code>${esc(c.content)}</code></pre>`
+        : `<div class="canvas-card-body md" data-raw="${esc(c.content)}"></div>`}
+    </div>`;
+}
+
+function prependCanvasCard(c) {
+  const el = document.getElementById('canvas-cards');
+  if (!el) return;
+  const empty = el.querySelector('.panel-empty');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.innerHTML = renderCanvasCardHTML(c);
+  const card = div.firstElementChild;
+  el.insertBefore(card, el.firstChild);
+  card.querySelectorAll('.canvas-card-body.md').forEach(b => {
+    if (typeof marked !== 'undefined') b.innerHTML = marked.parse(b.dataset.raw || '');
+  });
+}
+
+function removeCanvasCard(id) {
+  const el = document.getElementById(`cvs-${id}`);
+  if (el) el.remove();
+}
+
+async function deleteCanvasCard(id) {
+  await fetch(`/api/canvas/${id}`, { method: 'DELETE' });
+  removeCanvasCard(id);
+}
+
+async function clearCanvas() {
+  if (!confirm('Clear all canvas cards?')) return;
+  await fetch('/api/canvas', { method: 'DELETE' });
+  const el = document.getElementById('canvas-cards');
+  if (el) el.innerHTML = '<div class="panel-empty">Canvas cleared.</div>';
+}
+
+async function pushCanvasCard() {
+  const title = (document.getElementById('canvas-card-title') || {}).value || '';
+  const content = (document.getElementById('canvas-card-content') || {}).value || '';
+  const type = (document.getElementById('canvas-card-type') || {}).value || 'markdown';
+  if (!content.trim()) { if (typeof toast === 'function') toast('Enter card content first', 'warn'); return; }
+  try {
+    await fetch('/api/canvas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, content, type }),
+    });
+    document.getElementById('canvas-card-title').value = '';
+    document.getElementById('canvas-card-content').value = '';
+    if (typeof toast === 'function') toast('Card added to canvas', 'ok');
+  } catch (e) {
+    if (typeof toast === 'function') toast('Failed to add card', 'err');
+  }
+}
+
 // ── Panel auto-load hooks ─────────────────────────────────────────────────────
 
 (function patchSwitchPanel() {
@@ -914,5 +1236,8 @@ async function searchYouTube(q) {
     else if (name === 'trello') loadTrelloBoards();
     else if (name === 'spotify') loadSpotifyNowPlaying();
     else if (name === 'youtube') loadYouTube();
+    else if (name === 'skillhub') loadSkillHub();
+    else if (name === 'channels') loadChannels();
+    else if (name === 'canvas') loadCanvas();
   };
 })();

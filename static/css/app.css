@@ -987,6 +987,58 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 }
 
 /* ── Mobile (≤576px): full-width overlay sidebar ──────────────────────── */
+/* ── SkillHub ───────────────────────────────────────────────────────────── */
+.skill-cat-btn{background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:3px 9px;border-radius:20px;font-size:10px;font-family:var(--font);cursor:pointer;transition:all .15s;white-space:nowrap}
+.skill-cat-btn:hover{color:var(--text);border-color:var(--accent)}
+.skill-cat-btn.active{color:var(--accent);border-color:rgba(var(--accent-rgb),.5);background:rgba(var(--accent-rgb),.1)}
+.skill-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;transition:border-color .15s}
+.skill-card:hover{border-color:rgba(var(--accent-rgb),.35)}
+.skill-card-header{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px}
+.skill-icon{font-size:20px;flex-shrink:0;line-height:1}
+.skill-name{font-size:12px;font-weight:700;color:var(--text);margin-bottom:2px}
+.skill-meta{font-size:10px;color:var(--muted)}
+.skill-cat-tag{background:rgba(var(--accent-rgb),.1);color:var(--accent);border-radius:4px;padding:1px 5px;font-size:9.5px}
+.skill-rating{font-size:11px;color:var(--warn);white-space:nowrap;flex-shrink:0;align-self:center}
+.skill-desc{font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px}
+.skill-footer{display:flex;align-items:center;gap:8px}
+.skill-installs{font-size:10px;color:var(--muted)}
+.skill-install-btn{margin-left:auto;flex-shrink:0;font-size:10.5px;padding:4px 12px}
+.skill-uninstall-btn{margin-left:auto;flex-shrink:0;font-size:10.5px;padding:4px 12px;color:var(--muted)}
+
+/* ── Channels ───────────────────────────────────────────────────────────── */
+.channel-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px}
+.channel-card-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.channel-icon{font-size:20px;flex-shrink:0}
+.channel-info{flex:1;min-width:0}
+.channel-name{font-size:12px;font-weight:700;color:var(--text)}
+.channel-handle{font-size:10.5px;color:var(--muted);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.channel-badge{font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:12px;letter-spacing:.3px;flex-shrink:0;white-space:nowrap}
+.channel-badge.connected{background:rgba(var(--success-rgb),.15);color:var(--success);border:1px solid rgba(var(--success-rgb),.35)}
+.channel-badge.disconnected{background:rgba(var(--accent-rgb),.07);color:var(--muted);border:1px solid var(--border)}
+.channel-badge.connecting{background:rgba(var(--warn-rgb),.12);color:var(--warn);border:1px solid rgba(var(--warn-rgb),.35)}
+.channel-badge.error{background:rgba(var(--danger-rgb),.12);color:var(--danger);border:1px solid rgba(var(--danger-rgb),.35)}
+.channel-setup{padding:6px 0 2px}
+.channel-actions{display:flex;align-items:center;gap:6px;padding-top:4px}
+
+/* ── Live Canvas ─────────────────────────────────────────────────────────── */
+.canvas-add-row{display:flex;gap:6px;margin-bottom:6px}
+.canvas-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;animation:cardIn .2s ease}
+@keyframes cardIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.canvas-card-hdr{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.canvas-card-title{font-size:11.5px;font-weight:700;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.canvas-card-ts{font-size:9.5px;color:var(--muted);flex-shrink:0}
+.canvas-card-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:0 2px;border-radius:3px;line-height:1;flex-shrink:0}
+.canvas-card-del:hover{color:var(--danger)}
+.canvas-card-body{font-size:11.5px;color:var(--text2);line-height:1.6}
+.canvas-card-body h1,.canvas-card-body h2,.canvas-card-body h3{font-size:13px;font-weight:700;color:var(--text);margin:8px 0 4px}
+.canvas-card-body h4,.canvas-card-body h5{font-size:12px;font-weight:600;color:var(--text);margin:6px 0 3px}
+.canvas-card-body p{margin-bottom:6px}
+.canvas-card-body ul,.canvas-card-body ol{padding-left:16px;margin-bottom:6px}
+.canvas-card-body li{margin-bottom:2px}
+.canvas-card-body code{background:var(--surface2);padding:1px 4px;border-radius:3px;font-family:var(--mono);font-size:10.5px}
+.canvas-card-body a{color:var(--accent)}
+.canvas-card-code{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-family:var(--mono);font-size:10.5px;color:var(--text2);overflow-x:auto;white-space:pre-wrap;word-break:break-all;margin:0}
+
 @media(max-width:576px){
   :root{--sidebar-w:100vw}
   #sidebar{position:fixed;top:var(--hdr-h);left:0;bottom:0;transform:translateX(-100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:27;width:100%;max-width:340px}
