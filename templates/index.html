@@ -107,6 +107,7 @@
       <button class="snav-btn" data-panel="research-mode" onclick="switchPanel('research-mode')"><span class="snav-icon">🔬</span>Research Mode</button>
       <button class="snav-btn" data-panel="curator" onclick="switchPanel('curator')"><span class="snav-icon">🧬</span>Curator</button>
       <button class="snav-btn" data-panel="knowledge" onclick="switchPanel('knowledge')"><span class="snav-icon">📚</span>Knowledge</button>
+      <button class="snav-btn" data-panel="researcher" onclick="switchPanel('researcher')"><span class="snav-icon">🔬</span>Researcher</button>
       <button class="snav-btn" data-panel="hands" onclick="switchPanel('hands')"><span class="snav-icon">✋</span>Hands</button>
       <button class="snav-btn" data-panel="marketplace" onclick="switchPanel('marketplace')"><span class="snav-icon">🏪</span>ClawHub</button>
       <button class="snav-btn" data-panel="workspaces" onclick="switchPanel('workspaces')"><span class="snav-icon">🗂️</span>Workspaces</button>
@@ -754,26 +755,65 @@
       </div>
 
       <!-- ── Knowledge panel ─────────────────────────────────────────── -->
-      <div id="panel-knowledge" class="panel">
+      <div id="panel-knowledge" class="panel" ondragenter="initKbDropZone()">
         <div class="intg-header">
           <span class="intg-icon">📚</span>
           <span class="intg-title">Knowledge Base</span>
           <button class="panel-btn" onclick="loadKnowledge()" style="margin-left:auto" title="Refresh">↺</button>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
-          RAG document store — ingest PDFs, DOCX, Markdown, and text files. Arix uses BM25 search to pull relevant passages into planning context.
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5">
+          RAG document store — ingest PDFs, DOCX, Markdown, and code files. The agent uses BM25 search to pull relevant passages into every planning context automatically.
         </div>
-        <div class="panel-action-row" style="margin-bottom:6px">
-          <input class="panel-input" id="kb-ingest-path" placeholder="File path to ingest…" style="margin:0;flex:1">
-          <button class="panel-btn primary" onclick="kbIngest()" style="flex:0;white-space:nowrap">+ Ingest</button>
-        </div>
-        <div class="panel-action-row" style="margin-bottom:12px">
+
+        <!-- Drag-drop upload zone -->
+        <label id="kb-drop-zone" for="kb-file-input" style="display:block;border:2px dashed var(--border);border-radius:var(--radius-sm);padding:12px;text-align:center;cursor:pointer;margin-bottom:8px;transition:all .2s;color:var(--muted);font-size:11.5px"
+          ondragover="event.preventDefault();this.style.borderColor='var(--accent)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="event.preventDefault();this.style.borderColor='var(--border)';Array.from(event.dataTransfer.files).forEach(kbUploadFile)">
+          📎 Drop PDF, DOCX, MD, TXT, or code files here to ingest
+          <input type="file" id="kb-file-input" multiple style="display:none"
+            accept=".pdf,.docx,.txt,.md,.markdown,.rst,.csv,.py,.js,.ts,.go,.rs,.java,.cpp,.c,.json,.yaml,.yml,.log"
+            onchange="Array.from(this.files).forEach(kbUploadFile);this.value=''">
+          <div style="font-size:9.5px;margin-top:3px;opacity:.7">or click to browse · max 50 MB</div>
+        </label>
+
+        <!-- File path ingest (advanced) -->
+        <details style="margin-bottom:8px">
+          <summary style="font-size:10px;color:var(--muted);cursor:pointer">+ Ingest by file path</summary>
+          <div class="panel-action-row" style="margin-top:5px">
+            <input class="panel-input" id="kb-ingest-path" placeholder="/path/to/file.pdf" style="margin:0;flex:1">
+            <button class="panel-btn primary" onclick="kbIngest()" style="flex:0;white-space:nowrap">Ingest</button>
+          </div>
+        </details>
+
+        <!-- Search -->
+        <div class="panel-action-row" style="margin-bottom:10px">
           <input class="panel-input" id="kb-query-input" placeholder="Search knowledge base…" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')kbQuery()">
-          <button class="panel-btn" onclick="kbQuery()" style="flex:0;white-space:nowrap">Search</button>
+          <button class="panel-btn" onclick="kbQuery()" style="flex:0;white-space:nowrap">🔍</button>
         </div>
-        <div id="kb-query-results" style="margin-bottom:10px"></div>
+        <div id="kb-query-results" style="margin-bottom:8px"></div>
         <div class="qa-section-title">Ingested Documents <span id="kb-doc-count" style="color:var(--muted);font-weight:400"></span></div>
         <div id="kb-docs"></div>
+      </div>
+
+      <!-- ── Researcher Interests panel ──────────────────────────────── -->
+      <div id="panel-researcher" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🔬</span>
+          <span class="intg-title">Autonomous Researcher</span>
+          <button class="panel-btn" onclick="loadResearcherPanel()" style="margin-left:auto" title="Refresh">↺</button>
+          <button class="panel-btn primary" onclick="triggerResearchNow()" title="Run a research session now" style="margin-left:4px">▶ Run</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.5">
+          Inspired by HermitClaw — the researcher autonomously picks topics, searches the web, and builds a growing body of knowledge without being prompted.
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:10px" id="researcher-status"></div>
+        <div class="qa-section-title" style="margin-bottom:6px">Interest Areas</div>
+        <div id="researcher-interests" style="margin-bottom:10px"></div>
+        <div class="panel-action-row">
+          <input class="panel-input" id="researcher-add-input" placeholder="Add interest (e.g. AI security, Rust)" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')addResearcherInterest()">
+          <button class="panel-btn primary" onclick="addResearcherInterest()" style="flex:0;white-space:nowrap">+ Add</button>
+        </div>
       </div>
 
       <!-- ── Hands panel ─────────────────────────────────────────────── -->

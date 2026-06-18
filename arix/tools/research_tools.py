@@ -444,3 +444,45 @@ async def summarize_url(url: str, dry_run: bool = False) -> dict:
         }
     except Exception as e:
         return {"error": str(e), "url": url}
+
+
+async def search_knowledge_base(query: str, top_k: int = 5, dry_run: bool = False) -> dict:
+    """Search the local RAG knowledge base for passages relevant to a query.
+
+    Searches all ingested documents (PDFs, DOCX, Markdown, text files) using
+    BM25 keyword matching and returns the most relevant passages with their
+    source documents and scores.
+
+    Args:
+        query: Natural-language query or keywords to search for
+        top_k: Number of top-scoring passages to return (1-20)
+        dry_run: If True, validate the query without searching
+
+    Returns:
+        dict with 'results' list (chunk text, doc_name, score, page),
+        'total_docs' in the knowledge base, and 'query' for reference.
+    """
+    if dry_run:
+        return {"dry_run": True, "query": query, "top_k": top_k}
+
+    top_k = max(1, min(top_k, 20))
+    try:
+        from arix.memory.rag_ingester import get_knowledge_base
+        kb = get_knowledge_base()
+        stats = kb.get_stats()
+        if stats.get("total_chunks", 0) == 0:
+            return {
+                "query": query,
+                "results": [],
+                "total_docs": 0,
+                "message": "Knowledge base is empty. Ingest documents via the Knowledge panel.",
+            }
+        results = kb.query(query, top_k=top_k)
+        return {
+            "query": query,
+            "results": results.get("results", []),
+            "total_docs": stats.get("total_docs", 0),
+            "total_chunks": stats.get("total_chunks", 0),
+        }
+    except Exception as e:
+        return {"error": str(e), "query": query}

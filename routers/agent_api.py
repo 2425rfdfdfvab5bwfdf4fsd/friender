@@ -49,6 +49,7 @@ async def status():
         }),
         "memory_task_count": agent.memory.task_count(),
         "workflow_count": len(wm.list_workflows()) if wm else 0,
+        "sandbox": __import__("arix.security.sandbox", fromlist=["get_sandbox_capabilities"]).get_sandbox_capabilities(),
         "whatsapp_secrets": {
             "access_token": bool(os.environ.get("WHATSAPP_ACCESS_TOKEN")),
             "phone_number_id": bool(os.environ.get("WHATSAPP_PHONE_NUMBER_ID")),
@@ -395,3 +396,94 @@ async def get_research_journal(limit: int = 30):
         "status": status,
         "total": len(findings),
     }
+
+
+# ── Researcher interests ──────────────────────────────────────────────────────
+
+@router.get("/api/researcher/interests")
+async def get_researcher_interests():
+    """Return the autonomous researcher's current seed topics / interest areas."""
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+    r = get_autonomous_researcher()
+    status = r.get_status()
+    return {
+        "interests": status.get("seed_topics", []),
+        "total": len(status.get("seed_topics", [])),
+        "status": {
+            "running": status.get("running", False),
+            "total_sessions": status.get("total_sessions", 0),
+            "interval_minutes": status.get("interval_minutes", 45),
+        },
+    }
+
+
+@router.post("/api/researcher/interests")
+async def add_researcher_interest(body: dict):
+    """Add a new seed topic to the autonomous researcher's interest list."""
+    topic = (body.get("topic") or "").strip()
+    if not topic:
+        raise HTTPException(status_code=400, detail="topic is required")
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+    get_autonomous_researcher().add_seed_topic(topic)
+    return {"ok": True, "topic": topic}
+
+
+@router.delete("/api/researcher/interests/{topic}")
+async def remove_researcher_interest(topic: str):
+    """Remove a seed topic from the autonomous researcher."""
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+    get_autonomous_researcher().remove_seed_topic(topic)
+    return {"ok": True, "topic": topic}
+
+
+@router.post("/api/researcher/run-now")
+async def trigger_researcher_now():
+    """Trigger an immediate research session (non-blocking)."""
+    from arix.intelligence.autonomous_researcher import get_autonomous_researcher
+    get_autonomous_researcher().run_now()
+    return {"ok": True, "message": "Research session triggered"}
+
+
+# ── Ollama model management ───────────────────────────────────────────────────
+
+@router.get("/api/providers/ollama/models")
+async def list_ollama_models():
+    """List models available in the local Ollama instance."""
+    from arix.llm_client import LLMClient
+    try:
+        models = await LLMClient.list_ollama_models()
+        return {"models": models, "count": len(models), "running": len(models) > 0}
+    except Exception as e:
+        return {"models": [], "count": 0, "running": False, "error": str(e)}
+
+
+@router.post("/api/providers/ollama/pull")
+async def pull_ollama_model(body: dict):
+    """Pull (download) an Ollama model by name."""
+    import asyncio, os, urllib.request, json as _json
+    model = (body.get("model") or "").strip()
+    if not model:
+        raise HTTPException(status_code=400, detail="model name is required")
+    base = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+
+    async def _pull():
+        def _do():
+            try:
+                data = _json.dumps({"name": model, "stream": False}).encode()
+                req = urllib.request.Request(
+                    f"{base}/api/pull",
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=300) as resp:
+                    return _json.loads(resp.read())
+            except Exception as exc:
+                return {"error": str(exc)}
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, _do)
+
+    result = await _pull()
+    if "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return {"ok": True, "model": model, "status": result.get("status", "done")}

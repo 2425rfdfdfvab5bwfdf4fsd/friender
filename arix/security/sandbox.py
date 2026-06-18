@@ -161,6 +161,33 @@ def _apply_rlimits(
 
 
 _UNSHARE_BIN = shutil.which("unshare")
+_BWRAP_BIN = shutil.which("bwrap")
+_DOCKER_BIN = shutil.which("docker")
+
+
+def detect_sandbox_method() -> str:
+    """Return the strongest isolation method available on this system.
+
+    Priority: bwrap (bubblewrap) > unshare (network-only) > setrlimit-only
+    """
+    if _BWRAP_BIN:
+        return "bubblewrap"
+    if _UNSHARE_BIN:
+        return "unshare-net"
+    return "setrlimit"
+
+
+def get_sandbox_capabilities() -> dict:
+    """Return a dict describing available sandbox mechanisms on this host."""
+    return {
+        "method": detect_sandbox_method(),
+        "bwrap": bool(_BWRAP_BIN),
+        "unshare": bool(_UNSHARE_BIN),
+        "docker": bool(_DOCKER_BIN),
+        "setrlimit": True,
+        "network_isolation": bool(_UNSHARE_BIN or _BWRAP_BIN),
+        "filesystem_isolation": bool(_BWRAP_BIN),
+    }
 
 
 def _build_cmd(

@@ -1635,7 +1635,7 @@ const PANEL_TITLES = {
   marketplace:'🏪 ClawHub Marketplace', workspaces:'🗂️ Agent Workspaces',
   'research-mode':'🔬 Autonomous Research', agents:'🤖 Multi-Agent Router',
   hands:'✋ Capability Hands', curator:'🧬 Skill Curator',
-  knowledge:'📚 Knowledge Base', mcp:'🔗 MCP Servers',
+  knowledge:'📚 Knowledge Base', researcher:'🔬 Autonomous Researcher', mcp:'🔗 MCP Servers',
   channels:'📡 Channels', canvas:'🎨 Live Canvas', skillhub:'🛒 SkillHub',
 };
 
@@ -1665,6 +1665,8 @@ function switchPanel(name) {
   else if (name === 'agents') loadAgents();
   else if (name === 'hands') loadHands();
   else if (name === 'curator') loadCurator();
+  else if (name === 'knowledge') loadKnowledge();
+  else if (name === 'researcher') loadResearcherPanel();
 }
 
 function openDetailSidebar(name) {
@@ -3407,5 +3409,197 @@ function showBridgeHelp() {
     el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
   }
   el.classList.add('show');
+}
+
+
+// ── Knowledge Base Panel ──────────────────────────────────────────────────────
+async function loadKnowledge() {
+  const docsEl = document.getElementById('kb-docs');
+  const countEl = document.getElementById('kb-doc-count');
+  if (docsEl) docsEl.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:6px 0">Loading…</div>';
+  try {
+    const r = await fetch('/api/knowledge');
+    const d = await r.json();
+    if (countEl) countEl.textContent = `(${(d.docs||[]).length} docs · ${d.stats?.total_chunks||0} chunks)`;
+    renderKnowledgeDocs(d.docs || []);
+  } catch(e) {
+    if (docsEl) docsEl.innerHTML = '<div style="color:var(--danger);font-size:11px">Failed to load</div>';
+  }
+}
+
+function renderKnowledgeDocs(docs) {
+  const el = document.getElementById('kb-docs');
+  if (!el) return;
+  if (!docs.length) {
+    el.innerHTML = '<div class="panel-empty">No documents ingested yet.<br>Drag &amp; drop a PDF, DOCX, MD, or TXT file here, or use the ingest form above.</div>';
+    return;
+  }
+  el.innerHTML = docs.map(d => `
+    <div style="display:flex;align-items:center;gap:7px;padding:7px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:16px">${_kbIcon(d.file_type)}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
+        <div style="font-size:10px;color:var(--muted)">${d.chunks} chunks · ${_kbFmt(d.size_bytes)} · ${fmtRelTime(d.ingested_at)}</div>
+      </div>
+      <button class="panel-btn" onclick="kbDelete('${d.doc_id}')" title="Remove" style="padding:2px 7px;font-size:10px;color:var(--danger)">✕</button>
+    </div>`).join('');
+}
+
+function _kbIcon(type) {
+  return {pdf:'📄',docx:'📝',markdown:'📋',text:'📃',code:'💻',json:'{}',csv:'📊'}[type] || '📎';
+}
+function _kbFmt(bytes) {
+  if (!bytes) return '?';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+
+async function kbIngest() {
+  const pathEl = document.getElementById('kb-ingest-path');
+  const path = (pathEl?.value||'').trim();
+  if (!path) { toast('Enter a file path', 'warn'); return; }
+  try {
+    const r = await fetch('/api/knowledge/ingest', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({file_path: path})
+    });
+    const d = await r.json();
+    if (r.ok) { toast(`Ingested ${d.chunks||0} chunks ✓`, 'ok'); if(pathEl) pathEl.value = ''; await loadKnowledge(); }
+    else toast(d.detail || 'Ingest failed', 'err');
+  } catch(e) { toast('Ingest error: ' + e.message, 'err'); }
+}
+
+async function kbUploadFile(file) {
+  if (!file) return;
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('doc_name', file.name);
+  toast(`Uploading ${file.name}…`, 'info', 2000);
+  try {
+    const r = await fetch('/api/knowledge/upload', {method:'POST', body:fd});
+    const d = await r.json();
+    if (r.ok) { toast(`✓ Ingested ${d.chunks||0} chunks from ${file.name}`, 'ok'); await loadKnowledge(); }
+    else toast(d.detail || 'Upload failed', 'err');
+  } catch(e) { toast('Upload error: ' + e.message, 'err'); }
+}
+
+async function kbQuery() {
+  const qEl = document.getElementById('kb-query-input');
+  const resEl = document.getElementById('kb-query-results');
+  const q = (qEl?.value||'').trim();
+  if (!q) { toast('Enter a search query', 'warn'); return; }
+  if (resEl) resEl.innerHTML = '<div style="color:var(--muted);font-size:11px">Searching…</div>';
+  try {
+    const r = await fetch('/api/knowledge/query', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query: q, top_k: 5})
+    });
+    const d = await r.json();
+    const results = d.results || [];
+    if (!results.length) {
+      if (resEl) resEl.innerHTML = '<div class="panel-empty">No matching passages found.</div>';
+      return;
+    }
+    if (resEl) resEl.innerHTML = `
+      <div class="qa-section-title" style="margin-bottom:6px">Results for "${esc(q)}"</div>
+      ${results.map(c => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:4px">${esc(c.doc_name)} · p.${c.page||1} · score ${(c.score||0).toFixed(2)}</div>
+          <div style="font-size:11.5px;color:var(--text);line-height:1.5">${esc((c.text||'').slice(0,300))}${(c.text||'').length>300?'…':''}</div>
+        </div>`).join('')}`;
+  } catch(e) { if(resEl) resEl.innerHTML = '<div style="color:var(--danger);font-size:11px">Search failed</div>'; }
+}
+
+async function kbDelete(docId) {
+  if (!confirm('Remove this document from the knowledge base?')) return;
+  try {
+    const r = await fetch(`/api/knowledge/docs/${encodeURIComponent(docId)}`, {method:'DELETE'});
+    if (r.ok) { toast('Document removed', 'ok'); await loadKnowledge(); }
+    else toast('Delete failed', 'err');
+  } catch(e) { toast('Delete error', 'err'); }
+}
+
+function initKbDropZone() {
+  const panel = document.getElementById('panel-knowledge');
+  if (!panel || panel._kbDrop) return;
+  panel._kbDrop = true;
+  panel.addEventListener('dragover', e => { e.preventDefault(); panel.classList.add('kb-drag-over'); });
+  panel.addEventListener('dragleave', () => panel.classList.remove('kb-drag-over'));
+  panel.addEventListener('drop', e => {
+    e.preventDefault(); panel.classList.remove('kb-drag-over');
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length) {
+      files.forEach(f => kbUploadFile(f));
+    }
+  });
+}
+
+// ── Researcher Interests Panel ─────────────────────────────────────────────────
+async function loadResearcherPanel() {
+  const el = document.getElementById('researcher-interests');
+  const statusEl = document.getElementById('researcher-status');
+  if (el) el.innerHTML = '<div style="color:var(--muted);font-size:11px">Loading…</div>';
+  try {
+    const r = await fetch('/api/researcher/interests');
+    const d = await r.json();
+    renderResearcherInterests(d.interests || [], d.status || {});
+    if (statusEl) {
+      const st = d.status || {};
+      statusEl.innerHTML = `
+        <span style="color:${st.running?'var(--success)':'var(--muted)'}">
+          ${st.running?'● Running':'○ Idle'}
+        </span>
+        &nbsp;·&nbsp;${st.total_sessions||0} sessions
+        &nbsp;·&nbsp;every ${st.interval_minutes||45} min`;
+    }
+  } catch(e) {
+    if (el) el.innerHTML = '<div style="color:var(--danger);font-size:11px">Failed to load</div>';
+  }
+}
+
+function renderResearcherInterests(interests, status) {
+  const el = document.getElementById('researcher-interests');
+  if (!el) return;
+  if (!interests.length) {
+    el.innerHTML = `<div class="panel-empty">No interests configured.<br>Add topics below and the researcher will autonomously explore them in the background.</div>`;
+    return;
+  }
+  el.innerHTML = interests.map(topic => `
+    <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px">🔬</span>
+      <span style="flex:1;font-size:12px;color:var(--text)">${esc(topic)}</span>
+      <button class="panel-btn" onclick="removeResearcherInterest('${esc(topic)}')" title="Remove" style="padding:2px 7px;font-size:10px;color:var(--danger)">✕</button>
+    </div>`).join('');
+}
+
+async function addResearcherInterest() {
+  const inp = document.getElementById('researcher-add-input');
+  const topic = (inp?.value||'').trim();
+  if (!topic) { toast('Enter a topic', 'warn'); return; }
+  try {
+    const r = await fetch('/api/researcher/interests', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({topic})
+    });
+    if (r.ok) { toast(`Added: ${topic}`, 'ok'); if(inp) inp.value=''; await loadResearcherPanel(); }
+    else { const d = await r.json(); toast(d.detail || 'Failed', 'err'); }
+  } catch(e) { toast('Error: ' + e.message, 'err'); }
+}
+
+async function removeResearcherInterest(topic) {
+  try {
+    await fetch(`/api/researcher/interests/${encodeURIComponent(topic)}`, {method:'DELETE'});
+    toast(`Removed: ${topic}`, 'ok');
+    await loadResearcherPanel();
+  } catch(e) { toast('Remove failed', 'err'); }
+}
+
+async function triggerResearchNow() {
+  try {
+    const r = await fetch('/api/researcher/run-now', {method:'POST'});
+    const d = await r.json();
+    toast(d.message || 'Research triggered', 'ok');
+  } catch(e) { toast('Failed to trigger research', 'err'); }
 }
 

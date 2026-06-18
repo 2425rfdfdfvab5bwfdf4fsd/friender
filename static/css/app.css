@@ -1181,3 +1181,7 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);display:flex
 
 /* ── Provider badge LOCAL mode ─────────────────────────────────────────────── */
 #provider-badge.local{background:rgba(76,175,80,.18)!important;color:#4CAF50!important;border-color:rgba(76,175,80,.35)!important}
+
+/* ── Knowledge drop zone ──────────────────────────────────────────────────── */
+#panel-knowledge.kb-drag-over #kb-drop-zone,
+#kb-drop-zone:hover { border-color:var(--accent)!important; background:rgba(var(--accent-rgb),.06)!important; }

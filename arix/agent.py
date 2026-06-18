@@ -120,6 +120,7 @@ TOOL_DISPATCH: dict[str, Callable] = {
     # Research Agent tools
     "research_topic": lambda args: research_tools.research_topic(**_clean(args)),
     "summarize_url": lambda args: research_tools.summarize_url(**_clean(args)),
+    "search_knowledge_base": lambda args: research_tools.search_knowledge_base(**_clean(args)),
     # Sandbox code execution (Gap #1)
     "run_code": lambda args: code_tools.run_code(**_clean(args)),
     # Google Calendar tools
@@ -954,12 +955,37 @@ class ArixAgent:
                     if few_shot_lines else ""
                 )
 
+                # ── RAG Knowledge Base context injection ──────────────────
+                # Query the local document knowledge base for passages relevant
+                # to this command and inject the top results as context so the
+                # LLM planner can leverage the user's own documents.
+                rag_context = ""
+                try:
+                    kb_stats = self.knowledge_base.get_stats()
+                    if kb_stats.get("total_chunks", 0) > 0:
+                        kb_results = self.knowledge_base.query(effective_cmd, top_k=3)
+                        passages = kb_results.get("results", [])
+                        if passages:
+                            rag_lines = [
+                                f'  [{r.get("doc_name","doc")} p.{r.get("page",1)}] '
+                                f'{(r.get("text") or "")[:200].strip()}'
+                                for r in passages if r.get("text")
+                            ]
+                            if rag_lines:
+                                rag_context = (
+                                    "RELEVANT PASSAGES FROM YOUR KNOWLEDGE BASE:\n"
+                                    + "\n".join(rag_lines)
+                                )
+                except Exception:
+                    pass
+
                 # Prepend user profile + few-shot examples so the planner knows
                 # who it's working for and can match past successful patterns.
                 context_parts = [p for p in [
                     f"USER PROFILE:\n{_user_context}" if _user_context else "",
                     few_shot_section,
                     mem_context,
+                    rag_context,
                 ] if p]
                 full_context = "\n\n".join(context_parts)
 

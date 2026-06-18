@@ -957,6 +957,20 @@ _REGISTRY_DATA = [
         code_execution_mitigations=None, platforms=ALL_PLATFORMS,
         domain="research", batchable=False, idempotent=True,
     ),
+    ToolMetadata(
+        name="search_knowledge_base",
+        description="Search the local RAG knowledge base (ingested PDFs, DOCX, Markdown, text) for passages relevant to a query",
+        risk_level=RiskLevel.LOW, reversible=True, reversible_notes=None,
+        requires_confirmation=False, conditional_confirmation_rules=[],
+        data_egress=False, egress_type="none", network_behavior=None,
+        path_scope_required=False, max_files_without_confirmation=None,
+        max_total_bytes_without_confirmation=None, overwrite_policy="allow",
+        secret_scan_required=False, requires_diff_preview=False,
+        dry_run_supported=True, undo_supported=False, atomic=True,
+        requires_screenshot=False, can_indirectly_execute_code=False,
+        code_execution_mitigations=None, platforms=ALL_PLATFORMS,
+        domain="research", batchable=False, idempotent=True,
+    ),
     # ── Digital Employee tools ────────────────────────────────────────────────
     ToolMetadata(
         name="cleanup_temp_files",
