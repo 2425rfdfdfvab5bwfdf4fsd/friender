@@ -39,10 +39,15 @@ from routers import (
     calendar,
     canvas,
     channels,
+    curator,
     drive,
     gmail,
+    hands,
     intelligence,
+    knowledge,
+    mcp,
     memory,
+    multi_agent,
     notion,
     personal,
     plugins,
@@ -90,6 +95,12 @@ async def lifespan(app_: FastAPI):
             await mgr.start_telegram(os.environ["TELEGRAM_BOT_TOKEN"])
         if os.environ.get("DISCORD_BOT_TOKEN"):
             await mgr.start_discord(os.environ["DISCORD_BOT_TOKEN"])
+        if os.environ.get("MATRIX_ACCESS_TOKEN"):
+            await mgr.start_matrix(
+                homeserver=os.environ.get("MATRIX_HOMESERVER", "https://matrix.org"),
+                user_id=os.environ.get("MATRIX_USER_ID", ""),
+                access_token=os.environ["MATRIX_ACCESS_TOKEN"],
+            )
     except Exception as _e:
         import logging
         logging.getLogger(__name__).warning("Channel autostart skipped: %s", _e)
@@ -105,7 +116,7 @@ async def lifespan(app_: FastAPI):
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="Arix", version="8.0.0", lifespan=lifespan)
+app = FastAPI(title="Arix", version="8.4.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
@@ -195,10 +206,15 @@ app.include_router(bridge.router)
 app.include_router(calendar.router)
 app.include_router(canvas.router)
 app.include_router(channels.router)
+app.include_router(curator.router)
 app.include_router(drive.router)
 app.include_router(gmail.router)
+app.include_router(hands.router)
 app.include_router(intelligence.router)
+app.include_router(knowledge.router)
+app.include_router(mcp.router)
 app.include_router(memory.router)
+app.include_router(multi_agent.router)
 app.include_router(notion.router)
 app.include_router(personal.router)
 app.include_router(plugins.router)

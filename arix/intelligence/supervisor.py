@@ -736,6 +736,22 @@ class GoalSupervisor:
             except Exception:
                 pass
 
+        # v8.4: Notify Hermes Curator of goal completion
+        curator_triggered = False
+        try:
+            from arix.intelligence.curator import get_curator
+            curator = get_curator()
+            should_run = curator.on_goal_completed(
+                goal=goal,
+                steps_completed=plan.completed_steps,
+                success=True,
+            )
+            if should_run:
+                asyncio.create_task(curator.run_loop())
+                curator_triggered = True
+        except Exception:
+            pass
+
         emit("goal_complete", {
             "goal_id": plan.goal_id,
             "goal": goal,
@@ -744,6 +760,7 @@ class GoalSupervisor:
             "elapsed": elapsed,
             "decomposition_method": method,
             "skill_saved": skill_hint,
+            "curator_triggered": curator_triggered,
         })
         self._cleanup_checkpoint(plan)
         self._active_goals.pop(plan.goal_id, None)

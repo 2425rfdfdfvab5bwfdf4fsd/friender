@@ -1424,6 +1424,35 @@ _REGISTRY_DATA = [
         code_execution_mitigations=None, platforms=ALL_PLATFORMS,
         domain="youtube", batchable=False, idempotent=True,
     ),
+    # ── v8.4: RAG Knowledge Base tools ───────────────────────────────────────
+    ToolMetadata(
+        name="ingest_document",
+        description="Ingest a local document (PDF, DOCX, MD, TXT) into the RAG knowledge base for semantic search.",
+        risk_level=RiskLevel.LOW, reversible=True, reversible_notes="Document can be removed from index",
+        requires_confirmation=False, conditional_confirmation_rules=[],
+        data_egress=False, egress_type="none", network_behavior=None,
+        path_scope_required=True, max_files_without_confirmation=1,
+        max_total_bytes_without_confirmation=52_428_800, overwrite_policy="allow",
+        secret_scan_required=True, requires_diff_preview=False,
+        dry_run_supported=False, undo_supported=True, atomic=True,
+        requires_screenshot=False, can_indirectly_execute_code=False,
+        code_execution_mitigations=None, platforms=ALL_PLATFORMS,
+        domain="knowledge", batchable=True, idempotent=True,
+    ),
+    ToolMetadata(
+        name="query_knowledge_base",
+        description="Search the RAG knowledge base for relevant passages from ingested documents using BM25 keyword search.",
+        risk_level=RiskLevel.LOW, reversible=True, reversible_notes=None,
+        requires_confirmation=False, conditional_confirmation_rules=[],
+        data_egress=False, egress_type="none", network_behavior=None,
+        path_scope_required=False, max_files_without_confirmation=None,
+        max_total_bytes_without_confirmation=None, overwrite_policy="allow",
+        secret_scan_required=False, requires_diff_preview=False,
+        dry_run_supported=True, undo_supported=False, atomic=True,
+        requires_screenshot=False, can_indirectly_execute_code=False,
+        code_execution_mitigations=None, platforms=ALL_PLATFORMS,
+        domain="knowledge", batchable=False, idempotent=True,
+    ),
 ]
 
 TOOL_REGISTRY: dict[str, ToolMetadata] = {t.name: t for t in _REGISTRY_DATA}

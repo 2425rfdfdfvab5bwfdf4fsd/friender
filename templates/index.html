@@ -103,6 +103,12 @@
       <button class="snav-btn" data-panel="channels" onclick="switchPanel('channels')"><span class="snav-icon">📡</span>Channels</button>
       <button class="snav-btn" data-panel="canvas" onclick="switchPanel('canvas')"><span class="snav-icon">🎨</span>Live Canvas</button>
       <div class="snav-sep"></div>
+      <button class="snav-btn" data-panel="agents" onclick="switchPanel('agents')"><span class="snav-icon">🤖</span>Agents</button>
+      <button class="snav-btn" data-panel="curator" onclick="switchPanel('curator')"><span class="snav-icon">🧬</span>Curator</button>
+      <button class="snav-btn" data-panel="knowledge" onclick="switchPanel('knowledge')"><span class="snav-icon">📚</span>Knowledge</button>
+      <button class="snav-btn" data-panel="hands" onclick="switchPanel('hands')"><span class="snav-icon">✋</span>Hands</button>
+      <button class="snav-btn" data-panel="mcp" onclick="switchPanel('mcp')"><span class="snav-icon">🔗</span>MCP</button>
+      <div class="snav-sep"></div>
       <button class="snav-btn" data-panel="settings" onclick="switchPanel('settings')"><span class="snav-icon">⚙️</span>Settings</button>
       <button class="snav-btn" data-panel="audit" onclick="switchPanel('audit')"><span class="snav-icon">🔍</span>Audit</button>
       <button class="snav-btn" data-panel="sysmon" onclick="switchPanel('sysmon')"><span class="snav-icon">📊</span>System</button>
@@ -556,9 +562,129 @@
           </div>
         </div>
 
-        <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">
-          💡 Set <code>TELEGRAM_BOT_TOKEN</code> or <code>DISCORD_BOT_TOKEN</code> in Secrets to auto-connect on startup.
+        <!-- Matrix -->
+        <div class="channel-card" id="ch-matrix">
+          <div class="channel-card-header">
+            <span class="channel-icon">🌐</span>
+            <div class="channel-info">
+              <div class="channel-name">Matrix</div>
+              <div class="channel-handle" id="mx-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="mx-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="mx-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Connect via a Matrix homeserver. Use Element to get your access token from Settings → Help &amp; About.</div>
+            <input class="panel-input" id="mx-homeserver" placeholder="Homeserver (e.g. https://matrix.org)" style="margin-bottom:5px">
+            <input class="panel-input" id="mx-user-id" placeholder="User ID (e.g. @arix:matrix.org)" style="margin-bottom:5px">
+            <input class="panel-input" id="mx-token" type="password" placeholder="Access token" style="margin-bottom:5px">
+            <input class="panel-input" id="mx-prefix" placeholder="Command prefix (default: !arix)" style="margin-bottom:6px" value="!arix">
+            <button class="panel-btn primary" onclick="startMatrix()" style="width:100%">Connect Matrix</button>
+          </div>
+          <div class="channel-actions" id="mx-actions" style="display:none">
+            <span id="mx-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('matrix')" style="margin-left:auto">Disconnect</button>
+          </div>
         </div>
+
+        <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">
+          💡 Set <code>TELEGRAM_BOT_TOKEN</code>, <code>DISCORD_BOT_TOKEN</code>, or <code>MATRIX_ACCESS_TOKEN</code> in Secrets to auto-connect on startup.
+        </div>
+      </div>
+
+      <!-- ── Agents panel ────────────────────────────────────────────── -->
+      <div id="panel-agents" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🤖</span>
+          <span class="intg-title">Multi-Agent Router</span>
+          <button class="panel-btn" onclick="loadAgents()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Commands are automatically routed to specialist agents — Researcher, Coder, Ops, or Planner — each with an isolated workspace and expert persona.
+        </div>
+        <div id="agents-roles-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px"></div>
+        <div class="qa-section-title">Routing History</div>
+        <div id="agents-history" style="font-size:11px;color:var(--text2)"></div>
+      </div>
+
+      <!-- ── Curator panel ───────────────────────────────────────────── -->
+      <div id="panel-curator" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🧬</span>
+          <span class="intg-title">Skill Curator</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            <button class="panel-btn" onclick="loadCurator()" title="Refresh">↺</button>
+            <button class="panel-btn primary" onclick="triggerCuratorRun()" title="Run cycle now">▶ Run</button>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Inspired by Hermes Agent — every 15 completed goals the Curator mines your history for patterns, creates skills, refines underperformers, and promotes the best to Core status.
+        </div>
+        <div id="curator-stats" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px"></div>
+        <div class="qa-section-title">Learned Skills <span id="curator-skill-count" style="color:var(--muted);font-weight:400"></span></div>
+        <div id="curator-skills"></div>
+      </div>
+
+      <!-- ── Knowledge panel ─────────────────────────────────────────── -->
+      <div id="panel-knowledge" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">📚</span>
+          <span class="intg-title">Knowledge Base</span>
+          <button class="panel-btn" onclick="loadKnowledge()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          RAG document store — ingest PDFs, DOCX, Markdown, and text files. Arix uses BM25 search to pull relevant passages into planning context.
+        </div>
+        <div class="panel-action-row" style="margin-bottom:6px">
+          <input class="panel-input" id="kb-ingest-path" placeholder="File path to ingest…" style="margin:0;flex:1">
+          <button class="panel-btn primary" onclick="kbIngest()" style="flex:0;white-space:nowrap">+ Ingest</button>
+        </div>
+        <div class="panel-action-row" style="margin-bottom:12px">
+          <input class="panel-input" id="kb-query-input" placeholder="Search knowledge base…" style="margin:0;flex:1" onkeydown="if(event.key==='Enter')kbQuery()">
+          <button class="panel-btn" onclick="kbQuery()" style="flex:0;white-space:nowrap">Search</button>
+        </div>
+        <div id="kb-query-results" style="margin-bottom:10px"></div>
+        <div class="qa-section-title">Ingested Documents <span id="kb-doc-count" style="color:var(--muted);font-weight:400"></span></div>
+        <div id="kb-docs"></div>
+      </div>
+
+      <!-- ── Hands panel ─────────────────────────────────────────────── -->
+      <div id="panel-hands" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">✋</span>
+          <span class="intg-title">Capability Hands</span>
+          <button class="panel-btn" onclick="loadHands()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Inspired by OpenFang — each Hand bundles expert knowledge, tool permissions, and pre-built execution plans for a specific capability domain.
+        </div>
+        <div id="hands-grid"></div>
+      </div>
+
+      <!-- ── MCP panel ───────────────────────────────────────────────── -->
+      <div id="panel-mcp" class="panel">
+        <div class="intg-header">
+          <span class="intg-icon">🔗</span>
+          <span class="intg-title">MCP Servers</span>
+          <button class="panel-btn" onclick="loadMcp()" style="margin-left:auto" title="Refresh">↺</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">
+          Model Context Protocol — connect external tool servers via stdio subprocess or HTTP. Arix auto-discovers all available tools from each connected server.
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:10px">
+          <div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:7px">Add MCP Server</div>
+          <input class="panel-input" id="mcp-name" placeholder="Server name" style="margin-bottom:5px">
+          <select id="mcp-transport" style="width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:6px 8px;border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;margin-bottom:5px" onchange="mcpTransportChange(this.value)">
+            <option value="stdio">stdio (local subprocess)</option>
+            <option value="http">http (remote server)</option>
+          </select>
+          <input class="panel-input" id="mcp-command" placeholder="Command (e.g. npx @modelcontextprotocol/server-filesystem /path)" style="margin-bottom:5px">
+          <input class="panel-input" id="mcp-url" placeholder="URL (e.g. http://localhost:3000)" style="margin-bottom:5px;display:none">
+          <button class="panel-btn primary" onclick="mcpAddServer()" style="width:100%">+ Add Server</button>
+        </div>
+        <div class="qa-section-title">Connected Servers</div>
+        <div id="mcp-servers"></div>
+        <div class="qa-section-title" style="margin-top:10px">Available Tools</div>
+        <div id="mcp-tools" style="font-size:11px;color:var(--text2)"></div>
       </div>
 
       <!-- Live Canvas panel -->
@@ -943,6 +1069,237 @@
 
 <script src="/static/js/app.js"></script>
 <script src="/static/js/integrations.js"></script>
+<script>
+// ── v8.4: Multi-Agent Router ──────────────────────────────────────────────
+async function loadAgents(){
+  try{
+    const d=await fetch('/api/agents').then(r=>r.json());
+    const grid=document.getElementById('agents-roles-grid');
+    grid.innerHTML=d.roles.map(r=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px">
+        <div style="font-size:16px;margin-bottom:3px">${r.icon}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--text)">${r.name.charAt(0).toUpperCase()+r.name.slice(1)}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${r.description}</div>
+      </div>`).join('');
+    const hist=document.getElementById('agents-history');
+    if(!d.routing_history||!d.routing_history.length){hist.innerHTML='<div class="panel-empty">No commands routed yet.</div>';return;}
+    hist.innerHTML=d.routing_history.slice().reverse().map(h=>`
+      <div style="display:flex;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);align-items:center">
+        <span style="font-size:16px">${agentIcon(h.role)}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:11px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(h.command)}</div>
+          <div style="font-size:10px;color:var(--muted)">${h.role} · ${h.method} · ${h.duration_ms}ms</div>
+        </div>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+function agentIcon(role){return{researcher:'🔬',coder:'💻',ops:'⚙️',planner:'🗺️',general:'🤖'}[role]||'🤖';}
+
+// ── v8.4: Curator ──────────────────────────────────────────────────────────
+async function loadCurator(){
+  try{
+    const [st,sk]=await Promise.all([
+      fetch('/api/curator').then(r=>r.json()),
+      fetch('/api/curator/skills').then(r=>r.json()),
+    ]);
+    // Stats
+    const stats=document.getElementById('curator-stats');
+    stats.innerHTML=[
+      {label:'Total Skills',value:st.total_skills},
+      {label:'Core Skills',value:st.core_skills},
+      {label:'Until Next Run',value:st.goals_until_next_run+' goals'},
+    ].map(s=>`<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;text-align:center">
+      <div style="font-size:16px;font-weight:700;color:var(--accent)">${s.value}</div>
+      <div style="font-size:10px;color:var(--muted)">${s.label}</div>
+    </div>`).join('');
+    // Skills list
+    const list=document.getElementById('curator-skills');
+    const cnt=document.getElementById('curator-skill-count');
+    cnt.textContent=`(${sk.skills.length})`;
+    if(!sk.skills.length){list.innerHTML='<div class="panel-empty">No skills learned yet. Complete 15+ goals to trigger the first Curator cycle.</div>';return;}
+    list.innerHTML=sk.skills.map(s=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          ${s.is_core?'<span style="font-size:9px;background:var(--accent);color:#fff;border-radius:3px;padding:1px 5px">CORE</span>':''}
+          <div style="font-size:11px;font-weight:700;color:var(--text);flex:1">${escHtml(s.name)}</div>
+          <div style="font-size:10px;color:var(--muted)">⭐${s.score.toFixed(1)}</div>
+        </div>
+        <div style="font-size:10px;color:var(--muted)">${escHtml(s.description)}</div>
+        <div style="font-size:10px;color:var(--text2);margin-top:3px">Uses: ${s.uses} · Success: ${s.uses?Math.round(s.successes/s.uses*100):0}% · ${s.category}</div>
+        <div style="display:flex;gap:5px;margin-top:5px">
+          <button class="panel-btn" style="font-size:10px;padding:3px 8px" onclick="curatorToggleCore('${s.id}')">${s.is_core?'Remove Core':'Promote Core'}</button>
+          <button class="panel-btn" style="font-size:10px;padding:3px 8px;color:var(--danger)" onclick="curatorDeleteSkill('${s.id}')">Delete</button>
+        </div>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+async function triggerCuratorRun(){
+  const btn=event.target;btn.disabled=true;btn.textContent='Running…';
+  try{
+    const r=await fetch('/api/curator/run',{method:'POST'}).then(r=>r.json());
+    showToast(`Curator: created ${r.stage_2_created.length}, refined ${r.stage_3_refined.length}, promoted ${r.stage_4_promoted.length} skills`);
+    await loadCurator();
+  }catch(e){showToast('Curator run failed: '+e,'error');}
+  finally{btn.disabled=false;btn.textContent='▶ Run';}
+}
+async function curatorToggleCore(id){
+  await fetch('/api/curator/skills/toggle-core',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({skill_id:id})});
+  await loadCurator();
+}
+async function curatorDeleteSkill(id){
+  if(!confirm('Delete this skill?'))return;
+  await fetch(`/api/curator/skills/${id}`,{method:'DELETE'});
+  await loadCurator();
+}
+
+// ── v8.4: Knowledge Base ──────────────────────────────────────────────────
+async function loadKnowledge(){
+  try{
+    const d=await fetch('/api/knowledge').then(r=>r.json());
+    const docs=document.getElementById('kb-docs');
+    const cnt=document.getElementById('kb-doc-count');
+    cnt.textContent=`(${d.docs.length})`;
+    if(!d.docs.length){docs.innerHTML='<div class="panel-empty">No documents ingested yet. Enter a file path above and click + Ingest.</div>';return;}
+    docs.innerHTML=d.docs.map(doc=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:14px">${kbTypeIcon(doc.file_type)}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:11px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(doc.name)}</div>
+            <div style="font-size:10px;color:var(--muted)">${doc.chunk_count} chunks · ${doc.file_type} · ${Math.round(doc.char_count/1000)}k chars</div>
+          </div>
+          <button class="panel-btn" style="font-size:10px;padding:3px 8px;color:var(--danger)" onclick="kbDeleteDoc('${doc.doc_id}')">✕</button>
+        </div>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+function kbTypeIcon(t){return{pdf:'📄',docx:'📝',markdown:'📖',text:'📃',code:'💻',json:'📊'}[t]||'📎';}
+async function kbIngest(){
+  const path=document.getElementById('kb-ingest-path').value.trim();
+  if(!path)return;
+  const r=await fetch('/api/knowledge/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_path:path})}).then(r=>r.json());
+  if(r.ok){showToast(r.message||'Ingested successfully');document.getElementById('kb-ingest-path').value='';await loadKnowledge();}
+  else showToast('Ingest failed: '+(r.detail||r.error),'error');
+}
+async function kbQuery(){
+  const q=document.getElementById('kb-query-input').value.trim();
+  if(!q)return;
+  const div=document.getElementById('kb-query-results');
+  div.innerHTML='<div style="color:var(--muted);font-size:11px">Searching…</div>';
+  const r=await fetch('/api/knowledge/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q,top_k:4})}).then(r=>r.json());
+  if(!r.ok||!r.results.length){div.innerHTML='<div class="panel-empty">No relevant passages found.</div>';return;}
+  div.innerHTML=r.results.map(res=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:4px">${escHtml(res.doc_name)} · p${res.page} · score ${res.score}</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5">${escHtml(res.text.slice(0,200))}${res.text.length>200?'…':''}</div>
+    </div>`).join('');
+}
+async function kbDeleteDoc(id){
+  if(!confirm('Remove this document from the knowledge base?'))return;
+  await fetch(`/api/knowledge/docs/${id}`,{method:'DELETE'});
+  await loadKnowledge();
+}
+
+// ── v8.4: Capability Hands ────────────────────────────────────────────────
+async function loadHands(){
+  try{
+    const d=await fetch('/api/hands').then(r=>r.json());
+    const grid=document.getElementById('hands-grid');
+    if(!d.hands.length){grid.innerHTML='<div class="panel-empty">No hands available.</div>';return;}
+    grid.innerHTML=d.hands.map(h=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px;margin-bottom:8px;opacity:${h.active?1:0.5}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+          <span style="font-size:20px">${h.icon}</span>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:700;color:var(--text)">${h.name} Hand</div>
+            <div style="font-size:10px;color:var(--muted)">${h.category} · ${h.plan_count} plans</div>
+          </div>
+          <button class="panel-btn" style="font-size:10px;padding:3px 10px" onclick="toggleHand('${h.hand_id}')">${h.active?'Disable':'Enable'}</button>
+        </div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:5px">${escHtml(h.description.slice(0,120))}${h.description.length>120?'…':''}</div>
+        <div style="font-size:10px;color:var(--muted)">Runs: ${h.metrics.runs} · Success: ${h.metrics.success_rate}% · Avg: ${h.metrics.avg_duration_s}s</div>
+      </div>`).join('');
+  }catch(e){console.error(e);}
+}
+async function toggleHand(id){
+  await fetch('/api/hands/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({hand_id:id})});
+  await loadHands();
+}
+
+// ── v8.4: MCP Client ──────────────────────────────────────────────────────
+async function loadMcp(){
+  try{
+    const [sd,td]=await Promise.all([
+      fetch('/api/mcp/servers').then(r=>r.json()),
+      fetch('/api/mcp/tools').then(r=>r.json()),
+    ]);
+    const srvs=document.getElementById('mcp-servers');
+    const tools=document.getElementById('mcp-tools');
+    if(!sd.servers.length){srvs.innerHTML='<div class="panel-empty">No MCP servers configured yet.</div>';}
+    else srvs.innerHTML=sd.servers.map(s=>`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:8px;width:7px;height:7px;border-radius:50%;background:${s.connected?'var(--success,#4caf50)':'var(--danger)'};display:inline-block"></span>
+          <div style="font-size:11px;font-weight:700;color:var(--text);flex:1">${escHtml(s.name)}</div>
+          <span style="font-size:10px;color:var(--muted)">${s.transport}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-bottom:5px">${s.tool_count} tools · ${s.calls_made} calls</div>
+        <div style="display:flex;gap:5px">
+          ${s.connected?
+            `<button class="panel-btn" style="font-size:10px;padding:3px 8px" onclick="mcpDisconnect('${s.server_id}')">Disconnect</button>`:
+            `<button class="panel-btn primary" style="font-size:10px;padding:3px 8px" onclick="mcpConnect('${s.server_id}')">Connect</button>`}
+          <button class="panel-btn" style="font-size:10px;padding:3px 8px;color:var(--danger)" onclick="mcpRemove('${s.server_id}')">Remove</button>
+        </div>
+        ${s.error?`<div style="font-size:10px;color:var(--danger);margin-top:4px">${escHtml(s.error)}</div>`:''}
+      </div>`).join('');
+    if(!td.tools.length){tools.innerHTML='<div class="panel-empty">Connect an MCP server to see available tools.</div>';}
+    else tools.innerHTML=td.tools.map(t=>`<div style="padding:3px 0;border-bottom:1px solid var(--border)"><span style="color:var(--accent)">${escHtml(t.name)}</span> <span style="color:var(--muted)">[${t.server_id}]</span> — ${escHtml(t.description||'')}</div>`).join('');
+  }catch(e){console.error(e);}
+}
+function mcpTransportChange(v){
+  document.getElementById('mcp-command').style.display=v==='stdio'?'':'none';
+  document.getElementById('mcp-url').style.display=v==='http'?'':'none';
+}
+async function mcpAddServer(){
+  const name=document.getElementById('mcp-name').value.trim();
+  const transport=document.getElementById('mcp-transport').value;
+  const command=document.getElementById('mcp-command').value.trim()||null;
+  const url=document.getElementById('mcp-url').value.trim()||null;
+  if(!name)return showToast('Enter a server name','error');
+  const r=await fetch('/api/mcp/servers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,transport,command,url})}).then(r=>r.json());
+  if(r.ok){showToast('Server added: '+name);document.getElementById('mcp-name').value='';await loadMcp();}
+  else showToast('Add failed','error');
+}
+async function mcpConnect(id){await fetch(`/api/mcp/servers/${id}/connect`,{method:'POST'}).then(r=>r.json());await loadMcp();}
+async function mcpDisconnect(id){await fetch(`/api/mcp/servers/${id}/disconnect`,{method:'POST'});await loadMcp();}
+async function mcpRemove(id){if(!confirm('Remove this MCP server?'))return;await fetch(`/api/mcp/servers/${id}`,{method:'DELETE'});await loadMcp();}
+
+// ── v8.4: Matrix Channel ──────────────────────────────────────────────────
+async function startMatrix(){
+  const homeserver=document.getElementById('mx-homeserver').value.trim();
+  const user_id=document.getElementById('mx-user-id').value.trim();
+  const access_token=document.getElementById('mx-token').value.trim();
+  const command_prefix=document.getElementById('mx-prefix').value.trim()||'!arix';
+  if(!homeserver||!user_id||!access_token)return showToast('Fill in all Matrix fields','error');
+  const r=await fetch('/api/channels/matrix/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({homeserver,user_id,access_token,command_prefix})}).then(r=>r.json()).catch(e=>({ok:false,error:String(e)}));
+  if(r.ok){showToast('Matrix bot connected');document.getElementById('mx-token').value='';refreshChannelStatus();}
+  else showToast('Matrix error: '+(r.detail||r.error),'error');
+}
+
+// ── Patch switchPanel to auto-load new panels ─────────────────────────────
+const _origSwitch=window.patchSwitchPanel||null;
+(function(){
+  const _orig=window.switchPanel;
+  window.switchPanel=function(panel){
+    if(_orig) _orig(panel);
+    if(panel==='agents') setTimeout(loadAgents,100);
+    else if(panel==='curator') setTimeout(loadCurator,100);
+    else if(panel==='knowledge') setTimeout(loadKnowledge,100);
+    else if(panel==='hands') setTimeout(loadHands,100);
+    else if(panel==='mcp') setTimeout(loadMcp,100);
+  };
+})();
+</script>
 <script>
 (function(){
   const cvs = document.getElementById('nn-bg');

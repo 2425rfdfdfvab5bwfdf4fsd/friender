@@ -86,6 +86,36 @@ class ChannelManager:
         task.add_done_callback(lambda t: self._on_task_done(name, t))
         return {"ok": True, "name": name}
 
+    async def start_matrix(
+        self,
+        homeserver: str,
+        user_id: str,
+        access_token: str,
+        name: str = "matrix",
+        command_prefix: str = "!arix",
+    ) -> dict:
+        """Start a Matrix bot adapter."""
+        if name in self._tasks and not self._tasks[name].done():
+            return {"ok": False, "error": "Already running"}
+
+        status = ChannelStatus(name=name, platform="matrix", enabled=True)
+        self._channels[name] = status
+
+        from arix.channels.matrix_channel import MatrixChannel
+        adapter = MatrixChannel(
+            homeserver=homeserver,
+            user_id=user_id,
+            access_token=access_token,
+            status=status,
+            run_fn=self._run_command_fn,
+            command_prefix=command_prefix,
+        )
+
+        task = asyncio.create_task(adapter.run(), name=f"channel-{name}")
+        self._tasks[name] = task
+        task.add_done_callback(lambda t: self._on_task_done(name, t))
+        return {"ok": True, "name": name, "platform": "matrix"}
+
     async def stop_channel(self, name: str) -> dict:
         task = self._tasks.get(name)
         if task and not task.done():

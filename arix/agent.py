@@ -34,6 +34,11 @@ from arix.intelligence.advisor import AdvisoryIntentDetector, is_chitchat
 from arix.llm_client import LLMClient
 from arix.memory.memory_manager import MemoryManager
 from arix.intelligence.supervisor import GoalSupervisor, is_multi_step_goal
+from arix.intelligence.curator import get_curator
+from arix.intelligence.multi_agent_router import get_router
+from arix.memory.rag_ingester import get_knowledge_base
+from arix.hands.catalog import get_hand_manager
+from arix.mcp_client import get_mcp_manager
 
 import arix.tools.file_tools as file_tools
 import arix.tools.app_tools as app_tools
@@ -172,6 +177,16 @@ TOOL_DISPATCH: dict[str, Callable] = {
     "desktop_drag": lambda args: desktop_tools.desktop_drag(**_clean(args)),
     "desktop_find_and_click": lambda args: desktop_tools.desktop_find_and_click(**_clean(args)),
     "desktop_read_screen": lambda args: desktop_tools.desktop_read_screen(**_clean(args)),
+    # v8.4: RAG Knowledge Base tools
+    "ingest_document": lambda args: get_knowledge_base().ingest(
+        file_path=args.get("file_path", ""),
+        doc_name=args.get("doc_name"),
+    ),
+    "query_knowledge_base": lambda args: get_knowledge_base().query(
+        query_text=args.get("query", ""),
+        top_k=int(args.get("top_k", 5)),
+        doc_filter=args.get("doc_filter"),
+    ),
 }
 
 # Tools whose results can feed the undo manager
@@ -316,7 +331,36 @@ class ArixAgent:
             self.supervisor.set_llm_client(llm_client)
         self.supervisor.set_memory(self.memory)  # Gap #12: skill saving after goal
 
-        # Gap #8: per-task execution trace store (task_id → list of trace entries)
+        # ── v8.4: OpenClaw-inspired upgrades ─────────────────────────────────
+
+        # Hermes Curator — autonomous skill self-improvement loop
+        self.curator = get_curator()
+        self.curator.set_task_history(self.task_history)
+        if llm_client is not None:
+            self.curator.set_llm_client(llm_client)
+
+        # Multi-Agent Router — specialist agent dispatch
+        self.agent_router = get_router()
+        if llm_client is not None:
+            self.agent_router.set_llm_client(llm_client)
+        self.agent_router.set_command_fn(self.run_command)
+
+        # RAG Knowledge Base — document ingestion + BM25 retrieval
+        self.knowledge_base = get_knowledge_base()
+        if _openai_key:
+            try:
+                import openai as _openai2
+                self.knowledge_base.set_embedding_provider(_openai2.OpenAI(api_key=_openai_key))
+            except Exception:
+                pass
+
+        # Capability Hands — OpenFang-style autonomous capability packs
+        self.hand_manager = get_hand_manager()
+
+        # MCP Client — Model Context Protocol tool server manager
+        self.mcp_manager = get_mcp_manager()
+
+        # ── Gap #8: per-task execution trace store (task_id → list of trace entries)
         self._trace: dict[str, list] = {}
 
         # Gap #7: per-task skip-step sets (task_id → set of step_ids to skip)
