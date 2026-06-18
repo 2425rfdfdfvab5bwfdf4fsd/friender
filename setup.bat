@@ -4,7 +4,7 @@ color 0A
 
 echo.
 echo  ============================================
-echo    Arix v9.3  —  First-Time Setup
+echo    Arix v9.5  —  First-Time Setup
 echo  ============================================
 echo.
 echo  This script will:

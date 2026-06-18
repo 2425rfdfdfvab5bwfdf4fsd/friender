@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arix v9.3 — First-Time Setup (Mac / Linux)
+# Arix v9.5 — First-Time Setup (Mac / Linux)
 # Run once: bash setup.sh
 
 set -e
@@ -17,7 +17,7 @@ info() { echo -e "  $*"; }
 
 echo ""
 echo -e "${BOLD}  ============================================${RESET}"
-echo -e "${BOLD}    Arix v9.3  —  First-Time Setup${RESET}"
+echo -e "${BOLD}    Arix v9.5  —  First-Time Setup${RESET}"
 echo -e "${BOLD}  ============================================${RESET}"
 echo ""
 

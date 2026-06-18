@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arix v9.3 — Launch Server (Mac / Linux)
+# Arix v9.5 — Launch Server (Mac / Linux)
 # Usage: bash launch.sh
 
 BOLD="\033[1m"
@@ -9,7 +9,7 @@ RESET="\033[0m"
 
 echo ""
 echo -e "${BOLD}  ============================================${RESET}"
-echo -e "${BOLD}    Arix v9.3  —  Starting...${RESET}"
+echo -e "${BOLD}    Arix v9.5  —  Starting...${RESET}"
 echo -e "${BOLD}  ============================================${RESET}"
 echo ""
 

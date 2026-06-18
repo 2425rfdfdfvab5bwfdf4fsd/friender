@@ -4,7 +4,7 @@ color 0A
 
 echo.
 echo  ============================================
-echo    Arix v9.3  —  Starting...
+echo    Arix v9.5  —  Starting...
 echo  ============================================
 echo.
 

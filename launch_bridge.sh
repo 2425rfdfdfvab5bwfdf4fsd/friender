@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Arix v9.3 — Local Bridge: Desktop Control (Mac / Linux)
+# Arix v9.5 — Local Bridge: Desktop Control (Mac / Linux)
 # Run in a SECOND terminal AFTER launch.sh is already running.
 
 BOLD="\033[1m"
