@@ -116,6 +116,91 @@ class ChannelManager:
         task.add_done_callback(lambda t: self._on_task_done(name, t))
         return {"ok": True, "name": name, "platform": "matrix"}
 
+    async def start_irc(
+        self,
+        server: str,
+        port: int = 6667,
+        nick: str = "ArixBot",
+        channel: str = "#arix",
+        password: str = "",
+        name: str = "irc",
+        command_prefix: str = "!arix",
+        use_tls: bool = False,
+    ) -> dict:
+        """Start an IRC bot adapter."""
+        if name in self._tasks and not self._tasks[name].done():
+            return {"ok": False, "error": "Already running"}
+
+        status = ChannelStatus(name=name, platform="irc", enabled=True)
+        self._channels[name] = status
+
+        from arix.channels.irc_channel import IRCChannel
+        adapter = IRCChannel(
+            server=server, port=port, nick=nick, channel=channel,
+            password=password, status=status, run_fn=self._run_command_fn,
+            command_prefix=command_prefix, use_tls=use_tls,
+        )
+
+        task = asyncio.create_task(adapter.run(), name=f"channel-{name}")
+        self._tasks[name] = task
+        task.add_done_callback(lambda t: self._on_task_done(name, t))
+        return {"ok": True, "name": name, "platform": "irc"}
+
+    async def start_signal(
+        self,
+        api_url: str,
+        phone_number: str,
+        name: str = "signal",
+        command_prefix: str = "",
+    ) -> dict:
+        """Start a Signal channel adapter via signal-cli REST API."""
+        if name in self._tasks and not self._tasks[name].done():
+            return {"ok": False, "error": "Already running"}
+
+        status = ChannelStatus(name=name, platform="signal", enabled=True)
+        self._channels[name] = status
+
+        from arix.channels.signal_channel import SignalChannel
+        adapter = SignalChannel(
+            api_url=api_url, phone_number=phone_number,
+            status=status, run_fn=self._run_command_fn,
+            command_prefix=command_prefix,
+        )
+
+        task = asyncio.create_task(adapter.run(), name=f"channel-{name}")
+        self._tasks[name] = task
+        task.add_done_callback(lambda t: self._on_task_done(name, t))
+        return {"ok": True, "name": name, "platform": "signal"}
+
+    async def start_line(
+        self,
+        access_token: str,
+        channel_secret: str,
+        name: str = "line",
+    ) -> dict:
+        """Start a LINE Messaging API channel adapter (webhook mode)."""
+        if name in self._tasks and not self._tasks[name].done():
+            return {"ok": False, "error": "Already running"}
+
+        status = ChannelStatus(name=name, platform="line", enabled=True)
+        self._channels[name] = status
+
+        from arix.channels.line_channel import LINEChannel
+        adapter = LINEChannel(
+            access_token=access_token, channel_secret=channel_secret,
+            status=status, run_fn=self._run_command_fn,
+        )
+
+        # Store adapter for webhook routing
+        self._line_adapter = adapter
+        task = asyncio.create_task(adapter.run(), name=f"channel-{name}")
+        self._tasks[name] = task
+        task.add_done_callback(lambda t: self._on_task_done(name, t))
+        return {"ok": True, "name": name, "platform": "line"}
+
+    def get_line_adapter(self) -> Optional[Any]:
+        return getattr(self, "_line_adapter", None)
+
     async def stop_channel(self, name: str) -> dict:
         task = self._tasks.get(name)
         if task and not task.done():

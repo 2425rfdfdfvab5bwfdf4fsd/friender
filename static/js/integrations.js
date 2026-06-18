@@ -1007,31 +1007,38 @@ async function uninstallSkill(id) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Channels (Telegram + Discord)
+// Channels (Telegram + Discord + Matrix + IRC + Signal + LINE)
 // ══════════════════════════════════════════════════════════════════════════════
+
+const _CH_PREFIX = {
+  telegram: 'tg', discord: 'dc', matrix: 'mx',
+  irc: 'irc', signal: 'sig', line: 'line',
+};
 
 async function loadChannels() {
   try {
     const res = await fetch('/api/channels');
     const data = await res.json();
     const channels = data.channels || [];
+    const find = p => channels.find(c => c.platform === p);
 
-    const tg = channels.find(c => c.platform === 'telegram');
-    const dc = channels.find(c => c.platform === 'discord');
-
-    updateChannelUI('telegram', tg, data.telegram_configured);
-    updateChannelUI('discord', dc, data.discord_configured);
+    updateChannelUI('telegram', find('telegram'), data.telegram_configured);
+    updateChannelUI('discord',  find('discord'),  data.discord_configured);
+    updateChannelUI('matrix',   find('matrix'),   data.matrix_configured);
+    updateChannelUI('irc',      find('irc'),      data.irc_configured);
+    updateChannelUI('signal',   find('signal'),   data.signal_configured);
+    updateChannelUI('line',     find('line'),      data.line_configured);
   } catch (e) {
-    // silently ignore — channels endpoint may not be needed
+    // silently ignore
   }
 }
 
 function updateChannelUI(platform, ch, envConfigured) {
-  const prefix = platform === 'telegram' ? 'tg' : 'dc';
-  const badge = document.getElementById(`${prefix}-badge`);
-  const handle = document.getElementById(`${prefix}-handle`);
-  const setup = document.getElementById(`${prefix}-setup`);
-  const actions = document.getElementById(`${prefix}-actions`);
+  const prefix = _CH_PREFIX[platform] || platform;
+  const badge    = document.getElementById(`${prefix}-badge`);
+  const handle   = document.getElementById(`${prefix}-handle`);
+  const setup    = document.getElementById(`${prefix}-setup`);
+  const actions  = document.getElementById(`${prefix}-actions`);
   const routedEl = document.getElementById(`${prefix}-routed`);
 
   if (!badge) return;
@@ -1052,52 +1059,77 @@ function updateChannelUI(platform, ch, envConfigured) {
   } else {
     badge.textContent = envConfigured ? 'Auto' : 'Off';
     badge.className = `channel-badge ${envConfigured ? 'connecting' : 'disconnected'}`;
-    if (handle) handle.textContent = envConfigured ? 'Token from env' : 'Not connected';
+    if (handle) handle.textContent = envConfigured ? 'Configured via env' : 'Not connected';
     if (setup) setup.style.display = envConfigured ? 'none' : 'block';
     if (actions) actions.style.display = envConfigured ? 'flex' : 'none';
   }
 }
 
-async function startTelegram() {
-  const tokenInput = document.getElementById('tg-token-input');
-  const token = (tokenInput && tokenInput.value.trim()) || '';
+async function _startChannel(url, body, label) {
   try {
-    const res = await fetch('/api/channels/telegram/start', {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     if (res.ok) {
-      if (typeof toast === 'function') toast('✈️ Telegram bot starting…', 'info');
+      if (typeof toast === 'function') toast(`${label} starting…`, 'info');
       setTimeout(loadChannels, 2000);
     } else {
-      if (typeof toast === 'function') toast(`Telegram error: ${data.detail || 'unknown'}`, 'err');
+      if (typeof toast === 'function') toast(`${label} error: ${data.detail || 'unknown'}`, 'err');
     }
   } catch (e) {
-    if (typeof toast === 'function') toast('Failed to start Telegram', 'err');
+    if (typeof toast === 'function') toast(`Failed to start ${label}`, 'err');
   }
 }
 
+async function startTelegram() {
+  const token = (document.getElementById('tg-token-input') || {}).value?.trim() || '';
+  await _startChannel('/api/channels/telegram/start', { token }, '✈️ Telegram');
+}
+
 async function startDiscord() {
-  const tokenInput = document.getElementById('dc-token-input');
-  const token = (tokenInput && tokenInput.value.trim()) || '';
-  try {
-    const res = await fetch('/api/channels/discord/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      if (typeof toast === 'function') toast('🎮 Discord bot starting…', 'info');
-      setTimeout(loadChannels, 2000);
-    } else {
-      if (typeof toast === 'function') toast(`Discord error: ${data.detail || 'unknown'}`, 'err');
-    }
-  } catch (e) {
-    if (typeof toast === 'function') toast('Failed to start Discord', 'err');
+  const token = (document.getElementById('dc-token-input') || {}).value?.trim() || '';
+  await _startChannel('/api/channels/discord/start', { token }, '🎮 Discord');
+}
+
+async function startMatrix() {
+  const homeserver = (document.getElementById('mx-homeserver') || {}).value?.trim() || '';
+  const user_id    = (document.getElementById('mx-user-id')    || {}).value?.trim() || '';
+  const access_token = (document.getElementById('mx-token')    || {}).value?.trim() || '';
+  const command_prefix = (document.getElementById('mx-prefix') || {}).value?.trim() || '!arix';
+  await _startChannel('/api/channels/matrix/start',
+    { homeserver, user_id, access_token, command_prefix }, '🌐 Matrix');
+}
+
+async function startIRC() {
+  const server  = (document.getElementById('irc-server')  || {}).value?.trim() || '';
+  const channel = (document.getElementById('irc-channel') || {}).value?.trim() || '#arix';
+  const nick    = (document.getElementById('irc-nick')    || {}).value?.trim() || 'ArixBot';
+  const port    = parseInt((document.getElementById('irc-port') || {}).value?.trim() || '6667', 10);
+  if (!server) { if (typeof toast === 'function') toast('IRC server required', 'err'); return; }
+  await _startChannel('/api/channels/irc/start',
+    { server, channel, nick, port }, '💬 IRC');
+}
+
+async function startSignal() {
+  const phone_number = (document.getElementById('sig-phone') || {}).value?.trim() || '';
+  const api_url      = (document.getElementById('sig-url')   || {}).value?.trim() || 'http://localhost:8080';
+  if (!phone_number) { if (typeof toast === 'function') toast('Signal phone number required', 'err'); return; }
+  await _startChannel('/api/channels/signal/start',
+    { phone_number, api_url }, '🔒 Signal');
+}
+
+async function startLINE() {
+  const access_token    = (document.getElementById('line-token')  || {}).value?.trim() || '';
+  const channel_secret  = (document.getElementById('line-secret') || {}).value?.trim() || '';
+  if (!access_token || !channel_secret) {
+    if (typeof toast === 'function') toast('LINE token and secret required', 'err');
+    return;
   }
+  await _startChannel('/api/channels/line/start',
+    { access_token, channel_secret }, '💚 LINE');
 }
 
 async function stopChannel(name) {

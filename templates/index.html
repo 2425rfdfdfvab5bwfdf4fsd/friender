@@ -589,8 +589,76 @@
           </div>
         </div>
 
+        <!-- IRC -->
+        <div class="channel-card" id="ch-irc">
+          <div class="channel-card-header">
+            <span class="channel-icon">💬</span>
+            <div class="channel-info">
+              <div class="channel-name">IRC</div>
+              <div class="channel-handle" id="irc-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="irc-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="irc-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Connect to any IRC network. Bot responds to <code>!arix</code> prefix or direct nick mentions.</div>
+            <input class="panel-input" id="irc-server" placeholder="IRC server (e.g. irc.libera.chat)" style="margin-bottom:5px">
+            <input class="panel-input" id="irc-channel" placeholder="Channel (e.g. #arix)" style="margin-bottom:5px" value="#arix">
+            <input class="panel-input" id="irc-nick" placeholder="Bot nick (default: ArixBot)" style="margin-bottom:5px" value="ArixBot">
+            <input class="panel-input" id="irc-port" placeholder="Port (default: 6667)" style="margin-bottom:6px" value="6667">
+            <button class="panel-btn primary" onclick="startIRC()" style="width:100%">Connect IRC</button>
+          </div>
+          <div class="channel-actions" id="irc-actions" style="display:none">
+            <span id="irc-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('irc')" style="margin-left:auto">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- Signal -->
+        <div class="channel-card" id="ch-signal">
+          <div class="channel-card-header">
+            <span class="channel-icon">🔒</span>
+            <div class="channel-info">
+              <div class="channel-name">Signal</div>
+              <div class="channel-handle" id="sig-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="sig-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="sig-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Requires <b>signal-cli REST API</b> running locally.<br><code>docker run -p 8080:8080 bbernhard/signal-cli-rest-api</code></div>
+            <input class="panel-input" id="sig-phone" placeholder="Your Signal number (+12345678900)" style="margin-bottom:5px">
+            <input class="panel-input" id="sig-url" placeholder="API URL (default: http://localhost:8080)" style="margin-bottom:6px" value="http://localhost:8080">
+            <button class="panel-btn primary" onclick="startSignal()" style="width:100%">Connect Signal</button>
+          </div>
+          <div class="channel-actions" id="sig-actions" style="display:none">
+            <span id="sig-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('signal')" style="margin-left:auto">Disconnect</button>
+          </div>
+        </div>
+
+        <!-- LINE -->
+        <div class="channel-card" id="ch-line">
+          <div class="channel-card-header">
+            <span class="channel-icon">💚</span>
+            <div class="channel-info">
+              <div class="channel-name">LINE</div>
+              <div class="channel-handle" id="line-handle">Not connected</div>
+            </div>
+            <span class="channel-badge disconnected" id="line-badge">Off</span>
+          </div>
+          <div class="channel-setup" id="line-setup">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px">1. LINE Developers → Messaging API channel<br>2. Set webhook URL to <code>/api/channels/line/webhook</code><br>3. Paste your access token and secret</div>
+            <input class="panel-input" id="line-token" type="password" placeholder="Channel access token" style="margin-bottom:5px">
+            <input class="panel-input" id="line-secret" type="password" placeholder="Channel secret" style="margin-bottom:6px">
+            <button class="panel-btn primary" onclick="startLINE()" style="width:100%">Connect LINE</button>
+          </div>
+          <div class="channel-actions" id="line-actions" style="display:none">
+            <span id="line-routed" style="font-size:10px;color:var(--muted)">0 messages routed</span>
+            <button class="panel-btn" onclick="stopChannel('line')" style="margin-left:auto">Disconnect</button>
+          </div>
+        </div>
+
         <div style="font-size:10px;color:var(--muted);margin-top:10px;line-height:1.5">
-          💡 Set <code>TELEGRAM_BOT_TOKEN</code>, <code>DISCORD_BOT_TOKEN</code>, or <code>MATRIX_ACCESS_TOKEN</code> in Secrets to auto-connect on startup.
+          💡 Set <code>TELEGRAM_BOT_TOKEN</code>, <code>DISCORD_BOT_TOKEN</code>, <code>MATRIX_ACCESS_TOKEN</code>, <code>IRC_SERVER</code>, <code>SIGNAL_PHONE_NUMBER</code>, or <code>LINE_CHANNEL_ACCESS_TOKEN</code> in Secrets to auto-connect on startup.
         </div>
       </div>
 
