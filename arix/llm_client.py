@@ -358,6 +358,11 @@ class LLMClient:
             import json as _json
             return _json.loads(clean)
         except Exception as e:
+            import logging as _logging
+            _logging.getLogger(__name__).warning(
+                "deep_analyze failed (provider=%s model=%s): %s: %s",
+                self.provider, self.model, type(e).__name__, e
+            )
             self._circuit_breaker.record_failure()
             if _is_auth_error(e):
                 raise RuntimeError(f"Deep analysis unavailable — invalid API key for '{self.provider}'.") from e

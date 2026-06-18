@@ -720,15 +720,55 @@ class ArixAgent:
                     })
                     # Fall through to normal pipeline
             else:
-                key_hint = ""
-                if self.llm_client:
-                    err = self.llm_client.key_error()
-                    if err:
-                        key_hint = f"\n\n**Current issue:** {err}"
-                yield AgentEvent("advisory", {
-                    "task_id": task_id,
-                    "question": raw_cmd,
-                    "response": (
+                _lc2 = raw_cmd.lower()
+                _gn2 = f", {_user_name}" if _user_name else ""
+
+                # Capability questions can be answered offline without LLM
+                if any(w in _lc2 for w in (
+                    "how do you", "how can you", "how do you do", "how does it work",
+                    "how does arix", "how you work", "how do u", "how r you",
+                )):
+                    offline_advisory = (
+                        f"Great question{_gn2}! Here's how I execute tasks:\n\n"
+                        "1. **You give me a command** — plain English (e.g. *\"find all PDFs in Downloads\"*)\n"
+                        "2. **I analyse your intent** — classify it as a task, question, or conversation\n"
+                        "3. **I build a plan** — select the right tools and sequence the steps\n"
+                        "4. **Security check** — every step is validated for safety before running\n"
+                        "5. **I execute** — tools run one by one and I stream results back to you\n\n"
+                        "**Available tool domains:** files, browser, system monitor, git, "
+                        "documents (Word/Excel), code generation, web research, desktop automation, "
+                        "Gmail, Drive, Calendar, Notion, Slack, Spotify, Trello, YouTube, and more.\n\n"
+                        "Try: *\"list my Downloads folder\"* or *\"search the web for Python tutorials\"*"
+                    )
+                elif any(w in _lc2 for w in ("what can you do", "what do you do", "what are your capabilities")):
+                    offline_advisory = (
+                        f"Here's what I can do{_gn2}:\n\n"
+                        "- 📁 **Files** — create, read, move, copy, search, unzip\n"
+                        "- 🌐 **Browser** — open URLs, search the web, extract content, download files\n"
+                        "- 💻 **System** — monitor CPU/RAM, list running apps\n"
+                        "- 🔀 **Git** — status, diff, add, commit\n"
+                        "- 📄 **Documents** — create/read Word and Excel files\n"
+                        "- 🤖 **Research & Code** — analyze topics, write and explain code\n"
+                        "- 📧 **Gmail / Drive / Calendar** — read mail, manage files, check events\n"
+                        "- 💬 **Slack / Notion / Trello / Spotify / YouTube** — app integrations\n"
+                        "- 🎯 **Multi-step goals** — chain complex tasks automatically\n\n"
+                        "Just type a command and I'll get it done!"
+                    )
+                elif any(w in _lc2 for w in ("who are you", "what are you", "what is arix", "tell me about yourself")):
+                    offline_advisory = (
+                        f"I'm Arix{_gn2} — your Personal AI Computer-Control Agent! "
+                        "I execute natural-language commands to control your computer: manage files, "
+                        "browse the web, run git commands, monitor your system, interact with apps "
+                        "like Gmail, Slack and Notion, and chain complex multi-step tasks together. "
+                        "What would you like me to do?"
+                    )
+                else:
+                    key_hint = ""
+                    if self.llm_client:
+                        err = self.llm_client.key_error()
+                        if err:
+                            key_hint = f"\n\n**Current issue:** {err}"
+                    offline_advisory = (
                         "**Advisory mode requires a working API key.**\n\n"
                         "To enable full AI advisory responses:\n"
                         "1. Go to Replit Secrets (🔒 in the left sidebar)\n"
@@ -738,7 +778,11 @@ class ArixAgent:
                         + key_hint + "\n\n"
                         "In demo mode, only computer-control actions (file, git, system, browser) "
                         "work with the heuristic planner."
-                    ),
+                    )
+                yield AgentEvent("advisory", {
+                    "task_id": task_id,
+                    "question": raw_cmd,
+                    "response": offline_advisory,
                     "provider": "offline",
                     "model": "demo",
                 })
