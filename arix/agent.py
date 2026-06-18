@@ -631,6 +631,18 @@ class ArixAgent:
                         "- 🎯 **Multi-step goals** — chain complex tasks together automatically\n\n"
                         "Just type a command and I'll get it done!"
                     )
+                elif any(w in _lc for w in ("how do you", "how do you do", "how can you", "how does arix", "how does it work")):
+                    offline_resp = (
+                        f"Great question{greeting_name}! Here's how I execute tasks:\n\n"
+                        "1. **You give me a command** — in plain English (e.g. *\"find all PDFs in Downloads\"* or *\"open LinkedIn\"*)\n"
+                        "2. **I analyze your intent** — I classify what you want: a task, a question, or a conversation\n"
+                        "3. **I build a plan** — I select the right tools and sequence the steps needed\n"
+                        "4. **Security check** — every step is validated for safety before running\n"
+                        "5. **I execute** — tools run one by one (file ops, browser, git, system, etc.) and I report results\n\n"
+                        "**Tools I can use:** files, browser, system monitor, git, documents (Word/Excel), code generation, "
+                        "web research, desktop automation, Gmail, Drive, Calendar, Notion, Slack, Spotify, Trello, YouTube, and more.\n\n"
+                        "Try typing a task like *\"list my Downloads folder\"* or *\"search the web for Python tutorials\"*!"
+                    )
                 else:
                     offline_resp = (
                         f"Hey{greeting_name}! I'm Arix, your personal AI assistant. "

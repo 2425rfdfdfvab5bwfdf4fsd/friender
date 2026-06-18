@@ -228,7 +228,8 @@ _CHITCHAT_PATTERNS: list[re.Pattern] = [re.compile(p, re.I) for p in [
     # Wellbeing questions
     r'\bhow\s+are\s+you\b',
     r'\bhow\s+r\s+u\b',
-    r'\bhow\s+(are\s+u|you\s+doing|you\s+feeling|is\s+it\s+going|do\s+you\s+do)\b',
+    r'\bhow\s+(are\s+u|you\s+doing|you\s+feeling|is\s+it\s+going)\b',
+    r'\bhow\s+do\s+you\s+do\s*[?!.]?\s*$',
     r'\byou\s+(doing|feeling|alright|ok|good|well)\b',
     # Identity / capability questions (conversational, not technical)
     r'\b(who|what)\s+are\s+you\b',
