@@ -875,6 +875,76 @@ Rules:
         except Exception:
             return []
 
+    async def vision_query(self, prompt: str, image_b64: str,
+                            media_type: str = "image/png") -> str:
+        """Query the LLM with an image + text prompt for vision tasks (OCR, element detection).
+
+        Supports Anthropic and OpenAI vision APIs.  All other providers return an empty
+        string so callers can fall back gracefully (e.g. desktop_find_and_click skips
+        the vision step rather than crashing).
+        """
+        if not image_b64:
+            return ""
+        try:
+            if self.provider == "anthropic":
+                return await self._call_anthropic_vision(prompt, image_b64, media_type)
+            if self.provider == "openai":
+                return await self._call_openai_vision(prompt, image_b64, media_type)
+            return ""
+        except Exception:
+            return ""
+
+    async def _call_anthropic_vision(self, prompt: str, image_b64: str,
+                                      media_type: str) -> str:
+        """Anthropic vision API — sends base64 image + text prompt."""
+        import anthropic
+        base_url = os.environ.get("AI_INTEGRATIONS_ANTHROPIC_BASE_URL")
+        api_key = self.api_key or os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY", "")
+        client_kwargs: dict[str, Any] = {"api_key": api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        client = anthropic.AsyncAnthropic(**client_kwargs)
+        msg = await client.messages.create(
+            model=self.model,
+            max_tokens=512,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": media_type,
+                            "data": image_b64,
+                        },
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+        )
+        return msg.content[0].text if msg.content else ""
+
+    async def _call_openai_vision(self, prompt: str, image_b64: str,
+                                   media_type: str) -> str:
+        """OpenAI vision API — sends base64 image as a data URL."""
+        import openai
+        client = openai.AsyncOpenAI(api_key=self.api_key)
+        response = await client.chat.completions.create(
+            model=self.model,
+            max_tokens=512,
+            messages=[{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:{media_type};base64,{image_b64}"},
+                    },
+                    {"type": "text", "text": prompt},
+                ],
+            }],
+        )
+        return response.choices[0].message.content or ""
+
     def update_key(self, api_key: str) -> None:
         self.api_key = api_key
         self._circuit_breaker = CircuitBreaker()

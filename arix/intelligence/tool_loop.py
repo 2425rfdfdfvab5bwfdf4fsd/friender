@@ -545,7 +545,11 @@ class ToolCallingLoop:
             tool_results = []
             for (block, tool_name, tool_args), result in zip(tool_calls_info, raw_results):
                 result_text = _truncate_result(result)
-                success = "error" not in str(result_text).lower()[:50]
+                if isinstance(result, dict):
+                    success = not bool(result.get("error"))
+                else:
+                    low = str(result_text).lower()
+                    success = not (low.startswith("error:") or low.startswith("error —"))
 
                 # Try to emit an A2UI card for rich visual rendering
                 a2ui_card = None
@@ -704,7 +708,11 @@ class ToolCallingLoop:
 
             for (tc, tool_name, tool_args), result in zip(parsed_calls, raw_results):
                 result_text = _truncate_result(result)
-                success = "error" not in str(result_text).lower()[:50]
+                if isinstance(result, dict):
+                    success = not bool(result.get("error"))
+                else:
+                    low = str(result_text).lower()
+                    success = not (low.startswith("error:") or low.startswith("error —"))
 
                 yield ("tool_loop_result", {
                     "task_id": task_id,

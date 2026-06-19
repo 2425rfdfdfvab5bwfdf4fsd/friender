@@ -256,6 +256,16 @@ def run_sandboxed(
         cmd = _build_cmd(interp, str(code_file), network_isolation)
         start = time.monotonic()
 
+        import sys as _sys
+        # preexec_fn is Unix-only; skip silently on Windows
+        _preexec = None
+        if _sys.platform != "win32":
+            _preexec = lambda: _apply_rlimits(
+                cpu_seconds=cpu_seconds,
+                max_memory_mb=max_memory_mb,
+                max_file_mb=max_file_mb,
+                max_procs=max_procs,
+            )
         try:
             proc = subprocess.run(
                 cmd,
@@ -266,12 +276,7 @@ def run_sandboxed(
                 env=clean_env,
                 stdin=subprocess.DEVNULL if stdin_data is None else None,
                 input=stdin_data,
-                preexec_fn=lambda: _apply_rlimits(
-                    cpu_seconds=cpu_seconds,
-                    max_memory_mb=max_memory_mb,
-                    max_file_mb=max_file_mb,
-                    max_procs=max_procs,
-                ),
+                preexec_fn=_preexec,
             )
             elapsed = round(time.monotonic() - start, 3)
 

@@ -151,7 +151,7 @@ async def open_web_app(
 
     Returns a dict with url, app_name, action, and opened status.
     """
-    from arix.tools.browser_tools import BrowserController  # lazy import
+    from arix.tools.browser_tools import get_browser_controller  # lazy import
     norm = _normalize_app_name(app_name)
 
     # Resolve base URL
@@ -207,7 +207,9 @@ async def open_web_app(
             final_url = f"{base_url}?q={search_query.replace(' ', '+')}"
         action_desc = f"Search {app_name} for '{search_query}'"
 
-    ctrl = BrowserController()
+    ctrl = get_browser_controller()
+    if not ctrl._page:
+        await ctrl.start()
     result = await ctrl.navigate(final_url)
     if isinstance(result, dict) and result.get("error"):
         return result

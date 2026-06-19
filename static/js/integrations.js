@@ -39,13 +39,23 @@ function speakText(text) {
   const utt = new SpeechSynthesisUtterance(cleaned);
   utt.rate = 1.05;
   utt.pitch = 1;
-  const voices = window.speechSynthesis.getVoices();
-  const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
-    || voices.find(v => v.lang.startsWith('en'));
-  if (preferred) utt.voice = preferred;
   utt.onstart = () => { _ttsSpeaking = true; };
   utt.onend = () => { _ttsSpeaking = false; };
-  window.speechSynthesis.speak(utt);
+
+  function _applyVoiceAndSpeak() {
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+      || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utt.voice = preferred;
+    window.speechSynthesis.speak(utt);
+  }
+
+  // Chrome loads voices asynchronously on first call — wait for voiceschanged if list is empty
+  if (window.speechSynthesis.getVoices().length > 0) {
+    _applyVoiceAndSpeak();
+  } else {
+    window.speechSynthesis.addEventListener('voiceschanged', _applyVoiceAndSpeak, { once: true });
+  }
 }
 
 // Hook TTS into incoming assistant messages

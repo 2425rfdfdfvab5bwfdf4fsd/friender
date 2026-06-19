@@ -198,7 +198,9 @@ class SkillCurator:
     def _save(self) -> None:
         try:
             _CURATOR_FILE.parent.mkdir(parents=True, exist_ok=True)
-            _CURATOR_FILE.write_text(json.dumps(self._state.to_dict(), indent=2))
+            tmp = _CURATOR_FILE.with_suffix(".tmp")
+            tmp.write_text(json.dumps(self._state.to_dict(), indent=2), encoding="utf-8")
+            tmp.replace(_CURATOR_FILE)
         except Exception as e:
             log.warning("Curator save error: %s", e)
 

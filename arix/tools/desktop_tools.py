@@ -309,9 +309,7 @@ async def _vision_find_from_b64(description: str, image_b64: str) -> tuple[int, 
             "Reply with ONLY: x=NNN y=NNN (the pixel coordinates of the center of the element).\n"
             "If you cannot find it, reply: NOT_FOUND"
         )
-        response = await asyncio.to_thread(
-            client.vision_query, prompt, image_b64
-        )
+        response = await client.vision_query(prompt, image_b64)
         if not response or "NOT_FOUND" in response:
             return None
 
@@ -343,6 +341,6 @@ async def _vision_ocr(image_b64: str) -> str:
             "Return it as plain text, preserving logical groupings.\n"
             "Do not add any commentary — text only."
         )
-        return await asyncio.to_thread(client.vision_query, prompt, image_b64) or ""
+        return await client.vision_query(prompt, image_b64) or ""
     except Exception:
         return "[OCR failed]"

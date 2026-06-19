@@ -420,7 +420,9 @@ async def list_ollama_models():
 @router.post("/api/providers/ollama/pull")
 async def pull_ollama_model(body: dict):
     """Pull (download) an Ollama model by name."""
-    import asyncio, os, urllib.request, json as _json
+    import asyncio
+    import urllib.request
+    import json as _json
     model = (body.get("model") or "").strip()
     if not model:
         raise HTTPException(status_code=400, detail="model name is required")

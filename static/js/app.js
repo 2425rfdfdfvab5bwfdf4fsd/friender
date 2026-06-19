@@ -2051,7 +2051,7 @@ function renderProjects(projects) {
     const pct = total > 0 ? Math.round(done/total*100) : 0;
     const tasksHtml = (p.tasks||[]).map(t => `
       <div class="ptask-item">
-        <div class="ptask-check ${t.status==='done'?'done':''}" onclick="toggleProjectTask(${t.id},'${t.status}')"></div>
+        <div class="ptask-check ${t.status==='done'?'done':''}" onclick="toggleProjectTask(${t.id},'${t.status}',${p.id})"></div>
         <span class="ptask-text ${t.status==='done'?'done':''}">${esc(t.title)}</span>
         <span class="ptask-pri ${t.priority}">${t.priority}</span>
         <button class="ptask-del" onclick="deleteProjectTask(${p.id},${t.id})">✕</button>
@@ -2113,10 +2113,10 @@ async function addProjectTask(projectId) {
   } catch(e) { toast('Failed to add task', 'err'); }
 }
 
-async function toggleProjectTask(taskId, currentStatus) {
+async function toggleProjectTask(taskId, currentStatus, projectId) {
   const newStatus = currentStatus === 'done' ? 'todo' : 'done';
   try {
-    await fetch(`/api/projects/0/tasks/${taskId}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+    await fetch(`/api/projects/${projectId}/tasks/${taskId}`, {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
     loadProjects();
   } catch(e) { toast('Failed to update task', 'err'); }
 }

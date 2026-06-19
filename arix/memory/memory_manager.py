@@ -1002,9 +1002,10 @@ class MemoryManager:
             for r in rows[:20]
         ]
 
+        success_rate = round(successes / len(rows) * 100) if rows else 0
         summary_lines = [
             f"**Last {days} days:** {len(rows)} task(s), "
-            f"{successes} succeeded ({round(successes/len(rows)*100)}% success rate).",
+            f"{successes} succeeded ({success_rate}% success rate).",
             f"**Most active domain:** {top_domain} ({domain_counts.get(top_domain, 0)} tasks).",
         ]
         if rows:

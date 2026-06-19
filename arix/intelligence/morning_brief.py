@@ -72,7 +72,7 @@ async def generate_morning_brief(
 
     name = profile.display_name() if profile else "there"
     greeting = f"Good {greeting_time}{', ' + name if name != 'User' else ''}!"
-    date_str = today.strftime("%A, %B %-d, %Y")
+    date_str = today.strftime("%A, %B %d, %Y").replace(" 0", " ")
 
     sections = []
 
