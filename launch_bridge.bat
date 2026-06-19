@@ -1,4 +1,10 @@
 @echo off
+:: Re-open inside a persistent window (argument-based guard, no env var needed)
+if not "%1"=="KEEP" (
+    start cmd /k "%~f0" KEEP
+    exit /b
+)
+
 title Arix - Local Bridge (Desktop Control)
 color 0B
 
@@ -35,7 +41,7 @@ call .venv\Scripts\activate
 :: Install pyautogui if missing
 pip show pyautogui >nul 2>&1
 if errorlevel 1 (
-    echo  [INFO] pyautogui not found - installing now (first time only)...
+    echo  [INFO] pyautogui not found - installing now (first time only^)...
     pip install pyautogui --quiet
     if errorlevel 1 (
         echo.
@@ -57,16 +63,16 @@ echo.
 echo    1. Local PC   -  ws://localhost:5000/ws/bridge
 echo    2. Remote     -  wss://your-app.replit.app/ws/bridge
 echo.
-set /p SERVER_CHOICE="  Enter 1 or 2 (default = 1): "
+set /p SERVER_CHOICE="  Enter 1 or 2 (press Enter for local): "
 
 if "%SERVER_CHOICE%"=="2" goto :remote_server
 
-:: Local (default)
+:: Option 1 - Local (default)
 set BRIDGE_URL=ws://localhost:5000/ws/bridge
 goto :do_connect
 
 :remote_server
-set /p REMOTE_HOST="  Paste your server hostname (e.g. arix.your-name.replit.app): "
+set /p REMOTE_HOST="  Paste your server hostname only, e.g. arix.your-name.replit.app: "
 set BRIDGE_URL=wss://%REMOTE_HOST%/ws/bridge
 
 :do_connect
