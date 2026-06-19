@@ -165,18 +165,45 @@ arix/
 │   ├── risk_evaluator.py    — CumulativePlanRiskEvaluator
 │   └── runtime_validator.py — RuntimeStepValidator + TOCTOU
 │
-├── tools/
-│   ├── registry.py          — TOOL_REGISTRY + TOOL_DISPATCH
-│   ├── file_tools.py        — list_directory, read/write/move/copy/trash
-│   ├── browser_tools.py     — Playwright browser automation
-│   ├── git_tools.py         — git status/diff/add/commit
-│   ├── system_tools.py      — system_monitor, run_code
-│   ├── app_tools.py         — open/close/list apps
-│   └── document_tools.py   — DOCX, XLSX read/write
+├── tools/                   — 100 tool implementations across 20 domains
+│   ├── registry.py          — TOOL_REGISTRY (ToolMetadata) + TOOL_DISPATCH
+│   ├── file_tools.py        — 10 file tools
+│   ├── browser_tools.py     — 14 Playwright browser tools
+│   ├── desktop_tools.py     — 11 desktop tools (local bridge + LLM vision)
+│   ├── app_tools.py         — 4 app management tools
+│   ├── system_tools.py      — system_monitor, cleanup_temp_files
+│   ├── git_tools.py         — 4 git tools
+│   ├── document_tools.py    — 4 document tools (DOCX, XLSX)
+│   ├── vision_tools.py      — analyze_image, capture_and_analyze
+│   ├── code_tools.py        — 6 coding tools (generate/explain/refactor/test/run/analyze)
+│   ├── research_tools.py    — research_topic, summarize_url
+│   ├── calendar_tools.py    — 3 Google Calendar tools
+│   ├── gmail_tools.py       — 5 Gmail tools
+│   ├── drive_tools.py       — 4 Google Drive tools
+│   ├── webapp_tools.py      — open/navigate/list web apps (browser singleton fixed)
+│   ├── whatsapp_tools.py    — send_whatsapp_message
+│   ├── notion_tools.py      — Notion CRUD
+│   ├── slack_tools.py       — Slack messaging
+│   ├── spotify_tools.py     — Spotify playback
+│   ├── trello_tools.py      — Trello boards/cards
+│   └── youtube_tools.py     — YouTube search
+│
+├── integrations/            — Integration API clients
+│   ├── gmail.py             — Gmail OAuth
+│   ├── google_drive.py      — Drive OAuth
+│   ├── google_calendar.py   — Calendar OAuth
+│   ├── notion.py            — Notion API
+│   ├── slack.py             — Slack bot
+│   ├── spotify.py           — Spotify OAuth
+│   ├── trello.py            — Trello API
+│   └── youtube.py           — YouTube Data API
 │
 ├── memory/
-│   ├── memory_manager.py    — Episodic, semantic, preferences, skills
-│   └── vector_index.py      — VectorIndex (OpenAI embeddings + TF-IDF)
+│   ├── memory_manager.py    — Episodic, semantic, preferences, skills (ZeroDivisionError fixed)
+│   ├── vector_index.py      — VectorIndex (OpenAI embeddings + TF-IDF fallback)
+│   ├── task_history.py      — Task history store
+│   ├── undo_manager.py      — In-memory undo stack (max 50)
+│   └── compressor.py        — Episodic summarization
 │
 ├── personal/
 │   ├── profile.py           — UserProfile
@@ -186,24 +213,28 @@ arix/
 │   └── projects.py          — ProjectsManager
 │
 ├── intelligence/
-│   ├── supervisor.py        — GoalSupervisor (multi-step goal decomp + retry)
+│   ├── supervisor.py        — GoalSupervisor (LLM goal decomp + progressive retry)
 │   ├── advisor.py           — AdvisoryIntentDetector
-│   ├── tool_loop.py         — ToolCallingLoop (native agentic loop, MAX_TOKENS=2000)
-│   ├── morning_brief.py     — Daily digest
+│   ├── tool_loop.py         — ToolCallingLoop (MAX_TOKENS=2000; success detection fixed)
+│   ├── morning_brief.py     — Daily digest (Windows %-d strftime fixed)
 │   ├── pattern_detector.py  — Usage pattern analysis
-│   └── notifications.py     — NotificationManager
+│   ├── notifications.py     — NotificationManager
+│   └── curator.py           — Hermes Curator (atomic _save() fixed)
 │
 ├── workflows/
-│   └── workflow_manager.py  — WorkflowManager + cron scheduler
-│
-├── integrations/
-│   └── google_calendar.py   — Google Calendar tools
+│   └── workflow_manager.py  — WorkflowManager + APScheduler cron
 │
 └── ui/
     └── onboarding.py        — Onboarding flow + disclosure text
 
-main.py                      — FastAPI app, all REST + WebSocket endpoints
-templates/index.html         — xterm.js terminal UI
+main.py                      — FastAPI entry point, imports all 29 routers
+templates/index.html         — xterm.js terminal UI + dashboard panels
+routers/                     — 29 FastAPI routers (agent_api, ws, memory, intelligence,
+                               gmail, drive, calendar, notion, slack, spotify, trello,
+                               youtube, whatsapp, vision, personal, plugins, bridge,
+                               workflows, curator, research_mode, knowledge, skillhub,
+                               marketplace, workspaces, hands, multi_agent, mcp, canvas,
+                               channels)
 ```
 
 ## Security Model

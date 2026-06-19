@@ -4,7 +4,7 @@ build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "arix"
-version = "9.3.0"
+version = "9.5.2"
 description = "Arix — Personal AI Agent, secure LLM-powered computer-control"
 readme = "README.md"
 license = { text = "MIT" }

@@ -5,6 +5,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.5.2] — 2026-06-19
+
+### Fixed — Full Codebase Audit (155 Python + 2 JS files)
+
+**Python — Critical (AttributeError / crash at runtime)**
+- `arix/llm_client.py` + `arix/tools/desktop_tools.py` — `vision_query()` method was entirely missing from `LLMClient`; `desktop_find_and_click` and `desktop_read_screen` raised `AttributeError` on every LLM-vision fallback. Added `vision_query()`, `_call_anthropic_vision()`, `_call_openai_vision()` methods and fixed callers to use `await client.vision_query(...)` instead of `asyncio.to_thread()`.
+- `arix/tools/webapp_tools.py` — `open_web_app()` created a brand-new `BrowserController()` on every call (never started), causing all web-app navigation to immediately return `{"error": "Browser not started"}`. Fixed to use the `get_browser_controller()` singleton with a `ctrl.start()` guard.
+
+**Python — Logic / Data-corruption**
+- `arix/intelligence/curator.py` — `_save()` wrote `curator_state.json` non-atomically; a crash mid-write permanently corrupted the skill curation state. Fixed with write-to-`.tmp` then atomic `replace()`.
+- `arix/intelligence/tool_loop.py` (×2) — `"error" not in result[:50]` misclassified any tool result containing the word "error" as a failure. Replaced with explicit `dict.get("error")` check + prefix-only string check.
+- `arix/memory/memory_manager.py` — `round(successes/len(rows)*100)` raised `ZeroDivisionError` on empty task history. Added `if rows else 0` guard.
+
+**Python — Cross-platform (Windows)**
+- `arix/security/sandbox.py` — `preexec_fn=lambda: _apply_rlimits(...)` is Unix-only; raises `ValueError` on Windows. Guarded with `if sys.platform != "win32"`.
+- `arix/intelligence/morning_brief.py` — `%-d` strftime directive crashes on Windows. Changed to `%d` + `.replace(" 0", " ")` for a cross-platform equivalent.
+
+**Python — Style**
+- `routers/agent_api.py` — Split `import asyncio, os, urllib.request, json as _json` (E401 multi-import line) into separate statements; removed redundant `os` import.
+
+**JavaScript**
+- `static/js/app.js` — `toggleProjectTask()` called `/api/projects/0/tasks/${taskId}` with hardcoded project ID `0`. Added `projectId` parameter and updated the render template to pass the correct `${p.id}`.
+- `static/js/integrations.js` — `speechSynthesis.getVoices()` returns empty list on first call in Chrome (async load). Added `voiceschanged` event listener fallback so TTS uses the correct preferred voice.
+
+### Documentation
+- `README.md` — Updated Project Structure (now reflects `arix/` package layout), Tool Registry (100 tools / 20 domains, complete tables per domain), Python requirement 3.10 → 3.11, port 8000 → 5000, Installation `cd arix`.
+- `pyproject.toml` — Bumped version `9.3.0` → `9.5.2`.
+- `docs/architecture.md` — Updated component map to reflect current `arix/` layout and full tool module list.
+
+---
+
 ## [9.5.1] — 2026-06-19
 
 ### Fixed — Full Codebase Audit

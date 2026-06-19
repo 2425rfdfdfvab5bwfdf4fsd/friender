@@ -201,9 +201,9 @@ Before risk scoring, the `PlanValidator` performs static analysis of the entire 
 
 ## Tool Registry
 
-Arix ships with 38+ tools organized across eight domains.
+Arix ships with **100 tools across 20 domains**. See `arix/tools/registry.py` for the full `ToolMetadata` definitions.
 
-### File
+### File (10 tools)
 
 | Tool | Description |
 |---|---|
@@ -214,20 +214,57 @@ Arix ships with 38+ tools organized across eight domains.
 | `move_file` | Move or rename a file |
 | `copy_file` | Copy a file to a new location |
 | `search_files` | Search by filename glob or content pattern |
+| `zip_files` | Compress files into a ZIP archive |
 | `unzip_archive` | Extract a ZIP archive (bomb-protected: max 1,000 files / 500 MB / ratio 100×) |
 | `move_to_trash` | Safely trash a file (recoverable via undo) |
 
-### Browser (Playwright-powered)
+### Browser — Playwright-powered (14 tools)
 
 | Tool | Description |
 |---|---|
 | `browser_open_url` | Open a URL in a managed headless Chromium session |
 | `browser_web_search` | Perform a DuckDuckGo search and return structured results |
-| `browser_extract_page_text` | Extract structured text content from the current page |
+| `browser_extract_page_text` | Extract structured text from the current page |
 | `browser_download_file` | Download a file from a URL to the local filesystem |
 | `browser_tab_management` | Open, close, and switch between browser tabs |
+| `browser_click` | Click an element by CSS selector |
+| `browser_type_text` | Type text into an input field |
+| `browser_fill_form` | Fill and submit a web form |
+| `browser_screenshot` | Capture a screenshot of the current page |
+| `browser_wait_for_element` | Wait until an element is visible |
+| `browser_scroll` | Scroll the page or a specific element |
+| `browser_go_back` | Navigate back in browser history |
+| `browser_get_page_source` | Get the raw HTML source of the current page |
+| `browser_get_structured_data` | Extract tables and structured data from a page |
 
-### Document
+### Desktop — Local Bridge required (11 tools)
+
+| Tool | Description |
+|---|---|
+| `desktop_screenshot` | Capture the full desktop screen |
+| `desktop_click` | Click at screen coordinates |
+| `desktop_double_click` | Double-click at screen coordinates |
+| `desktop_right_click` | Right-click at screen coordinates |
+| `desktop_type_text` | Type text using the keyboard |
+| `desktop_key` | Press a keyboard shortcut |
+| `desktop_scroll` | Scroll at screen coordinates |
+| `desktop_move_mouse` | Move mouse to coordinates |
+| `desktop_drag` | Drag from one position to another |
+| `desktop_find_and_click` | Find UI element by description and click it (LLM vision) |
+| `desktop_read_screen` | Read and describe what is currently on the screen (LLM vision) |
+
+### Coding (6 tools)
+
+| Tool | Description |
+|---|---|
+| `generate_code` | Generate code from a natural-language description |
+| `explain_code` | Explain what a code snippet does |
+| `refactor_code` | Refactor code for clarity, performance, or style |
+| `write_tests` | Write unit tests for a function or module |
+| `analyze_code_quality` | Analyze code for bugs, smells, and complexity |
+| `run_code` | Execute code in an isolated sandbox (rlimit + net isolation) |
+
+### Document (4 tools)
 
 | Tool | Description |
 |---|---|
@@ -236,7 +273,7 @@ Arix ships with 38+ tools organized across eight domains.
 | `create_xlsx` | Create an Excel (.xlsx) spreadsheet |
 | `read_xlsx` | Read and return the content of an Excel spreadsheet |
 
-### Git
+### Git (4 tools)
 
 | Tool | Description |
 |---|---|
@@ -245,33 +282,96 @@ Arix ships with 38+ tools organized across eight domains.
 | `git_add` | Stage one or more files |
 | `git_commit` | Commit staged changes with a message |
 
-### App
+### App (4 tools)
 
 | Tool | Description |
 |---|---|
 | `open_known_app` | Launch a registered application by name |
 | `close_app` | Close a running application |
 | `list_running_apps` | List all currently running applications |
+| `find_installed_apps` | Search for installed applications by name |
 
-### System
+### Calendar — Google Calendar (3 tools)
+
+| Tool | Description |
+|---|---|
+| `list_calendar_events` | List upcoming Google Calendar events |
+| `create_calendar_event` | Create a new calendar event |
+| `delete_calendar_event` | Delete a calendar event by ID |
+
+### Gmail (5 tools)
+
+| Tool | Description |
+|---|---|
+| `gmail_list_emails` | List recent emails from your inbox |
+| `gmail_read_email` | Read the full body of an email |
+| `gmail_search_emails` | Search emails by query string |
+| `gmail_send_email` | Compose and send an email |
+| `gmail_delete_email` | Delete an email by ID |
+
+### Google Drive (4 tools)
+
+| Tool | Description |
+|---|---|
+| `drive_list_files` | List files in Google Drive |
+| `drive_read_file` | Read the text content of a Drive file |
+| `drive_search_files` | Search files by name or content |
+| `drive_upload_file` | Upload a local file to Google Drive |
+
+### Vision (2 tools)
+
+| Tool | Description |
+|---|---|
+| `analyze_image` | Analyze an image file with LLM vision |
+| `capture_and_analyze` | Capture a screenshot and analyze it with LLM vision |
+
+### Research (2 tools)
+
+| Tool | Description |
+|---|---|
+| `research_topic` | Multi-step research producing a structured report |
+| `summarize_url` | Fetch and summarize the content of a URL |
+
+### System (2 tools)
 
 | Tool | Description |
 |---|---|
 | `system_monitor` | Report real-time CPU, RAM, disk usage, and top processes |
+| `cleanup_temp_files` | Scan and remove temporary files to free disk space |
 
-### AI / Specialized
-
-| Tool | Description |
-|---|---|
-| `run_code` | Generate and execute code in an isolated sandbox |
-| `vision_analyze` | Analyze a screenshot or the active browser page |
-| `deep_research` | Multi-step topic research producing a structured report |
-
-### Communication
+### Web Apps (3 tools)
 
 | Tool | Description |
 |---|---|
-| `whatsapp_send` | Send a message via WhatsApp integration |
+| `open_web_app` | Open a registered web application in the browser |
+| `navigate_web_app` | Navigate to a specific section of a web app |
+| `list_available_web_apps` | List all registered web applications |
+
+### Notion (varies)
+
+Full CRUD on Notion pages and databases via `NOTION_API_KEY`.
+
+### Slack (varies)
+
+Channel listing, message posting, and history retrieval via `SLACK_BOT_TOKEN`.
+
+### Trello (varies)
+
+Board, list, and card management via `TRELLO_API_KEY` + `TRELLO_API_TOKEN`.
+
+### Spotify (varies)
+
+Playback control, track search, and queue management via `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET`.
+
+### YouTube (varies)
+
+Video search and metadata retrieval via `YOUTUBE_API_KEY`.
+
+### Messaging (1 tool)
+
+| Tool | Description |
+|---|---|
+| `send_whatsapp_message` | Send a WhatsApp message via the Cloud API |
 
 ---
 
@@ -385,7 +485,7 @@ Arix personalizes its behavior based on a profile stored at `~/.arix/profile.jso
 
 ### Prerequisites
 
-- Python 3.10 or later
+- Python **3.11** or newer
 - `pip`
 
 ### Steps
@@ -393,7 +493,7 @@ Arix personalizes its behavior based on a profile stored at `~/.arix/profile.jso
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
-cd pacca
+cd arix
 
 # 2. Install Python dependencies
 pip install -r requirements.txt
@@ -475,7 +575,7 @@ Add to Replit Secrets (🔒) or export in your shell. Arix auto-detects which ke
 python main.py
 ```
 
-The web terminal is available at `http://localhost:8000` (or the Replit preview URL).
+The web terminal is available at `http://localhost:5000` (or the Replit preview URL).
 
 ---
 
@@ -568,64 +668,139 @@ The web terminal is available at `http://localhost:8000` (or the Replit preview 
 ## Project Structure
 
 ```
-pacca/
-├── main.py                       # FastAPI server, WebSocket handler, all API routes
+arix/
+├── main.py                       # FastAPI entry point — imports all 29 routers
 │
-├── pacca/
+├── arix/
 │   ├── agent.py                  # Central orchestrator — ties every layer together
-│   ├── config.py                 # Configuration dataclass + loader (~/.arix/config.json)
-│   ├── llm_client.py             # Anthropic/OpenAI client with retry, circuit breaker, fallback
-│   ├── heuristic_planner.py      # Regex-based offline planner (no API required)
-│   ├── supervisor.py             # LLM goal decomposition and multi-goal supervision
-│   ├── advisor.py                # Expert advisor persona + intent router
-│   ├── undo_manager.py           # In-memory undo stack with reversal callbacks
+│   ├── app_state.py              # Shared singletons (get_agent, get_workflow_manager)
+│   ├── config.py                 # ArixConfig dataclass + loader (~/.arix/config.json)
+│   ├── llm_client.py             # 13-provider LLM client; vision_query; retry + fallback
+│   ├── smart_router.py           # ResponseCache (TTL LRU), complexity classifier, model tier
+│   ├── tool_cache.py             # Short-TTL cache for 18 read-only tools
+│   ├── bridge_manager.py         # Local bridge WebSocket manager
+│   ├── cli.py                    # `arix` CLI: serve, doctor, init, version
 │   │
 │   ├── models/                   # Core data models
 │   │   ├── task_scope.py         # TaskScope (intent domain + frozen tool set)
 │   │   ├── capability_grant.py   # HMAC-signed single-use CapabilityGrant
 │   │   ├── resolved_resource.py  # PathCapability tokens
-│   │   └── ...
+│   │   ├── tool_metadata.py      # ToolMetadata definition
+│   │   ├── audit_log.py          # AuditLogger + HMAC chain
+│   │   └── provider_consent.py   # Provider consent model
 │   │
-│   ├── pipeline/                 # 6-stage execution pipeline
-│   │   ├── command_parser.py     # Natural language → structured intent
-│   │   ├── plan_validator.py     # Static plan analysis (allowlist, paths, URLs)
-│   │   ├── risk_evaluator.py     # Cumulative risk scoring + execution gates
+│   ├── pipeline/                 # 9-layer security pipeline
+│   │   ├── command_parser.py     # Natural language → TaskScope
+│   │   ├── content_gateway.py    # Consent + data sanitization gateway
+│   │   ├── heuristic_planner.py  # Regex offline planner (no API required)
+│   │   ├── plan_validator.py     # Tool allowlist, path scope, URL blocklist
 │   │   ├── policy_engine.py      # CapabilityGrant issuance per step
+│   │   ├── risk_evaluator.py     # Cumulative risk scoring + execution gates
 │   │   ├── runtime_validator.py  # Per-step re-validation + TOCTOU check
 │   │   └── task_state_machine.py # Task lifecycle enforcement
 │   │
 │   ├── security/                 # Security controls
 │   │   ├── safe_resource_resolver.py  # Sole path-resolution authority
 │   │   ├── local_text_redactor.py     # Credential / secret redactor
-│   │   ├── used_grant_registry.py     # Replay-attack prevention
-│   │   └── grant_verifier.py          # HMAC grant verification
+│   │   ├── used_grant_registry.py     # SQLite-backed replay prevention
+│   │   ├── grant_verifier.py          # HMAC grant verification
+│   │   ├── archive_safety.py          # ZIP bomb protection
+│   │   ├── git_safety.py              # Git secret scanning
+│   │   └── sandbox.py                 # run_code isolation (rlimit + unshare)
 │   │
 │   ├── memory/                   # Persistent memory system
-│   │   ├── memory_manager.py     # Episodic + semantic memory (SQLite)
-│   │   ├── vector_index.py       # Neural vector search + TF-IDF fallback
+│   │   ├── memory_manager.py     # Episodic + semantic memory (SQLite, WAL mode)
+│   │   ├── vector_index.py       # OpenAI text-embedding-3-small + TF-IDF fallback
+│   │   ├── task_history.py       # Task history store
+│   │   ├── undo_manager.py       # In-memory undo stack (max 50)
 │   │   └── compressor.py         # Periodic episodic summarization
 │   │
-│   ├── tools/                    # Tool implementations
-│   │   ├── file.py
-│   │   ├── app.py
-│   │   ├── system.py
-│   │   ├── browser.py
-│   │   ├── document.py
-│   │   └── git.py
+│   ├── tools/                    # 100 tool implementations across 20 domains
+│   │   ├── registry.py           # TOOL_REGISTRY (ToolMetadata) + TOOL_DISPATCH
+│   │   ├── file_tools.py         # 10 file tools
+│   │   ├── browser_tools.py      # 14 browser/Playwright tools
+│   │   ├── desktop_tools.py      # 11 desktop tools (local bridge)
+│   │   ├── app_tools.py          # 4 app management tools
+│   │   ├── system_tools.py       # system_monitor, cleanup_temp_files
+│   │   ├── git_tools.py          # 4 git tools
+│   │   ├── document_tools.py     # 4 document tools (DOCX, XLSX)
+│   │   ├── vision_tools.py       # analyze_image, capture_and_analyze
+│   │   ├── code_tools.py         # 6 coding tools (generate/explain/refactor/test/run)
+│   │   ├── research_tools.py     # research_topic, summarize_url
+│   │   ├── calendar_tools.py     # 3 Google Calendar tools
+│   │   ├── gmail_tools.py        # 5 Gmail tools
+│   │   ├── drive_tools.py        # 4 Google Drive tools
+│   │   ├── webapp_tools.py       # 3 web app tools
+│   │   ├── whatsapp_tools.py     # send_whatsapp_message
+│   │   ├── notion_tools.py       # Notion CRUD
+│   │   ├── slack_tools.py        # Slack messaging
+│   │   ├── spotify_tools.py      # Spotify playback
+│   │   ├── trello_tools.py       # Trello boards/cards
+│   │   └── youtube_tools.py      # YouTube search
 │   │
-│   ├── workflows/
-│   │   └── workflow_manager.py   # NL → cron scheduler (apscheduler + YAML storage)
+│   ├── integrations/             # Integration API clients
+│   │   ├── gmail.py              # Gmail OAuth client
+│   │   ├── google_drive.py       # Drive OAuth client
+│   │   ├── google_calendar.py    # Calendar OAuth client
+│   │   ├── notion.py             # Notion API client
+│   │   ├── slack.py              # Slack bot client
+│   │   ├── spotify.py            # Spotify OAuth client
+│   │   ├── trello.py             # Trello API client
+│   │   └── youtube.py            # YouTube Data API client
 │   │
 │   ├── intelligence/             # Proactive intelligence features
+│   │   ├── supervisor.py         # GoalSupervisor — LLM goal decomp + progressive retry
+│   │   ├── advisor.py            # AdvisoryIntentDetector — expert advisor persona
+│   │   ├── tool_loop.py          # ToolCallingLoop — native agentic loop (Anthropic/OpenAI)
 │   │   ├── morning_brief.py      # Daily digest generator with LLM narrative
 │   │   ├── pattern_detector.py   # Implicit preference learning from history
-│   │   └── notifications.py      # System-level proactive alerts
+│   │   ├── notifications.py      # System-level proactive alerts
+│   │   └── curator.py            # Hermes Curator — skill curation + research journal
 │   │
-│   └── personal/
-│       └── profile.py            # User profile (identity, prefs, work context)
+│   ├── personal/                 # Personal data managers
+│   │   ├── profile.py            # UserProfile (identity, prefs, work context)
+│   │   ├── notes.py              # NotesManager
+│   │   ├── reminders.py          # ReminderManager
+│   │   ├── todos.py              # TodoManager
+│   │   └── projects.py           # ProjectsManager
+│   │
+│   ├── workflows/
+│   │   └── workflow_manager.py   # WorkflowManager — NL→cron scheduler (APScheduler)
+│   │
+│   └── ui/
+│       └── onboarding.py         # Onboarding flow + disclosure text
 │
-└── templates/
-    └── index.html                # Web terminal UI (xterm.js + dashboard tabs)
+├── routers/                      # FastAPI routers (29 total)
+│   ├── agent_api.py              # Status, cache, tools, providers, settings
+│   ├── ws.py                     # WebSocket command handler
+│   ├── memory.py                 # Memory CRUD + search + export
+│   ├── intelligence.py           # Morning brief, notifications, patterns, goals
+│   ├── gmail.py / drive.py / calendar.py / notion.py
+│   ├── slack.py / spotify.py / trello.py / youtube.py
+│   ├── whatsapp.py / vision.py / personal.py / plugins.py
+│   ├── bridge.py                 # Local bridge WebSocket relay
+│   ├── workflows.py              # Scheduled workflow CRUD
+│   ├── curator.py                # Hermes Curator + research journal
+│   ├── research_mode.py          # Research mode + /api/researcher/* aliases
+│   ├── knowledge.py              # RAG knowledge base (ingest, search, upload)
+│   ├── skillhub.py               # SkillHub marketplace browser
+│   ├── marketplace.py            # ClawHub item install/rate/search
+│   ├── workspaces.py             # Agent workspace management
+│   ├── hands.py                  # Capability Hands (Browser/Clip/Lead/Designer/Data)
+│   ├── multi_agent.py            # Multi-Agent Router
+│   ├── mcp.py                    # MCP client proxy
+│   ├── canvas.py                 # Live Canvas SSE stream
+│   └── channels.py               # Channels (Telegram/Discord/IRC/Signal/LINE)
+│
+├── local_bridge/
+│   └── bridge_agent.py           # Desktop automation agent (run locally on your PC)
+│
+├── templates/
+│   └── index.html                # Web terminal UI (xterm.js + marked.js)
+│
+├── static/                       # CSS, JS, images
+├── tests/                        # 98 tests covering security, memory, config, risk
+└── docs/                         # Architecture, security, API, changelog
 ```
 
 ---
