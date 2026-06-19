@@ -225,7 +225,35 @@ async def favicon():
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return Path("templates/index.html").read_text(encoding="utf-8")
+    try:
+        return Path("templates/index.html").read_text(encoding="utf-8")
+    except Exception as exc:
+        import traceback
+        tb = traceback.format_exc()
+        return HTMLResponse(
+            f"<html><body style='font-family:monospace;background:#111;color:#f55;padding:2em'>"
+            f"<h2>Arix startup error</h2><pre>{tb}</pre>"
+            f"<p style='color:#aaa'>Fix the error above, then restart the server.</p>"
+            f"</body></html>",
+            status_code=500,
+        )
+
+
+@app.get("/debug", include_in_schema=False)
+async def debug_info():
+    """Local diagnostics endpoint — shows Python path, working dir, and env key presence."""
+    import sys
+    keys = [
+        "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY",
+        "GROQ_API_KEY", "AI_INTEGRATIONS_ANTHROPIC_API_KEY",
+    ]
+    return JSONResponse({
+        "python": sys.version,
+        "cwd": os.getcwd(),
+        "templates_exists": Path("templates/index.html").exists(),
+        "static_exists": Path("static").is_dir(),
+        "api_keys_present": {k: bool(os.environ.get(k)) for k in keys},
+    })
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────
