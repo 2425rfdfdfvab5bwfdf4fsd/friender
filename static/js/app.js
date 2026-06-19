@@ -2666,34 +2666,91 @@ const _PROV_ICONS = {
   mistral:'💨', deepseek:'🐋', perplexity:'🔍', xai:'✕', openrouter:'🛣️',
   fireworks:'🎆', cerebras:'🧠', cohere:'🌊', ollama:'🏠',
 };
+const _PROV_DISPLAY = {
+  anthropic:'Anthropic', openai:'OpenAI', gemini:'Gemini', groq:'Groq',
+  together:'Together', mistral:'Mistral', deepseek:'DeepSeek', perplexity:'Perplexity',
+  xai:'xAI', openrouter:'OpenRouter', fireworks:'Fireworks', cerebras:'Cerebras',
+  cohere:'Cohere', ollama:'Ollama',
+};
+const _PROV_KEY_INFO = {
+  anthropic: {url:'https://console.anthropic.com/settings/keys',     ph:'sk-ant-...'},
+  openai:    {url:'https://platform.openai.com/api-keys',             ph:'sk-...'},
+  gemini:    {url:'https://aistudio.google.com/app/apikey',           ph:'AIza...', free:true},
+  groq:      {url:'https://console.groq.com/keys',                    ph:'gsk_...', free:true},
+  together:  {url:'https://api.together.xyz/settings/api-keys',       ph:'...'},
+  mistral:   {url:'https://console.mistral.ai/api-keys',              ph:'...'},
+  deepseek:  {url:'https://platform.deepseek.com/api_keys',           ph:'sk-...'},
+  perplexity:{url:'https://www.perplexity.ai/settings/api',           ph:'pplx-...'},
+  xai:       {url:'https://console.x.ai',                             ph:'xai-...'},
+  openrouter:{url:'https://openrouter.ai/keys',                       ph:'sk-or-...', free:true},
+  fireworks: {url:'https://fireworks.ai/account/api-keys',            ph:'...'},
+  cerebras:  {url:'https://cloud.cerebras.ai',                        ph:'...'},
+  cohere:    {url:'https://dashboard.cohere.com/api-keys',            ph:'...'},
+};
+
+let _expandedKeyProv = null;
 
 function renderSettings(d, provData) {
   const panel = document.getElementById('panel-settings');
   const providers = (provData && provData.providers) || [];
   const currentProvider = (provData && provData.current_provider) || d.provider;
   const currentModel = (provData && provData.current_model) || d.model;
+  const isReplit = d.is_replit;
 
   const provCards = providers.map(p => {
     const icon = _PROV_ICONS[p.name] || '🤖';
+    const displayName = _PROV_DISPLAY[p.name] || p.name;
     const isActive = p.name === currentProvider;
     const isLocal = p.name === 'ollama';
-    return `<div class="prov-card${isActive?' prov-active':''}${!p.configured&&!isLocal?' prov-unconfigured':''}"
-      onclick="switchProviderUI('${esc(p.name)}','${esc(p.default_model||'')}')"
-      title="${esc(p.description||p.name)}">
+    const configured = p.configured || isLocal;
+    const keyInfo = _PROV_KEY_INFO[p.name];
+    const isFree = keyInfo && keyInfo.free;
+    const clickFn = configured
+      ? `switchProviderUI('${esc(p.name)}','${esc(p.default_model||'')}')`
+      : isLocal
+        ? `switchProviderUI('ollama','')`
+        : `toggleKeyEntry('${esc(p.name)}')`;
+    return `<div class="prov-card${isActive?' prov-active':''}${!configured?' prov-unconfigured':''}"
+      onclick="${clickFn}" title="${esc(p.description||displayName)}">
       <div class="prov-card-top">
         <span class="prov-card-icon">${icon}</span>
-        <span class="prov-card-name">${esc(p.name)}</span>
+        <span class="prov-card-name">${esc(displayName)}</span>
         ${isActive ? '<span class="prov-card-active-dot">●</span>' : ''}
+        ${isFree && !configured ? '<span class="prov-free-badge">FREE</span>' : ''}
       </div>
-      <div class="prov-card-status ${p.configured||isLocal?'ok':'err'}">
-        ${p.configured ? '✓ Ready' : (isLocal ? (p.ollama_running?'✓ Running':'⚪ Offline') : '✗ No key')}
+      <div class="prov-card-status ${configured?'ok':'err'}">
+        ${configured ? '✓ Ready' : (isLocal ? (p.ollama_running?'✓ Running':'⚪ Offline') : '+ Add key')}
       </div>
     </div>`;
   }).join('');
 
+  // Key-entry panel for the expanded provider
+  let keyEntryHtml = '';
+  if (_expandedKeyProv && !isReplit) {
+    const ki = _PROV_KEY_INFO[_expandedKeyProv] || {};
+    const dn = _PROV_DISPLAY[_expandedKeyProv] || _expandedKeyProv;
+    keyEntryHtml = `
+    <div class="key-entry-panel" id="key-entry-panel">
+      <div class="key-entry-title">Add ${esc(dn)} key</div>
+      <div class="key-entry-row">
+        <input type="password" class="setting-input" id="key-input-${esc(_expandedKeyProv)}"
+          placeholder="${esc(ki.ph||'Paste API key...')}" autocomplete="off" style="flex:1;font-size:11px"
+          onkeydown="if(event.key==='Enter')saveProviderKey('${esc(_expandedKeyProv)}')">
+        <button class="key-entry-save-btn" onclick="saveProviderKey('${esc(_expandedKeyProv)}')">Save</button>
+        <button class="key-entry-cancel-btn" onclick="_expandedKeyProv=null;loadSettings()">✕</button>
+      </div>
+      ${ki.url ? `<a href="${esc(ki.url)}" target="_blank" class="key-entry-link">Get key →${ki.free?' (free tier available)':''}</a>` : ''}
+    </div>`;
+  }
+
+  const keyHint = isReplit
+    ? `Add keys in <strong>Replit Secrets</strong> (🔒 sidebar) to enable providers`
+    : `Add keys via the <strong>+ Add key</strong> button above, or edit your <code>.env</code> file`;
+
   panel.innerHTML = `
     <div class="setting-section-title">AI Provider <span style="color:var(--muted);font-weight:400;font-size:10px">(${(provData&&provData.configured_count)||0}/${providers.length} configured)</span></div>
     <div class="prov-grid">${provCards}</div>
+    ${keyEntryHtml}
     <div class="setting-group" style="margin-top:10px">
       <label class="setting-label">Model</label>
       <input class="setting-input" id="cfg-model" value="${esc(currentModel)}">
@@ -2718,14 +2775,43 @@ function renderSettings(d, provData) {
     <div style="font-size:10px;color:var(--muted);line-height:1.7">
       <div>LLM: <span style="color:${d.llm_available?'var(--success)':'var(--danger)'}">${d.llm_available?'✓ Connected':'✗ Not connected'}</span></div>
       ${d.llm_error?`<div style="color:var(--danger);margin-top:3px">${esc(d.llm_error)}</div>`:''}
-      <div style="margin-top:4px">v${esc(d.version||'8.0.0')} · ${d.tool_count||0} tools loaded</div>
-      <div style="margin-top:2px;color:var(--muted2)">Add API keys in Replit Secrets (🔒) to enable providers</div>
+      <div style="margin-top:4px">v${esc(d.version||'9.5.0')} · ${d.tool_count||0} tools loaded</div>
+      <div style="margin-top:4px">${keyHint}</div>
     </div>`;
+
+  // Auto-focus key input if open
+  if (_expandedKeyProv) {
+    const inp = document.getElementById('key-input-' + _expandedKeyProv);
+    if (inp) setTimeout(() => inp.focus(), 60);
+  }
+}
+
+function toggleKeyEntry(provName) {
+  _expandedKeyProv = (_expandedKeyProv === provName) ? null : provName;
+  loadSettings();
+}
+
+async function saveProviderKey(provName) {
+  const inp = document.getElementById('key-input-' + provName);
+  if (!inp || !inp.value.trim()) { toast('Please enter an API key', 'err'); return; }
+  try {
+    const r = await fetch('/api/settings/set-key', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({provider: provName, key: inp.value.trim()}),
+    });
+    const d = await r.json();
+    if (d.error || d.detail) { toast(d.error || d.detail, 'err'); return; }
+    toast(`${_PROV_DISPLAY[provName]||provName} key saved ✓ — switching now`, 'ok');
+    _expandedKeyProv = null;
+    await switchProviderUI(provName, '');
+  } catch(e) { toast('Failed to save key', 'err'); }
 }
 
 async function switchProviderUI(provider, defaultModel) {
   try {
-    const model = document.getElementById('cfg-model') ? document.getElementById('cfg-model').value.trim() : defaultModel;
+    const modelEl = document.getElementById('cfg-model');
+    const model = modelEl ? modelEl.value.trim() : defaultModel;
     const r = await fetch('/api/providers/switch', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
@@ -2733,13 +2819,12 @@ async function switchProviderUI(provider, defaultModel) {
     });
     const d = await r.json();
     if (d.error) { toast(d.error, 'err'); return; }
-    toast(`Switched to ${d.provider} / ${d.model} ✓`, 'ok');
+    toast(`Switched to ${_PROV_DISPLAY[d.provider]||d.provider} / ${d.model} ✓`, 'ok');
     loadSettings();
-    // Update header badge
     const pb = document.getElementById('provider-badge');
     if (pb) {
       const isLocal = provider === 'ollama';
-      pb.textContent = isLocal ? `🏠 LOCAL: ${d.model}` : `${d.provider} / ${d.model}`;
+      pb.textContent = isLocal ? `🏠 LOCAL: ${d.model}` : `${_PROV_DISPLAY[d.provider]||d.provider} / ${d.model}`;
       pb.className = isLocal ? 'live local' : 'live';
     }
   } catch(e) { toast('Failed to switch provider', 'err'); }

@@ -57,6 +57,7 @@ async def status():
             "allowed_numbers": bool(os.environ.get("WHATSAPP_ALLOWED_NUMBERS")),
             "webhook_secret": bool(os.environ.get("WHATSAPP_WEBHOOK_SECRET")),
         },
+        "is_replit": bool(os.environ.get("REPL_ID")),
     }
 
 
@@ -326,6 +327,53 @@ async def list_providers():
         "total": len(providers),
         "configured_count": sum(1 for p in providers if p["configured"]),
     }
+
+
+@router.post("/api/settings/set-key")
+async def set_provider_key(body: dict):
+    """Write a provider API key to the local .env file and activate it immediately."""
+    import re
+    _PROV_ENV = {
+        "anthropic":  "ANTHROPIC_API_KEY",
+        "openai":     "OPENAI_API_KEY",
+        "gemini":     "GEMINI_API_KEY",
+        "groq":       "GROQ_API_KEY",
+        "together":   "TOGETHER_API_KEY",
+        "mistral":    "MISTRAL_API_KEY",
+        "deepseek":   "DEEPSEEK_API_KEY",
+        "perplexity": "PERPLEXITY_API_KEY",
+        "xai":        "XAI_API_KEY",
+        "openrouter": "OPENROUTER_API_KEY",
+        "fireworks":  "FIREWORKS_API_KEY",
+        "cerebras":   "CEREBRAS_API_KEY",
+        "cohere":     "COHERE_API_KEY",
+    }
+    provider = body.get("provider", "").strip()
+    key_value = body.get("key", "").strip()
+    env_var = _PROV_ENV.get(provider)
+    if not env_var:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+    if not key_value:
+        raise HTTPException(status_code=400, detail="Key cannot be empty")
+
+    # Apply to running process immediately
+    os.environ[env_var] = key_value
+
+    # Persist to .env file (create if missing)
+    env_path = Path(".env")
+    if env_path.exists():
+        content = env_path.read_text(encoding="utf-8")
+        pattern = re.compile(rf"^#?\s*{re.escape(env_var)}\s*=.*$", re.MULTILINE)
+        if pattern.search(content):
+            content = pattern.sub(f"{env_var}={key_value}", content)
+        else:
+            content = content.rstrip("\n") + f"\n{env_var}={key_value}\n"
+    else:
+        content = f"{env_var}={key_value}\n"
+    env_path.write_text(content, encoding="utf-8")
+
+    reset_agent()
+    return {"status": "ok", "env_var": env_var, "provider": provider}
 
 
 @router.post("/api/providers/switch")
