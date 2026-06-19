@@ -177,7 +177,7 @@ async def get_insights():
 
 @router.get("/api/audit-log")
 async def get_audit_log(n: int = 50):
-    log_path = Path.home() / ".pacca" / "audit.log"
+    log_path = Path.home() / ".arix" / "audit.log"
     if not log_path.exists():
         return {"entries": [], "path": str(log_path)}
     try:

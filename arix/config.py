@@ -185,7 +185,7 @@ async def auto_detect_and_switch_ollama(cfg: "ArixConfig") -> bool:
     Returns True if switched to Ollama.
     """
     # Only auto-switch if currently in demo/heuristic mode (no real key)
-    if cfg.provider != "anthropic" or os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY"):
+    if os.environ.get("AI_INTEGRATIONS_ANTHROPIC_API_KEY"):
         return False
 
     # Check if any cloud key is present

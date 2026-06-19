@@ -48,6 +48,7 @@ class CumulativePlanRiskEvaluator:
 
             counters["files_affected"] += 1
 
+            risk_str = ""
             risk = getattr(meta, "risk_level", None)
             if risk is not None:
                 risk_str = risk.value if hasattr(risk, "value") else str(risk)

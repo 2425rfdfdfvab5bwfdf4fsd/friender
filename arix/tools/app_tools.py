@@ -362,12 +362,10 @@ def open_known_app(name: str, dry_run: bool = False) -> dict:
                     "would_open": web_url,
                     "note": f"Desktop app not found — would open web version at {web_url}",
                 }
-            # Open web version via browser tool
+            # Open web version in the system default browser (sync-safe fallback)
             try:
-                from arix.tools.browser_tools import BrowserController
-                import asyncio as _asyncio
-                ctrl = BrowserController()
-                result = _asyncio.run(ctrl.navigate(web_url))
+                import webbrowser as _wb
+                _wb.open(web_url)
                 return {
                     "opened": web_url,
                     "app_name": name,

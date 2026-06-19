@@ -242,7 +242,7 @@ async def _handle_command(
             return
 
     if low in ("audit", "audit log"):
-        log_path = Path.home() / ".pacca" / "audit.log"
+        log_path = Path.home() / ".arix" / "audit.log"
         entries = []
         if log_path.exists():
             for line in log_path.read_text(encoding="utf-8").splitlines()[-20:]:
@@ -359,7 +359,7 @@ async def websocket_endpoint(ws: WebSocket):
     else:
         welcome_msg = "Arix ready. Type a command, ask a question, or type 'help'."
     await put("welcome", {
-        "version": "8.0.0",
+        "version": "9.5.0",
         "provider": agent.config.provider,
         "model": agent.config.model,
         "llm_available": llm_available,

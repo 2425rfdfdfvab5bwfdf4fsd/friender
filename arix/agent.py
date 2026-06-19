@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import os
 import re
 import secrets
@@ -10,6 +11,8 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from typing import AsyncIterator, Callable, Any
+
+log = logging.getLogger(__name__)
 
 from arix.config import ArixConfig, get_grant_secret_key
 from arix.personal.profile import UserProfile

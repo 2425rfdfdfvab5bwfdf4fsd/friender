@@ -55,22 +55,25 @@ TOOL_SCHEMAS: dict[str, dict] = {
         ["path", "pattern"],
     ),
     "zip_files": _obj(
-        {"paths": {"type": "array", "items": _STR, "description": "List of paths to zip"},
-         "output": {"type": "string", "description": "Output .zip file path"}},
-        ["paths", "output"],
+        {"source_paths": {"type": "array", "items": _STR, "description": "List of paths to zip"},
+         "output_path": {"type": "string", "description": "Output .zip file path"}},
+        ["source_paths", "output_path"],
     ),
     "unzip_archive": _obj(
-        {"path": _PATH, "destination": {"type": "string", "description": "Extraction directory"}},
-        ["path"],
+        {"archive_path": _PATH, "destination": {"type": "string", "description": "Extraction directory"}},
+        ["archive_path"],
     ),
-    "move_to_trash": _obj({"path": _PATH}, ["path"]),
+    "move_to_trash": _obj(
+        {"paths": {"type": "array", "items": _STR, "description": "List of paths to move to trash"}},
+        ["paths"],
+    ),
 
     # ── App tools ────────────────────────────────────────────────────────────
     "open_known_app": _obj(
-        {"app_name": {"type": "string", "description": "App name e.g. Chrome, Spotify, Excel"}},
-        ["app_name"],
+        {"name": {"type": "string", "description": "App name e.g. Chrome, Spotify, Excel"}},
+        ["name"],
     ),
-    "close_app": _obj({"app_name": _STR}, ["app_name"]),
+    "close_app": _obj({"name": _STR}, ["name"]),
     "list_running_apps": _obj({}),
     "find_installed_apps": _obj({"query": {"type": "string", "description": "Search query"}}, ["query"]),
     "list_available_web_apps": _obj({}),
@@ -79,7 +82,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "system_monitor": _obj({"detail": {"type": "string", "enum": ["basic", "full"]}}),
     "cleanup_temp_files": _obj(
         {"dry_run": {"type": "boolean", "description": "Preview without deleting"},
-         "older_than_days": {"type": "integer", "description": "Delete files older than N days"}},
+         "max_age_days": {"type": "integer", "description": "Delete files older than N days"}},
     ),
 
     # ── Browser tools ────────────────────────────────────────────────────────
@@ -122,10 +125,10 @@ TOOL_SCHEMAS: dict[str, dict] = {
         {"description": _STR, "language": {"type": "string", "description": "Programming language"}},
         ["description"],
     ),
-    "explain_code": _obj({"code": _STR, "language": _STR}, ["code"]),
-    "refactor_code": _obj({"code": _STR, "instruction": _STR}, ["code", "instruction"]),
-    "write_tests": _obj({"code": _STR, "language": _STR, "framework": _STR}, ["code"]),
-    "analyze_code_quality": _obj({"code": _STR, "language": _STR}, ["code"]),
+    "explain_code": _obj({"file_path": _PATH}, ["file_path"]),
+    "refactor_code": _obj({"file_path": _PATH, "instructions": _STR}, ["file_path", "instructions"]),
+    "write_tests": _obj({"file_path": _PATH, "test_framework": _STR}, ["file_path"]),
+    "analyze_code_quality": _obj({"file_path": _PATH}, ["file_path"]),
     "run_code": _obj(
         {"language": {"type": "string", "enum": ["python", "javascript", "bash", "ruby"]},
          "code": _STR},
@@ -228,7 +231,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "desktop_scroll": _obj({"x": _INT, "y": _INT, "clicks": _INT}),
     "desktop_move_mouse": _obj({"x": _INT, "y": _INT}, ["x", "y"]),
     "desktop_drag": _obj({"x1": _INT, "y1": _INT, "x2": _INT, "y2": _INT}),
-    "desktop_find_and_click": _obj({"label": _STR}, ["label"]),
+    "desktop_find_and_click": _obj({"description": _STR}, ["description"]),
     "desktop_read_screen": _obj({}),
 
     # ── RAG Knowledge Base ───────────────────────────────────────────────────
@@ -351,7 +354,9 @@ class ToolCallingLoop:
         if fn is None:
             return {"error": f"Tool '{name}' not found"}
         try:
-            result = await asyncio.to_thread(fn, args)
+            result = fn(args)
+            if asyncio.iscoroutine(result):
+                result = await result
             _tc.put(name, args, result)
             return result
         except Exception as e:

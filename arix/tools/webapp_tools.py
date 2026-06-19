@@ -8,7 +8,7 @@ work with the same browser session as the rest of Arix's browser tools.
 """
 from __future__ import annotations
 import asyncio
-from typing import Any
+from typing import Any, Coroutine
 
 # ── Web app URL map ───────────────────────────────────────────────────────────
 # Maps normalised app name → base URL for the web version.
@@ -137,7 +137,7 @@ def _normalize_app_name(name: str) -> str:
     return name.lower().replace(" ", "").replace("-", "").replace("_", "")
 
 
-def open_web_app(
+async def open_web_app(
     app_name: str,
     action: str = "home",
     search_query: str = "",
@@ -208,7 +208,7 @@ def open_web_app(
         action_desc = f"Search {app_name} for '{search_query}'"
 
     ctrl = BrowserController()
-    result = asyncio.run(ctrl.navigate(final_url))
+    result = await ctrl.navigate(final_url)
     if isinstance(result, dict) and result.get("error"):
         return result
 
@@ -225,7 +225,7 @@ def open_web_app(
     }
 
 
-def navigate_web_app(
+async def navigate_web_app(
     app_name: str,
     task: str,
     params: dict | None = None,
@@ -274,7 +274,7 @@ def navigate_web_app(
 
     search_q = params.get("query", "") or params.get("search", "")
 
-    return open_web_app(app_name=app_name, action=matched_action, search_query=search_q)
+    return await open_web_app(app_name=app_name, action=matched_action, search_query=search_q)
 
 
 def list_available_web_apps() -> dict:
