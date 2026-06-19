@@ -92,14 +92,29 @@ async def lifespan(app_: FastAPI):
         from arix.app_state import get_agent
 
         async def _channel_run_fn(command: str) -> str:
+            from arix.agent import AgentEvent
             agent = get_agent()
-            chunks = []
-            async for chunk in agent.run_command(command):
-                if isinstance(chunk, str):
-                    chunks.append(chunk)
-                elif hasattr(chunk, "text"):
-                    chunks.append(chunk.text)
-            return "".join(chunks) or "(done)"
+            parts: list[str] = []
+            async for event in agent.run_command(command):
+                if not isinstance(event, AgentEvent):
+                    continue
+                if event.type == "completed":
+                    steps = event.data.get("steps_executed", 0)
+                    parts.append(f"✅ Done ({steps} step{'s' if steps != 1 else ''})")
+                elif event.type == "step_complete":
+                    tool = event.data.get("tool", "")
+                    result = event.data.get("result", {})
+                    if isinstance(result, dict) and not result.get("error"):
+                        parts.append(f"• {tool}: OK")
+                    elif isinstance(result, dict) and result.get("error"):
+                        parts.append(f"• {tool}: {result['error']}")
+                elif event.type in ("error", "step_error"):
+                    parts.append(f"❌ {event.data.get('message') or event.data.get('error', 'Error')}")
+                elif event.type == "advisory":
+                    parts.append(event.data.get("response", ""))
+                elif event.type == "chat":
+                    parts.append(event.data.get("response", ""))
+            return "\n".join(p for p in parts if p) or "(done)"
 
         mgr = get_channel_manager()
         mgr.set_command_fn(_channel_run_fn)
@@ -285,6 +300,7 @@ app.include_router(workflows.router)
 app.include_router(ws.router)
 app.include_router(youtube.router)
 app.include_router(research_mode.router)
+app.include_router(research_mode.researcher_router)
 app.include_router(marketplace.router)
 app.include_router(workspaces.router)
 

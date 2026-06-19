@@ -511,9 +511,11 @@ class HeuristicPlanner:
     def _plan_messaging(self, low: str, cmd: str) -> list[dict]:
         quotes = QUOTE_RE.findall(cmd)
         msg = quotes[0] if quotes else cmd
+        to_m = re.compile(r'\bto\s+([A-Za-z][^\s,]+(?:\s+[A-Za-z][^\s,]+)?)', re.I).search(cmd)
+        to = to_m.group(1) if to_m else ""
         return [{"tool": "send_whatsapp_message",
-                 "args": {"message": msg},
-                 "description": f"Send WhatsApp message: {msg[:40]}"}]
+                 "args": {"to": to, "message": msg},
+                 "description": f"Send WhatsApp message to {to or '<recipient>'}: {msg[:40]}"}]
 
     def _plan_cleanup(self, low: str, cmd: str) -> list[dict]:
         """Plan a temp-file cleanup task — always dry-run first, then confirm."""

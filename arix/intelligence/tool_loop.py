@@ -79,7 +79,7 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "list_available_web_apps": _obj({}),
 
     # ── System tools ─────────────────────────────────────────────────────────
-    "system_monitor": _obj({"detail": {"type": "string", "enum": ["basic", "full"]}}),
+    "system_monitor": _obj({"include_processes": _BOOL, "top_n_processes": _INT}),
     "cleanup_temp_files": _obj(
         {"dry_run": {"type": "boolean", "description": "Preview without deleting"},
          "max_age_days": {"type": "integer", "description": "Delete files older than N days"}},
@@ -88,25 +88,28 @@ TOOL_SCHEMAS: dict[str, dict] = {
     # ── Browser tools ────────────────────────────────────────────────────────
     "browser_open_url": _obj({"url": {"type": "string", "description": "Full URL to open"}}, ["url"]),
     "browser_web_search": _obj({"query": {"type": "string", "description": "Search query"}}, ["query"]),
-    "browser_extract_page_text": _obj({"url": _STR}, ["url"]),
-    "browser_download_file": _obj({"url": _STR, "destination": _PATH}, ["url", "destination"]),
+    "browser_extract_page_text": _obj({}),
+    "browser_download_file": _obj({"url": _STR}, ["url"]),
     "browser_tab_management": _obj({"action": {"type": "string", "enum": ["list", "close_current", "new"]}}),
     "browser_click": _obj({"selector": _STR, "description": _STR}, ["selector"]),
     "browser_type_text": _obj({"selector": _STR, "text": _STR}, ["selector", "text"]),
-    "browser_fill_form": _obj({"fields": {"type": "object", "description": "Field selector → value map"}}, ["fields"]),
-    "browser_screenshot": _obj({"save_path": _STR}),
+    "browser_fill_form": _obj({"fields": {"type": "array", "items": {"type": "object"}, "description": "List of {selector, value} dicts"}}, ["fields"]),
+    "browser_screenshot": _obj({"path": _STR}),
     "browser_wait_for_element": _obj({"selector": _STR, "timeout": _INT}, ["selector"]),
     "browser_scroll": _obj({"direction": {"type": "string", "enum": ["up", "down"]}, "amount": _INT}),
     "browser_go_back": _obj({}),
     "browser_get_page_source": _obj({}),
-    "browser_get_structured_data": _obj({"data_type": {"type": "string", "description": "Type of data to extract"}}),
+    "browser_get_structured_data": _obj({"selector": {"type": "string", "description": "Optional CSS selector to scope extraction"}}),
 
     # ── Document tools ───────────────────────────────────────────────────────
-    "create_docx": _obj({"path": _PATH, "content": _STR}, ["path", "content"]),
+    "create_docx": _obj({"path": _PATH, "content": _STR, "title": _STR}, ["path", "content"]),
     "read_docx": _obj({"path": _PATH}, ["path"]),
     "create_xlsx": _obj(
-        {"path": _PATH, "data": {"type": "object", "description": "Sheet name → list of rows"}},
-        ["path", "data"],
+        {"path": _PATH,
+         "sheet_name": {"type": "string", "description": "Sheet name (default: Sheet1)"},
+         "headers": {"type": "array", "items": _STR, "description": "Column headers"},
+         "rows": {"type": "array", "items": {"type": "array"}, "description": "List of row arrays"}},
+        ["path"],
     ),
     "read_xlsx": _obj({"path": _PATH}, ["path"]),
 
@@ -144,14 +147,14 @@ TOOL_SCHEMAS: dict[str, dict] = {
 
     # ── Vision tools ─────────────────────────────────────────────────────────
     "analyze_image": _obj(
-        {"path": _PATH, "question": {"type": "string", "description": "What to analyze/look for"}},
-        ["path"],
+        {"image_path": _PATH, "question": {"type": "string", "description": "What to analyze/look for"}},
+        ["image_path"],
     ),
     "capture_and_analyze": _obj({"question": _STR}),
 
     # ── Calendar tools ───────────────────────────────────────────────────────
     "list_calendar_events": _obj(
-        {"days_ahead": _INT, "max_results": _INT},
+        {"days_ahead": _INT, "calendar_id": {"type": "string", "description": "Calendar ID (default: primary)"}},
     ),
     "create_calendar_event": _obj(
         {"title": _STR,
@@ -166,8 +169,8 @@ TOOL_SCHEMAS: dict[str, dict] = {
     # ── Web app tools ────────────────────────────────────────────────────────
     "open_web_app": _obj({"app_name": _STR}, ["app_name"]),
     "navigate_web_app": _obj(
-        {"app_name": _STR, "destination": {"type": "string", "description": "Section or page to navigate to"}},
-        ["app_name", "destination"],
+        {"app_name": _STR, "task": {"type": "string", "description": "Natural-language description of what to do, e.g. 'open messages', 'search jobs'"}},
+        ["app_name", "task"],
     ),
 
     # ── WhatsApp ─────────────────────────────────────────────────────────────
@@ -184,37 +187,36 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "drive_list_files": _obj({"max_results": _INT, "folder_id": _STR}),
     "drive_search_files": _obj({"query": _STR, "max_results": _INT}, ["query"]),
     "drive_read_file": _obj({"file_id": _STR}, ["file_id"]),
-    "drive_upload_file": _obj({"file_path": _PATH, "folder_id": _STR}, ["file_path"]),
+    "drive_upload_file": _obj({"local_path": _PATH, "parent_folder_id": _STR, "new_name": _STR}, ["local_path"]),
 
     # ── Notion ───────────────────────────────────────────────────────────────
     "notion_search": _obj({"query": _STR, "max_results": _INT}, ["query"]),
     "notion_read_page": _obj({"page_id": _STR}, ["page_id"]),
     "notion_create_page": _obj(
-        {"title": _STR, "content": _STR, "parent_id": _STR},
+        {"title": _STR, "content": _STR, "parent_page_id": _STR},
         ["title", "content"],
     ),
     "notion_append_to_page": _obj({"page_id": _STR, "content": _STR}, ["page_id", "content"]),
 
     # ── Slack ────────────────────────────────────────────────────────────────
     "slack_list_channels": _obj({}),
-    "slack_send_message": _obj({"channel": _STR, "message": _STR}, ["channel", "message"]),
+    "slack_send_message": _obj({"channel": _STR, "text": _STR}, ["channel", "text"]),
     "slack_get_messages": _obj({"channel": _STR, "limit": _INT}, ["channel"]),
     "slack_search": _obj({"query": _STR}, ["query"]),
 
     # ── Trello ───────────────────────────────────────────────────────────────
     "trello_list_boards": _obj({}),
-    "trello_list_cards": _obj({"list_id": _STR}, ["list_id"]),
+    "trello_list_cards": _obj({"board_id": _STR}, ["board_id"]),
     "trello_create_card": _obj({"list_id": _STR, "name": _STR, "desc": _STR}, ["list_id", "name"]),
     "trello_get_lists": _obj({"board_id": _STR}, ["board_id"]),
 
     # ── Spotify ──────────────────────────────────────────────────────────────
     "spotify_search": _obj(
-        {"query": _STR,
-         "search_type": {"type": "string", "enum": ["track", "artist", "album", "playlist"]}},
+        {"query": _STR, "limit": {"type": "integer", "description": "Max results (default 10)"}},
         ["query"],
     ),
     "spotify_current_track": _obj({}),
-    "spotify_play_pause": _obj({"action": {"type": "string", "enum": ["play", "pause", "toggle"]}}),
+    "spotify_play_pause": _obj({"play": {"type": "boolean", "description": "True to play, false to pause"}}),
 
     # ── YouTube ──────────────────────────────────────────────────────────────
     "youtube_search": _obj({"query": _STR, "max_results": _INT}, ["query"]),
@@ -222,21 +224,41 @@ TOOL_SCHEMAS: dict[str, dict] = {
     "youtube_search_channels": _obj({"query": _STR}, ["query"]),
 
     # ── Desktop (bridge) ────────────────────────────────────────────────────
-    "desktop_screenshot": _obj({"save_path": _STR}),
+    "desktop_screenshot": _obj({"region": {"type": "string", "description": "Optional 'x,y,width,height' sub-region"}}),
     "desktop_click": _obj({"x": _INT, "y": _INT}, ["x", "y"]),
     "desktop_double_click": _obj({"x": _INT, "y": _INT}, ["x", "y"]),
     "desktop_right_click": _obj({"x": _INT, "y": _INT}, ["x", "y"]),
     "desktop_type_text": _obj({"text": _STR}, ["text"]),
-    "desktop_key": _obj({"key": _STR}, ["key"]),
-    "desktop_scroll": _obj({"x": _INT, "y": _INT, "clicks": _INT}),
+    "desktop_key": _obj({"keys": _STR}, ["keys"]),
+    "desktop_scroll": _obj({"x": _INT, "y": _INT, "direction": {"type": "string", "enum": ["up", "down"]}, "amount": _INT}, ["x", "y"]),
     "desktop_move_mouse": _obj({"x": _INT, "y": _INT}, ["x", "y"]),
-    "desktop_drag": _obj({"x1": _INT, "y1": _INT, "x2": _INT, "y2": _INT}),
+    "desktop_drag": _obj({"from_x": _INT, "from_y": _INT, "to_x": _INT, "to_y": _INT}, ["from_x", "from_y", "to_x", "to_y"]),
     "desktop_find_and_click": _obj({"description": _STR}, ["description"]),
     "desktop_read_screen": _obj({}),
 
     # ── RAG Knowledge Base ───────────────────────────────────────────────────
     "ingest_document": _obj({"file_path": _PATH, "doc_name": _STR}, ["file_path"]),
     "query_knowledge_base": _obj({"query": _STR, "top_k": _INT, "doc_filter": _STR}, ["query"]),
+    "search_knowledge_base": _obj({"query": _STR, "top_k": _INT}, ["query"]),
+
+    # ── System utilities (extended) ──────────────────────────────────────────
+    "diff_files": _obj(
+        {"path_a": _PATH, "path_b": _PATH,
+         "context_lines": {"type": "integer", "description": "Lines of context around each diff (default 3)"}},
+        ["path_a", "path_b"],
+    ),
+    "get_clipboard": _obj({}),
+    "set_clipboard": _obj({"text": _STR}, ["text"]),
+
+    # ── Research utilities ───────────────────────────────────────────────────
+    "fetch_json_api": _obj(
+        {"url": _STR,
+         "method": {"type": "string", "enum": ["GET", "POST", "PUT", "DELETE"]},
+         "headers": {"type": "object", "description": "Optional HTTP headers"},
+         "body": {"type": "object", "description": "Optional request body (POST/PUT)"},
+         "timeout": _INT},
+        ["url"],
+    ),
 }
 
 # ── System prompts ────────────────────────────────────────────────────────────
