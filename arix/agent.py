@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 import os
+import re
 import secrets
 import time
 import uuid
@@ -198,6 +199,31 @@ TOOL_DISPATCH: dict[str, Callable] = {
 
 # Tools whose results can feed the undo manager
 _UNDO_BUILDERS: dict[str, Callable[[dict, dict], tuple[str, Callable] | None]] = {}
+
+
+_UUID_RE = re.compile(
+    r"^'?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'?$",
+    re.IGNORECASE,
+)
+
+def _looks_like_uuid(s: str) -> bool:
+    """Return True if s is (or repr-wraps) a bare UUID — never useful as a user-facing error."""
+    return bool(_UUID_RE.match(s.strip()))
+
+def _friendly_error(e: Exception, context: str = "") -> str:
+    """Convert an exception to a human-readable error string.
+
+    Strips internal tokens (UUIDs, grant IDs) and adds context where helpful.
+    """
+    raw = str(e)
+    prefix = f"{context}: " if context else ""
+    if _looks_like_uuid(raw):
+        return f"{prefix}Internal error — please try again"
+    if isinstance(e, KeyError):
+        return f"{prefix}Internal key error: {raw}"
+    if isinstance(e, TimeoutError):
+        return f"{prefix}Operation timed out"
+    return f"{prefix}{raw}" if raw else f"{prefix}An unexpected error occurred"
 
 
 def _clean(args: dict) -> dict:
@@ -410,20 +436,28 @@ class ArixAgent:
         task_id = task_id or str(uuid.uuid4())
         queue: asyncio.Queue = asyncio.Queue()
 
-        # Gap #8: Initialize trace store for this task
-        self._trace[task_id] = [{"type": "command", "data": {"command": command[:300]}, "ts": time.time()}]
-        if len(self._trace) > 50:
+        # Gap #8: Initialize trace store for this task.
+        # Prune BEFORE inserting so the current task_id is never accidentally removed.
+        if len(self._trace) >= 50:
             oldest_key = next(iter(self._trace))
-            self._trace.pop(oldest_key, None)
+            if oldest_key != task_id:
+                self._trace.pop(oldest_key, None)
+        self._trace[task_id] = [{"type": "command", "data": {"command": command[:300]}, "ts": time.time()}]
 
         async def _produce():
             try:
                 async for event in self._execute_pipeline(command, task_id):
                     await queue.put(event)
             except Exception as e:
+                # Build a human-readable message — never expose raw UUIDs or stack internals
+                raw = str(e)
+                if _looks_like_uuid(raw):
+                    msg = f"Internal error (task {raw[:8]}…) — please try again"
+                else:
+                    msg = raw or "An unexpected error occurred"
                 await queue.put(AgentEvent(
                     type="error",
-                    data={"message": str(e), "task_id": task_id}
+                    data={"message": msg, "task_id": task_id}
                 ))
             finally:
                 await queue.put(None)
@@ -441,9 +475,10 @@ class ArixAgent:
             event = await queue.get()
             if event is None:
                 break
-            # Gap #8: Capture relevant events in trace
+            # Gap #8: Capture relevant events in trace — use setdefault to guard
+            # against the rare race where _trace[task_id] was pruned concurrently.
             if event.type in _TRACE_EVENTS:
-                self._trace[task_id].append({
+                self._trace.setdefault(task_id, []).append({
                     "type": event.type,
                     "data": event.data,
                     "ts": event.timestamp,
@@ -1254,10 +1289,11 @@ class ArixAgent:
                 })
 
             except Exception as e:
+                err_msg = _friendly_error(e, context=tool_name)
                 yield AgentEvent("step_error", {
                     "task_id": task_id,
                     "step_id": step_id,
-                    "error": str(e),
+                    "error": err_msg,
                 })
                 self.audit_logger.log_event(
                     task_id=task_id, step_id=step_id,
