@@ -98,7 +98,7 @@ class AutonomousResearcher:
     def _load_state(self) -> None:
         try:
             if _STATE_FILE.exists():
-                data = json.loads(_STATE_FILE.read_text())
+                data = json.loads(_STATE_FILE.read_text(encoding="utf-8"))
                 self._state = ResearchState(**{
                     k: v for k, v in data.items()
                     if k in ResearchState.__dataclass_fields__
@@ -129,7 +129,7 @@ class AutonomousResearcher:
                 f.write(json.dumps(finding.to_dict()) + "\n")
 
             # Trim to max findings
-            lines = _FINDINGS_FILE.read_text().splitlines()
+            lines = _FINDINGS_FILE.read_text(encoding="utf-8").splitlines()
             if len(lines) > _MAX_FINDINGS:
                 _FINDINGS_FILE.write_text(
                     "\n".join(lines[-_MAX_FINDINGS:]) + "\n"
@@ -141,7 +141,7 @@ class AutonomousResearcher:
         try:
             if not _FINDINGS_FILE.exists():
                 return []
-            lines = _FINDINGS_FILE.read_text().strip().splitlines()
+            lines = _FINDINGS_FILE.read_text(encoding="utf-8").strip().splitlines()
             findings = []
             for line in reversed(lines):
                 try:

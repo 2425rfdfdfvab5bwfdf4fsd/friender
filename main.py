@@ -225,7 +225,7 @@ async def favicon():
 
 @app.get("/", response_class=HTMLResponse)
 async def index():
-    return Path("templates/index.html").read_text()
+    return Path("templates/index.html").read_text(encoding="utf-8")
 
 
 # ── Routers ───────────────────────────────────────────────────────────────────

@@ -732,7 +732,7 @@ class HandManager:
         self._metrics_loaded = True
         try:
             if _HANDS_STATE_FILE.exists():
-                data = json.loads(_HANDS_STATE_FILE.read_text())
+                data = json.loads(_HANDS_STATE_FILE.read_text(encoding="utf-8"))
                 for hand_id, m in data.get("metrics", {}).items():
                     if hand_id in self._hands:
                         self._hands[hand_id].metrics = HandMetrics.from_dict(m)

@@ -24,7 +24,7 @@ def _load_all() -> list[dict]:
     plugins = []
     for f in sorted(_PLUGINS_DIR.glob("*.json")):
         try:
-            plugins.append(json.loads(f.read_text()))
+            plugins.append(json.loads(f.read_text(encoding="utf-8")))
         except Exception:
             pass
     return plugins
@@ -36,7 +36,7 @@ def _load_one(plugin_id: str) -> dict | None:
     if not f.exists():
         return None
     try:
-        return json.loads(f.read_text())
+        return json.loads(f.read_text(encoding="utf-8"))
     except Exception:
         return None
 

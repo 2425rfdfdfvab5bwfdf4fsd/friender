@@ -245,7 +245,7 @@ async def _handle_command(
         log_path = Path.home() / ".pacca" / "audit.log"
         entries = []
         if log_path.exists():
-            for line in log_path.read_text().splitlines()[-20:]:
+            for line in log_path.read_text(encoding="utf-8").splitlines()[-20:]:
                 try:
                     entries.append(json.loads(line))
                 except Exception:

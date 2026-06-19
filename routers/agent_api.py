@@ -180,7 +180,7 @@ async def get_audit_log(n: int = 50):
     if not log_path.exists():
         return {"entries": [], "path": str(log_path)}
     try:
-        lines = log_path.read_text().splitlines()
+        lines = log_path.read_text(encoding="utf-8").splitlines()
         entries = []
         for line in lines[-n:]:
             try:

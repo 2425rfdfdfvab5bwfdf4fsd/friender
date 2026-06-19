@@ -436,7 +436,7 @@ class MarketplaceHub:
     def _load_state(self) -> None:
         try:
             if _STATE_FILE.exists():
-                data = json.loads(_STATE_FILE.read_text())
+                data = json.loads(_STATE_FILE.read_text(encoding="utf-8"))
                 self._installed = data.get("installed", {})
                 self._ratings = data.get("ratings", {})
                 for item_id in self._installed:

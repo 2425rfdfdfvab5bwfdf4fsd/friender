@@ -21,7 +21,7 @@ def _load() -> list[dict]:
     if not _TODOS_FILE.exists():
         return []
     try:
-        return json.loads(_TODOS_FILE.read_text())
+        return json.loads(_TODOS_FILE.read_text(encoding="utf-8"))
     except Exception:
         return []
 

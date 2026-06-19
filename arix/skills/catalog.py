@@ -194,7 +194,7 @@ CATALOG: List[Skill] = [
 def _load_installed() -> Dict[str, bool]:
     try:
         if INSTALLED_FILE.exists():
-            return json.loads(INSTALLED_FILE.read_text())
+            return json.loads(INSTALLED_FILE.read_text(encoding="utf-8"))
     except Exception:
         pass
     return {}

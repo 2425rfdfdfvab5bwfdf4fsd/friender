@@ -168,7 +168,7 @@ class MemoryManager:
     def _load_prefs(self) -> dict:
         if PREFS_FILE.exists():
             try:
-                return json.loads(PREFS_FILE.read_text())
+                return json.loads(PREFS_FILE.read_text(encoding="utf-8"))
             except Exception:
                 pass
         return {}

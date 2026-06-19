@@ -53,7 +53,7 @@ class UserProfile:
     def load(cls) -> "UserProfile":
         if PROFILE_FILE.exists():
             try:
-                data = json.loads(PROFILE_FILE.read_text())
+                data = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
                 p = cls()
                 for k, v in data.items():
                     if hasattr(p, k):

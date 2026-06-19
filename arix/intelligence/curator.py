@@ -187,7 +187,7 @@ class SkillCurator:
             return self._state
         try:
             if _CURATOR_FILE.exists():
-                data = json.loads(_CURATOR_FILE.read_text())
+                data = json.loads(_CURATOR_FILE.read_text(encoding="utf-8"))
                 self._state = CuratorState.from_dict(data)
                 return self._state
         except Exception as e:

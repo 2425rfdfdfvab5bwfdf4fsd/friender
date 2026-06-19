@@ -94,7 +94,7 @@ class WorkspaceManager:
     def _load_state(self) -> None:
         try:
             if _STATE_FILE.exists():
-                data = json.loads(_STATE_FILE.read_text())
+                data = json.loads(_STATE_FILE.read_text(encoding="utf-8"))
                 for wid, wd in data.get("workspaces", {}).items():
                     ws = Workspace(
                         workspace_id=wd["workspace_id"],

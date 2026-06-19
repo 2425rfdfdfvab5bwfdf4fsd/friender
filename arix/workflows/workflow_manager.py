@@ -195,7 +195,7 @@ class WorkflowRegistry:
         if not path.exists():
             return None
         try:
-            data = yaml.safe_load(path.read_text())
+            data = yaml.safe_load(path.read_text(encoding="utf-8"))
             return Workflow.from_dict(data)
         except Exception:
             return None
@@ -204,7 +204,7 @@ class WorkflowRegistry:
         workflows = []
         for p in sorted(WORKFLOWS_DIR.glob("*.yaml")):
             try:
-                data = yaml.safe_load(p.read_text())
+                data = yaml.safe_load(p.read_text(encoding="utf-8"))
                 workflows.append(Workflow.from_dict(data))
             except Exception:
                 continue

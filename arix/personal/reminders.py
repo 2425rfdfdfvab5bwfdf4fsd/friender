@@ -20,7 +20,7 @@ def _load() -> list[dict]:
     if not _REMINDERS_FILE.exists():
         return []
     try:
-        return json.loads(_REMINDERS_FILE.read_text())
+        return json.loads(_REMINDERS_FILE.read_text(encoding="utf-8"))
     except Exception:
         return []
 

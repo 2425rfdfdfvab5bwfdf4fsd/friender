@@ -201,7 +201,7 @@ class MCPManager:
         self._loaded = True
         try:
             if _SERVERS_FILE.exists():
-                data = json.loads(_SERVERS_FILE.read_text())
+                data = json.loads(_SERVERS_FILE.read_text(encoding="utf-8"))
                 for s in data.get("servers", []):
                     server = MCPServer(
                         server_id=s["server_id"],

@@ -250,7 +250,7 @@ class KnowledgeBase:
         self._loaded = True
         try:
             if _INDEX_FILE.exists():
-                data = json.loads(_INDEX_FILE.read_text())
+                data = json.loads(_INDEX_FILE.read_text(encoding="utf-8"))
                 for d in data.get("docs", []):
                     doc = KnowledgeDoc.from_dict(d)
                     self._docs[doc.doc_id] = doc

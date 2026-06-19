@@ -120,7 +120,7 @@ class AuditLogger:
     def _load_last_hash(self) -> None:
         """Read the last entry's raw JSON to prime the chain."""
         try:
-            lines = self.log_file.read_text().splitlines()
+            lines = self.log_file.read_text(encoding="utf-8").splitlines()
             for line in reversed(lines):
                 line = line.strip()
                 if line:
@@ -190,7 +190,7 @@ class AuditLogger:
         if not self.log_file.exists():
             return {"valid": True, "total_entries": 0, "message": "Log file empty"}
 
-        lines = [l.strip() for l in self.log_file.read_text().splitlines() if l.strip()]
+        lines = [l.strip() for l in self.log_file.read_text(encoding="utf-8").splitlines() if l.strip()]
         if not lines:
             return {"valid": True, "total_entries": 0}
 
@@ -224,7 +224,7 @@ class AuditLogger:
         cutoff = time.time() - (self.retention_days * 86400)
         if not self.log_file.exists():
             return
-        lines = self.log_file.read_text().splitlines()
+        lines = self.log_file.read_text(encoding="utf-8").splitlines()
         kept = []
         for line in lines:
             try:

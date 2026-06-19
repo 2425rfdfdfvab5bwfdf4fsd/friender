@@ -27,7 +27,7 @@ def _load_cache() -> dict | None:
     if not BRIEF_CACHE_FILE.exists():
         return None
     try:
-        data = json.loads(BRIEF_CACHE_FILE.read_text())
+        data = json.loads(BRIEF_CACHE_FILE.read_text(encoding="utf-8"))
         cached_date = data.get("date", "")
         if cached_date == date.today().isoformat():
             return data
