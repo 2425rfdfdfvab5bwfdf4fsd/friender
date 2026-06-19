@@ -432,13 +432,13 @@ YOUTUBE_API_KEY=your-youtube-api-key
 
 *Send messages.*
 
-1. [twilio.com](https://www.twilio.com) → enable **WhatsApp Sandbox** → copy Account SID + Auth Token
+1. Go to **[developers.facebook.com/apps](https://developers.facebook.com/apps/)** → create a new app
+2. Add the **WhatsApp** product to the app
+3. Under **WhatsApp → API Setup**: copy your **Phone Number ID** and generate a **Temporary access token** (or create a permanent System User token for production)
 
 ```env
-TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-TWILIO_AUTH_TOKEN=your-auth-token
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
-WHATSAPP_RECIPIENT=whatsapp:+1your-number
+WHATSAPP_TOKEN=your-meta-access-token
+WHATSAPP_PHONE_NUMBER_ID=your-phone-number-id
 ```
 
 ---
@@ -668,6 +668,6 @@ Optional features
 
 ---
 
-*Arix v9.3 — Personal AI Computer-Control Agent*
-*100 tools · 20 domains · 8 integrations · Ollama auto-fallback*
+*Arix v9.5.1 — Personal AI Computer-Control Agent*
+*100 tools · 20 domains · 8 integrations · 13 LLM providers · Ollama auto-fallback*
 *Windows 10/11 · macOS 12+ · Ubuntu 20.04+*

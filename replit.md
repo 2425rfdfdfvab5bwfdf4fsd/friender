@@ -107,12 +107,27 @@ arix/
     workflow_manager.py    Cron-based scheduled natural-language tasks
   ui/
     onboarding.py
-routers/                   FastAPI routers
-  agent_api.py  ws.py  memory.py  intelligence.py
+routers/                   FastAPI routers (29 total)
+  agent_api.py             Status, cache, tools, providers, onboard, settings
+  ws.py                    WebSocket command handler
+  memory.py                Memory CRUD + search + export
+  intelligence.py          Morning brief, notifications, patterns, active goals
   gmail.py  drive.py  calendar.py  notion.py
   slack.py  spotify.py  trello.py  youtube.py
   whatsapp.py  vision.py  personal.py  plugins.py
-  bridge.py  workflows.py
+  bridge.py                Local bridge WebSocket relay
+  workflows.py             Scheduled workflow CRUD
+  curator.py               Hermes Curator skill curation + research journal
+  research_mode.py         Research mode + /api/researcher/* aliases
+  knowledge.py             RAG knowledge base (ingest, search, upload)
+  skillhub.py              SkillHub marketplace browser
+  marketplace.py           ClawHub item install/rate/search
+  workspaces.py            Agent workspace management
+  hands.py                 Capability Hands (Browser/Clip/Lead/Designer/Data…)
+  multi_agent.py           Multi-Agent Router
+  mcp.py                   MCP client proxy
+  canvas.py                Live Canvas SSE stream
+  channels.py              Channels (Telegram/Discord/IRC/Signal/LINE)
 local_bridge/
   bridge_agent.py          Desktop automation agent (run locally on your PC)
 templates/

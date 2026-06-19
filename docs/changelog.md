@@ -5,6 +5,37 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [9.5.1] — 2026-06-19
+
+### Fixed — Full Codebase Audit
+
+**Tool schema corrections (`arix/intelligence/tool_loop.py`)**
+- `desktop_key`: renamed schema parameter `key` → `keys` to match function signature
+- `desktop_scroll`: replaced schema parameter `clicks` with `direction` + `amount` (correct signature)
+- `desktop_drag`: replaced `x1/y1/x2/y2` with `from_x/from_y/to_x/to_y` (correct signature)
+
+**Missing API routes (`routers/research_mode.py`)**
+- Added `researcher_router` with `GET/POST/DELETE /api/researcher/interests` and `POST /api/researcher/run-now`
+- Registered `researcher_router` in `main.py` (was called by JS but never served → 404)
+
+**Duplicate route elimination (`routers/agent_api.py`)**
+- Removed curator endpoints (`/api/curator/*`) duplicated from `routers/curator.py`
+- Removed researcher endpoints (`/api/researcher/*`) duplicated from `routers/research_mode.py`
+- Result: 212 routes with zero duplicates across all 29 routers
+
+**Curator router hardening (`routers/curator.py`)**
+- `toggle-core`: converted from POST-body param to URL path param (`/skills/{skill_id}/toggle-core`) to match JS call pattern
+- `run` endpoint: wired `llm_client` and `task_history` for actual curation execution
+- Added `GET /api/curator/research/journal` endpoint (was called by JS, returned 404)
+
+**Verification**
+- 100/100 tool schemas match TOOL_DISPATCH (zero gaps)
+- 100/100 tool schemas match TOOL_REGISTRY (zero gaps)
+- All 29 routers and 32+ `arix/` modules import cleanly
+- App starts cleanly with 0 errors
+
+---
+
 ## [9.5.0] — 2026-06-18
 
 ### Cost & Performance — Token Optimization Layer
