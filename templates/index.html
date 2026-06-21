@@ -1407,17 +1407,17 @@ async function toggleResearchMode(){
     const ep = _rmEnabled ? '/api/research-mode/stop' : '/api/research-mode/start';
     const body = _rmEnabled ? {} : {interval_minutes: parseInt(document.getElementById('rm-interval-input').value)||45};
     await fetch(ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    showToast(_rmEnabled?'Research Mode stopped':'Research Mode started 🔬','ok');
+    toast(_rmEnabled?'Research Mode stopped':'Research Mode started 🔬','ok');
     await loadResearchMode();
-  }catch(e){showToast('Error toggling Research Mode','err');}
+  }catch(e){toast('Error toggling Research Mode','err');}
 }
 async function runResearchNow(){
-  showToast('Running research session…','info');
+  toast('Running research session…','info');
   try{
     const r=await fetch('/api/research-mode/run-now',{method:'POST'});
-    if(r.ok){const f=await r.json();showToast(`Researched: "${f.topic}"`, 'ok');await loadResearchMode();}
-    else{showToast('Research session failed','err');}
-  }catch(e){showToast('Error: '+e.message,'err');}
+    if(r.ok){const f=await r.json();toast(`Researched: "${f.topic}"`, 'ok');await loadResearchMode();}
+    else{toast('Research session failed','err');}
+  }catch(e){toast('Error: '+e.message,'err');}
 }
 async function addResearchSeed(){
   const inp=document.getElementById('rm-seed-input');
@@ -1425,21 +1425,21 @@ async function addResearchSeed(){
   if(!topic)return;
   try{
     await fetch('/api/research-mode/seeds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({topic})});
-    inp.value='';showToast('Seed topic added','ok');await loadResearchMode();
-  }catch(e){showToast('Error adding seed','err');}
+    inp.value='';toast('Seed topic added','ok');await loadResearchMode();
+  }catch(e){toast('Error adding seed','err');}
 }
 async function removeResearchSeed(topic){
   try{
     await fetch(`/api/research-mode/seeds/${encodeURIComponent(topic)}`,{method:'DELETE'});
-    showToast('Seed removed','ok');await loadResearchMode();
-  }catch(e){showToast('Error removing seed','err');}
+    toast('Seed removed','ok');await loadResearchMode();
+  }catch(e){toast('Error removing seed','err');}
 }
 async function updateResearchInterval(){
   const v=parseInt(document.getElementById('rm-interval-input').value)||45;
   try{
     await fetch('/api/research-mode/settings',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({interval_minutes:v})});
-    showToast(`Interval set to ${v} minutes`,'ok');await loadResearchMode();
-  }catch(e){showToast('Error updating interval','err');}
+    toast(`Interval set to ${v} minutes`,'ok');await loadResearchMode();
+  }catch(e){toast('Error updating interval','err');}
 }
 
 // ── v8.4: Curator ──────────────────────────────────────────────────────────
@@ -1484,9 +1484,9 @@ async function triggerCuratorRun(){
   const btn=event.target;btn.disabled=true;btn.textContent='Running…';
   try{
     const r=await fetch('/api/curator/run',{method:'POST'}).then(r=>r.json());
-    showToast(`Curator: created ${r.stage_2_created.length}, refined ${r.stage_3_refined.length}, promoted ${r.stage_4_promoted.length} skills`);
+    toast(`Curator: created ${r.stage_2_created.length}, refined ${r.stage_3_refined.length}, promoted ${r.stage_4_promoted.length} skills`);
     await loadCurator();
-  }catch(e){showToast('Curator run failed: '+e,'error');}
+  }catch(e){toast('Curator run failed: '+e,'error');}
   finally{btn.disabled=false;btn.textContent='▶ Run';}
 }
 async function curatorToggleCore(id){
@@ -1525,8 +1525,8 @@ async function kbIngest(){
   const path=document.getElementById('kb-ingest-path').value.trim();
   if(!path)return;
   const r=await fetch('/api/knowledge/ingest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({file_path:path})}).then(r=>r.json());
-  if(r.ok){showToast(r.message||'Ingested successfully');document.getElementById('kb-ingest-path').value='';await loadKnowledge();}
-  else showToast('Ingest failed: '+(r.detail||r.error),'error');
+  if(r.ok){toast(r.message||'Ingested successfully');document.getElementById('kb-ingest-path').value='';await loadKnowledge();}
+  else toast('Ingest failed: '+(r.detail||r.error),'error');
 }
 async function kbQuery(){
   const q=document.getElementById('kb-query-input').value.trim();
@@ -1679,22 +1679,22 @@ async function loadMpInstalled(){
     document.getElementById('mp-featured-section').style.display='none';
     document.getElementById('mp-list-title').textContent=`${d.installed.length} Installed`;
     renderMpList(d.installed);
-  }catch(e){showToast('Error loading installed','err');}
+  }catch(e){toast('Error loading installed','err');}
 }
 
 async function mpInstall(itemId){
   try{
     const r=await fetch(`/api/marketplace/${itemId}/install`,{method:'POST'});
-    if(r.ok){showToast('Installed!','ok');}else{showToast('Install failed','err');}
+    if(r.ok){toast('Installed!','ok');}else{toast('Install failed','err');}
     await loadMarketplace();
-  }catch(e){showToast('Error installing','err');}
+  }catch(e){toast('Error installing','err');}
 }
 async function mpUninstall(itemId){
   try{
     await fetch(`/api/marketplace/${itemId}/install`,{method:'DELETE'});
-    showToast('Removed','ok');
+    toast('Removed','ok');
     await loadMarketplace();
-  }catch(e){showToast('Error removing','err');}
+  }catch(e){toast('Error removing','err');}
 }
 
 // ── v9.0: Agent Workspaces ────────────────────────────────────────────────
@@ -1749,14 +1749,14 @@ async function loadWorkspaces(){
 async function createWorkspace(){
   const task=document.getElementById('ws-task').value.trim();
   const role=document.getElementById('ws-role').value;
-  if(!task){showToast('Enter a task description','err');return;}
+  if(!task){toast('Enter a task description','err');return;}
   try{
     await fetch('/api/workspaces',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({agent_role:role,task_summary:task,ttl_hours:48})});
     document.getElementById('ws-task').value='';
-    showToast('Workspace created','ok');
+    toast('Workspace created','ok');
     await loadWorkspaces();
-  }catch(e){showToast('Error creating workspace','err');}
+  }catch(e){toast('Error creating workspace','err');}
 }
 async function wsArchive(id){
   await fetch(`/api/workspaces/${id}/archive`,{method:'PATCH'});
@@ -1765,12 +1765,12 @@ async function wsArchive(id){
 async function wsDelete(id){
   if(!confirm('Delete this workspace and all its artifacts?'))return;
   await fetch(`/api/workspaces/${id}`,{method:'DELETE'});
-  showToast('Workspace deleted','ok');
+  toast('Workspace deleted','ok');
   await loadWorkspaces();
 }
 async function wsGarbageCollect(){
   const r=await fetch('/api/workspaces/gc',{method:'POST'}).then(r=>r.json());
-  showToast(`GC: removed ${r.removed} expired workspace${r.removed!==1?'s':''}`,r.removed>0?'ok':'info');
+  toast(`GC: removed ${r.removed} expired workspace${r.removed!==1?'s':''}`,r.removed>0?'ok':'info');
   await loadWorkspaces();
 }
 function setWsFilter(btn,status){
@@ -1819,10 +1819,10 @@ async function mcpAddServer(){
   const transport=document.getElementById('mcp-transport').value;
   const command=document.getElementById('mcp-command').value.trim()||null;
   const url=document.getElementById('mcp-url').value.trim()||null;
-  if(!name)return showToast('Enter a server name','error');
+  if(!name)return toast('Enter a server name','error');
   const r=await fetch('/api/mcp/servers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,transport,command,url})}).then(r=>r.json());
-  if(r.ok){showToast('Server added: '+name);document.getElementById('mcp-name').value='';await loadMcp();}
-  else showToast('Add failed','error');
+  if(r.ok){toast('Server added: '+name);document.getElementById('mcp-name').value='';await loadMcp();}
+  else toast('Add failed','error');
 }
 async function mcpConnect(id){await fetch(`/api/mcp/servers/${id}/connect`,{method:'POST'}).then(r=>r.json());await loadMcp();}
 async function mcpDisconnect(id){await fetch(`/api/mcp/servers/${id}/disconnect`,{method:'POST'});await loadMcp();}
@@ -1834,10 +1834,10 @@ async function startMatrix(){
   const user_id=document.getElementById('mx-user-id').value.trim();
   const access_token=document.getElementById('mx-token').value.trim();
   const command_prefix=document.getElementById('mx-prefix').value.trim()||'!arix';
-  if(!homeserver||!user_id||!access_token)return showToast('Fill in all Matrix fields','error');
+  if(!homeserver||!user_id||!access_token)return toast('Fill in all Matrix fields','error');
   const r=await fetch('/api/channels/matrix/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({homeserver,user_id,access_token,command_prefix})}).then(r=>r.json()).catch(e=>({ok:false,error:String(e)}));
-  if(r.ok){showToast('Matrix bot connected');document.getElementById('mx-token').value='';refreshChannelStatus();}
-  else showToast('Matrix error: '+(r.detail||r.error),'error');
+  if(r.ok){toast('Matrix bot connected');document.getElementById('mx-token').value='';refreshChannelStatus();}
+  else toast('Matrix error: '+(r.detail||r.error),'error');
 }
 
 // ── Patch switchPanel to auto-load new panels ─────────────────────────────
