@@ -11,7 +11,7 @@ import re
 import time
 import urllib.parse
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 # ── Stealth configuration ─────────────────────────────────────────────────────
@@ -488,7 +488,7 @@ class BrowserController:
         except Exception as e:
             return {"error": str(e)}
 
-    async def wait_for_element(self, selector: str, state: str = "visible",
+    async def wait_for_element(self, selector: str, state: Literal["attached", "detached", "hidden", "visible"] = "visible",
                                 timeout: int = 15000) -> dict:
         if not self._page:
             return {"error": "Browser not started"}

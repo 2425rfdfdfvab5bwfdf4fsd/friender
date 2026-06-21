@@ -100,8 +100,16 @@ class PlanValidator:
                 tool_name, args, task_scope, i
             )
 
-            if "url" in args:
-                self._validate_url(args["url"], i)
+            # Check if we should enforce URL validation
+            tool_meta = self.tool_registry.get(tool_name)
+            data_egress = getattr(tool_meta, "data_egress", False)
+            egress_type = getattr(tool_meta, "egress_type", "none")
+            
+            # If the tool is a browser tool or has cloud egress, validate 'url' argument
+            if egress_type == "browser" or data_egress:
+                for arg_name in ["url", "link", "target_url", "site"]:
+                    if arg_name in args and isinstance(args[arg_name], str):
+                        self._validate_url(args[arg_name], i)
 
             validated_steps.append({
                 "step_id": f"step_{i:03d}",

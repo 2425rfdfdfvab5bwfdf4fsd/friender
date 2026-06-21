@@ -1433,13 +1433,35 @@ function renderTsbTodoList(todos) {
   const el = document.getElementById('tsb-todo-list');
   if (!el) return;
   if (!todos.length) { el.innerHTML = '<div class="panel-empty">No tasks yet — add one above!</div>'; return; }
-  el.innerHTML = todos.map(t => `
-    <div class="asst-todo-item">
-      <input type="checkbox" class="asst-todo-check" ${t.done?'checked':''} onchange="toggleTodoDoneTsb('${esc(t.id)}',this.checked)">
-      <span class="asst-todo-text ${t.done?'done':''}">${esc(t.text)}</span>
-      <span class="asst-todo-pri ptask-pri ${esc(t.priority)}">${esc(t.priority)}</span>
-      <button style="background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px" onclick="deleteTodoTsb('${esc(t.id)}')">✕</button>
-    </div>`).join('');
+  el.innerHTML = todos.map(t => {
+    const item = document.createElement('div');
+    item.className = 'asst-todo-item';
+    
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.className = 'asst-todo-check';
+    check.checked = !!t.done;
+    check.onchange = (e) => toggleTodoDoneTsb(t.id, e.target.checked);
+    
+    const text = document.createElement('span');
+    text.className = 'asst-todo-text' + (t.done ? ' done' : '');
+    text.textContent = t.text;
+    
+    const pri = document.createElement('span');
+    pri.className = `asst-todo-pri ptask-pri ${t.priority}`;
+    pri.textContent = t.priority;
+    
+    const del = document.createElement('button');
+    del.style = 'background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 4px';
+    del.textContent = '✕';
+    del.onclick = () => deleteTodoTsb(t.id);
+    
+    item.appendChild(check);
+    item.appendChild(text);
+    item.appendChild(pri);
+    item.appendChild(del);
+    return item.outerHTML;
+  }).join('');
 }
 
 function renderTsbRemList(rems) {

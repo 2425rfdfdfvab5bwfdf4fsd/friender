@@ -281,14 +281,20 @@ async def update_settings(body: dict):
         "max_file_egress_bytes": int,
         "offline_mode": lambda v: v if isinstance(v, bool) else str(v).lower() == "true",
     }
+    updated = False
     for field, cast in field_map.items():
         if field in body:
             try:
                 setattr(cfg, field, cast(body[field]))
+                updated = True
             except (ValueError, TypeError):
                 continue
-    cfg.save()
-    reset_agent()
+    if updated:
+        cfg.save()
+        reset_agent()
+    
+    # Reload config to get latest values
+    cfg = ArixConfig.load()
     return {
         "status": "ok",
         "config": {
@@ -296,6 +302,8 @@ async def update_settings(body: dict):
             "model": cfg.model,
             "risk_confirm_threshold": cfg.risk_confirm_threshold,
             "risk_proceed_threshold": cfg.risk_proceed_threshold,
+            "max_file_egress_bytes": cfg.max_file_egress_bytes,
+            "offline_mode": cfg.offline_mode,
         },
     }
 

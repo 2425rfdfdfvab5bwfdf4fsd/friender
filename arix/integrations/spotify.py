@@ -24,6 +24,8 @@ def _get_client_token() -> str | None:
         import httpx
         cid = os.environ.get("SPOTIFY_CLIENT_ID", "")
         csec = os.environ.get("SPOTIFY_CLIENT_SECRET", "")
+        if not cid or not csec:
+            return None
         creds = base64.b64encode(f"{cid}:{csec}".encode()).decode()
         resp = httpx.post(
             "https://accounts.spotify.com/api/token",
@@ -38,8 +40,12 @@ def _get_client_token() -> str | None:
                 "expires": time.time() + d["expires_in"] - 60,
             }
             return _cached_token["token"]
-    except Exception:
-        pass
+        else:
+            import logging
+            logging.getLogger(__name__).warning("Spotify token refresh failed: %d %s", resp.status_code, resp.text)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Spotify token refresh exception: %s", e)
     return None
 
 

@@ -324,6 +324,9 @@ async def websocket_endpoint(ws: WebSocket):
                 await ws.send_json({"type": "error", "data": {"message": "Unauthorized"}})
                 await ws.close(code=4401)
                 return
+        except asyncio.TimeoutError:
+            await ws.close(code=4401)
+            return
         except Exception:
             await ws.close(code=4401)
             return

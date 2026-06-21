@@ -28,7 +28,7 @@ def _load() -> list[dict]:
 
 def _save(data: list[dict]) -> None:
     _Arix_DIR.mkdir(parents=True, exist_ok=True)
-    _TODOS_FILE.write_text(json.dumps(data, indent=2))
+    _TODOS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def _priority_order(p: str) -> int:

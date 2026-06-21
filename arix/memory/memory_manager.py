@@ -411,6 +411,13 @@ class MemoryManager:
         Each result dict contains: command, intent_domain, intent_verb,
         outcome, steps_executed, created_at, success (bool).
         """
+        if self._vec.is_available():
+            vec_results = self._vec.search(query, top_k=limit)
+            if vec_results:
+                # Map back to episodic format if possible or use vec results directly
+                # Note: VectorIndex stores episodic summaries in vec_embeddings
+                return vec_results
+
         # Pull a broad candidate set from the DB
         where = "WHERE outcome = 'completed'" if success_only else ""
         rows = self._conn.execute(

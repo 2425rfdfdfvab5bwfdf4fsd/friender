@@ -40,15 +40,15 @@ class TaskHistory:
     def _load(self) -> None:
         if self.history_file.exists():
             try:
-                with open(self.history_file) as f:
+                with open(self.history_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                self._records = [TaskRecord(**r) for r in data]
+                self._records = [TaskRecord(**r) for r in data if isinstance(r, dict)]
             except Exception:
                 self._records = []
 
     def _save(self) -> None:
         self.history_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.history_file, "w") as f:
+        with open(self.history_file, "w", encoding="utf-8") as f:
             json.dump([asdict(r) for r in self._records[-self.max_records:]], f, indent=2)
         os.chmod(self.history_file, 0o600)
 

@@ -22,7 +22,7 @@ class ToolMetadata:
     requires_confirmation: bool
     conditional_confirmation_rules: list[str]
     data_egress: bool
-    egress_type: Literal["none", "cloud_content", "cloud_metadata", "browser"] | None
+    egress_type: Literal["none", "cloud_content", "cloud_metadata", "browser", "outbound_api", "api_call"] | None
     network_behavior: str | None
     path_scope_required: bool
     max_files_without_confirmation: int | None

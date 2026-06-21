@@ -151,22 +151,23 @@ async def generate_morning_brief(
     if curator:
         try:
             cur_status = curator.get_status()
-            total_skills = cur_status.get("total_skills", 0)
-            core_skills = cur_status.get("core_skills", 0)
-            run_count = cur_status.get("run_count", 0)
-            goals_until = cur_status.get("goals_until_next_run", 0)
-            if total_skills > 0 or run_count > 0:
-                sections.append({
-                    "type": "curator",
-                    "title": "🧬 Skill Curator",
-                    "text": (
-                        f"{total_skills} skills learned · {core_skills} core"
-                        + (f" · next cycle in {goals_until} goals" if goals_until > 0 else "")
-                    ),
-                    "total_skills": total_skills,
-                    "core_skills": core_skills,
-                    "run_count": run_count,
-                })
+            if cur_status:
+                total_skills = cur_status.get("total_skills", 0)
+                core_skills = cur_status.get("core_skills", 0)
+                run_count = cur_status.get("run_count", 0)
+                goals_until = cur_status.get("goals_until_next_run", 0)
+                if total_skills > 0 or run_count > 0:
+                    sections.append({
+                        "type": "curator",
+                        "title": "🧬 Skill Curator",
+                        "text": (
+                            f"{total_skills} skills learned · {core_skills} core"
+                            + (f" · next cycle in {goals_until} goals" if goals_until > 0 else "")
+                        ),
+                        "total_skills": total_skills,
+                        "core_skills": core_skills,
+                        "run_count": run_count,
+                    })
         except Exception:
             pass
 

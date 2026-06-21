@@ -67,6 +67,18 @@ class SafeResourceResolver:
         absolute_path = os.path.abspath(expanded)
         realpath = os.path.realpath(absolute_path)
 
+        # Block dangerous special file types. Symlinks are allowed — os.path.realpath()
+        # already follows them and the scope check below enforces the resolved target
+        # stays within the allowed prefix, so symlink-escape attacks are already caught.
+        try:
+            lstat = os.lstat(absolute_path)
+            if stat.S_ISFIFO(lstat.st_mode):
+                return self._blocked(raw_path, "normal", t, wall, "Named pipes are blocked")
+            if stat.S_ISSOCK(lstat.st_mode):
+                return self._blocked(raw_path, "normal", t, wall, "Sockets are blocked")
+        except OSError:
+            pass  # Path doesn't exist yet — fine for MAY_EXIST / MUST_NOT_EXIST
+
         blocked = self._check_credential_path(realpath)
         if blocked:
             return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall, blocked)

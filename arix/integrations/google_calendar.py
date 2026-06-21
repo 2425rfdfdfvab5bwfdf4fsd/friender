@@ -31,8 +31,12 @@ def _get_access_token() -> str | None:
         )
         if resp.status_code == 200:
             return resp.json().get("access_token")
-    except Exception:
-        pass
+        else:
+            import logging
+            logging.getLogger(__name__).warning("Calendar token refresh failed: %d %s", resp.status_code, resp.text)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("Calendar token refresh exception: %s", e)
     return None
 
 

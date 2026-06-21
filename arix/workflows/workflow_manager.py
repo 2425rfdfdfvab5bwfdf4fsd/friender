@@ -285,6 +285,7 @@ class WorkflowManager:
                     day_of_week=day_of_week,
                     args=[wf.name],
                     replace_existing=True,
+                    timezone=__import__('pytz').UTC if 'pytz' in __import__('sys').modules else None
                 )
         except Exception:
             pass

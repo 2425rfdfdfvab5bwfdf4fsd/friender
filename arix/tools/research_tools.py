@@ -131,6 +131,8 @@ async def _generate_queries(topic: str, n: int = 3) -> list[str]:
 async def _extract_page_text(controller, url: str, timeout: int = 12000) -> str:
     """Navigate to a URL and extract clean text content."""
     try:
+        if controller._page is None:
+            return ""
         await controller._page.goto(url, timeout=timeout, wait_until="domcontentloaded")
         text = await controller._page.evaluate("""() => {
             // Remove noise elements
@@ -152,8 +154,11 @@ async def _search_and_extract(query: str, extract_pages: bool = True) -> dict:
     """Search for a query, get result links, and optionally extract from top pages."""
     from arix.tools.browser_tools import get_browser_controller
     controller = get_browser_controller()
-    if not controller._page:
+    if controller._page is None:
         await controller.start()
+
+    if controller._page is None:
+        return {"error": "Failed to start browser"}
 
     search_url = "https://duckduckgo.com/?q=" + urllib.parse.quote(query) + "&ia=web"
     result = {
@@ -416,6 +421,8 @@ async def summarize_url(url: str, dry_run: bool = False) -> dict:
         await controller.start()
 
     try:
+        if controller._page is None:
+            return {"error": "Browser not started"}
         response = await controller._page.goto(url, timeout=25000, wait_until="domcontentloaded")
         title = await controller._page.title()
         text = await controller._page.evaluate("""() => {

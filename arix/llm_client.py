@@ -469,6 +469,10 @@ class LLMClient:
             and task_scope.intent_domain != "mixed"
             and not context  # no memory/RAG context to inject
         )
+
+        # Smart routing: use cheaper model for simple plans
+        plan_model = model_for_tier(self.provider, complexity)
+
         if use_compact:
             system = COMPACT_SYSTEM_PROMPT_TEMPLATE.format(
                 max_steps=min(task_scope.max_steps, 5),
@@ -490,8 +494,6 @@ class LLMClient:
                 memory_context=mem_section,
             )
         prompt = task_scope.redacted_command
-        # Smart routing: use cheaper model for simple plans
-        plan_model = model_for_tier(self.provider, complexity)
 
         last_error = None
         delay = 1.0

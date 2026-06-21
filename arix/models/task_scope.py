@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import Literal, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from arix.config import UserConfig
+    from arix.config import ArixConfig
 
 
 class TaskScopeError(Exception):

@@ -5,6 +5,8 @@ from arix.integrations import slack as _slack
 
 async def slack_list_channels(limit: int = 20, dry_run: bool = False) -> dict:
     """List all Slack channels in the workspace."""
+    if not _slack.is_configured():
+        return {"ok": False, "error": "Slack is not connected. Add credentials in the Slack panel."}
     if dry_run:
         return {"dry_run": True, "action": "slack_list_channels"}
     import asyncio
@@ -13,6 +15,8 @@ async def slack_list_channels(limit: int = 20, dry_run: bool = False) -> dict:
 
 async def slack_send_message(channel: str, text: str, thread_ts: str = "", dry_run: bool = False) -> dict:
     """Send a message to a Slack channel or thread."""
+    if not _slack.is_configured():
+        return {"ok": False, "error": "Slack is not connected. Add credentials in the Slack panel."}
     if dry_run:
         return {"dry_run": True, "action": "slack_send_message", "channel": channel, "text": text}
     import asyncio
@@ -21,6 +25,8 @@ async def slack_send_message(channel: str, text: str, thread_ts: str = "", dry_r
 
 async def slack_get_messages(channel: str, limit: int = 20, dry_run: bool = False) -> dict:
     """Get recent messages from a Slack channel."""
+    if not _slack.is_configured():
+        return {"ok": False, "error": "Slack is not connected. Add credentials in the Slack panel."}
     if dry_run:
         return {"dry_run": True, "action": "slack_get_messages", "channel": channel}
     import asyncio
@@ -29,6 +35,8 @@ async def slack_get_messages(channel: str, limit: int = 20, dry_run: bool = Fals
 
 async def slack_search(query: str, count: int = 10, dry_run: bool = False) -> dict:
     """Search Slack messages across all channels."""
+    if not _slack.is_configured():
+        return {"ok": False, "error": "Slack is not connected. Add credentials in the Slack panel."}
     if dry_run:
         return {"dry_run": True, "action": "slack_search", "query": query}
     import asyncio

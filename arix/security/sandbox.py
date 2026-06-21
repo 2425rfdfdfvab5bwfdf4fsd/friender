@@ -260,12 +260,23 @@ def run_sandboxed(
         # preexec_fn is Unix-only; skip silently on Windows
         _preexec = None
         if _sys.platform != "win32":
-            _preexec = lambda: _apply_rlimits(
-                cpu_seconds=cpu_seconds,
-                max_memory_mb=max_memory_mb,
-                max_file_mb=max_file_mb,
-                max_procs=max_procs,
-            )
+            def _preexec_wrapper():
+                # Avoid potential race by setting pdeathsig if available
+                # (Linux only, but _apply_rlimits is already best-effort)
+                try:
+                    import ctypes
+                    libc = ctypes.CDLL("libc.so.6")
+                    # PR_SET_PDEATHSIG = 1
+                    libc.prctl(1, 15) # SIGTERM
+                except Exception:
+                    pass
+                _apply_rlimits(
+                    cpu_seconds=cpu_seconds,
+                    max_memory_mb=max_memory_mb,
+                    max_file_mb=max_file_mb,
+                    max_procs=max_procs,
+                )
+            _preexec = _preexec_wrapper
         try:
             proc = subprocess.run(
                 cmd,

@@ -10,6 +10,8 @@ async def gmail_list_emails(
     dry_run: bool = False,
 ) -> dict:
     """List emails from Gmail inbox (or any label/query)."""
+    if not _gmail.is_configured():
+        return {"ok": False, "error": "Gmail is not connected. Add credentials in the Gmail panel."}
     if dry_run:
         return {"dry_run": True, "action": "gmail_list_emails", "label": label, "max_results": max_results}
     import asyncio
@@ -18,6 +20,8 @@ async def gmail_list_emails(
 
 async def gmail_read_email(message_id: str, dry_run: bool = False) -> dict:
     """Read the full body of a Gmail message by ID."""
+    if not _gmail.is_configured():
+        return {"ok": False, "error": "Gmail is not connected. Add credentials in the Gmail panel."}
     if dry_run:
         return {"dry_run": True, "action": "gmail_read_email", "message_id": message_id}
     import asyncio
@@ -33,6 +37,8 @@ async def gmail_send_email(
     dry_run: bool = False,
 ) -> dict:
     """Send an email via Gmail."""
+    if not _gmail.is_configured():
+        return {"ok": False, "error": "Gmail is not connected. Add credentials in the Gmail panel."}
     if dry_run:
         return {"dry_run": True, "action": "gmail_send_email", "to": to, "subject": subject}
     import asyncio
@@ -41,6 +47,8 @@ async def gmail_send_email(
 
 async def gmail_search_emails(query: str, max_results: int = 10, dry_run: bool = False) -> dict:
     """Search Gmail using Gmail query syntax (e.g. 'from:boss@co.com is:unread')."""
+    if not _gmail.is_configured():
+        return {"ok": False, "error": "Gmail is not connected. Add credentials in the Gmail panel."}
     if dry_run:
         return {"dry_run": True, "action": "gmail_search_emails", "query": query}
     import asyncio
@@ -49,6 +57,8 @@ async def gmail_search_emails(query: str, max_results: int = 10, dry_run: bool =
 
 async def gmail_delete_email(message_id: str, dry_run: bool = False) -> dict:
     """Permanently delete a Gmail message by ID."""
+    if not _gmail.is_configured():
+        return {"ok": False, "error": "Gmail is not connected. Add credentials in the Gmail panel."}
     if dry_run:
         return {"dry_run": True, "action": "gmail_delete_email", "message_id": message_id}
     import asyncio

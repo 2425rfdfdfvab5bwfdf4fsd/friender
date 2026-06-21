@@ -5,6 +5,8 @@ from arix.integrations import notion as _notion
 
 async def notion_search(query: str = "", max_results: int = 10, dry_run: bool = False) -> dict:
     """Search Notion pages and databases."""
+    if not _notion.is_configured():
+        return {"ok": False, "error": "Notion is not connected. Add credentials in the Notion panel."}
     if dry_run:
         return {"dry_run": True, "action": "notion_search", "query": query}
     import asyncio
@@ -13,6 +15,8 @@ async def notion_search(query: str = "", max_results: int = 10, dry_run: bool = 
 
 async def notion_read_page(page_id: str, dry_run: bool = False) -> dict:
     """Read the content of a Notion page by ID."""
+    if not _notion.is_configured():
+        return {"ok": False, "error": "Notion is not connected. Add credentials in the Notion panel."}
     if dry_run:
         return {"dry_run": True, "action": "notion_read_page", "page_id": page_id}
     import asyncio
@@ -21,6 +25,8 @@ async def notion_read_page(page_id: str, dry_run: bool = False) -> dict:
 
 async def notion_create_page(title: str, content: str = "", parent_page_id: str = "", dry_run: bool = False) -> dict:
     """Create a new Notion page with optional content."""
+    if not _notion.is_configured():
+        return {"ok": False, "error": "Notion is not connected. Add credentials in the Notion panel."}
     if dry_run:
         return {"dry_run": True, "action": "notion_create_page", "title": title}
     import asyncio
@@ -29,6 +35,8 @@ async def notion_create_page(title: str, content: str = "", parent_page_id: str 
 
 async def notion_append_to_page(page_id: str, content: str, dry_run: bool = False) -> dict:
     """Append text content to an existing Notion page."""
+    if not _notion.is_configured():
+        return {"ok": False, "error": "Notion is not connected. Add credentials in the Notion panel."}
     if dry_run:
         return {"dry_run": True, "action": "notion_append_to_page", "page_id": page_id}
     import asyncio

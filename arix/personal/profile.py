@@ -55,9 +55,10 @@ class UserProfile:
             try:
                 data = json.loads(PROFILE_FILE.read_text(encoding="utf-8"))
                 p = cls()
-                for k, v in data.items():
-                    if hasattr(p, k):
-                        setattr(p, k, v)
+                if isinstance(data, dict):
+                    for k, v in data.items():
+                        if hasattr(p, k):
+                            setattr(p, k, v)
                 return p
             except Exception:
                 pass
@@ -65,7 +66,7 @@ class UserProfile:
 
     def save(self) -> None:
         Arix_DIR.mkdir(parents=True, exist_ok=True)
-        PROFILE_FILE.write_text(json.dumps(asdict(self), indent=2))
+        PROFILE_FILE.write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")
         os.chmod(PROFILE_FILE, 0o600)
 
     def update(self, updates: dict) -> None:
