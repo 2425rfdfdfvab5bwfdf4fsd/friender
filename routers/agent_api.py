@@ -116,7 +116,25 @@ async def get_disclosure():
 async def get_sysmon():
     try:
         from arix.tools.system_tools import system_monitor
-        return await asyncio.to_thread(system_monitor, include_processes=True, top_n_processes=10)
+        raw = await asyncio.to_thread(system_monitor, include_processes=True, top_n_processes=10)
+        mem = raw.get("memory", {})
+        total_bytes = mem.get("total_mb", 0) * 1024 * 1024
+        used_bytes = (mem.get("total_mb", 0) - mem.get("available_mb", 0)) * 1024 * 1024
+        return {
+            "cpu_percent": raw.get("cpu", {}).get("percent", 0),
+            "cpu_count": raw.get("cpu", {}).get("count", 0),
+            "virtual_memory": {
+                "percent": mem.get("used_percent", 0),
+                "total": total_bytes,
+                "used": used_bytes,
+                "available": mem.get("available_mb", 0) * 1024 * 1024,
+            },
+            "disk": raw.get("disk", {}),
+            "uptime_hours": raw.get("uptime_hours", 0),
+            "platform": raw.get("platform", ""),
+            "top_processes": raw.get("top_processes", []),
+            "total_processes": raw.get("total_processes", 0),
+        }
     except Exception as e:
         return {"error": str(e)}
 
