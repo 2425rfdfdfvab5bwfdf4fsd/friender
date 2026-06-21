@@ -452,6 +452,7 @@ class ArixAgent:
                 async for event in self._execute_pipeline(command, task_id):
                     await queue.put(event)
             except Exception as e:
+                log.exception("Error in _execute_pipeline for task %s", task_id)
                 # Build a human-readable message — never expose raw UUIDs or stack internals
                 raw = str(e)
                 if _looks_like_uuid(raw):

@@ -416,7 +416,7 @@ function _updateProviderBadge(provider, model, llmAvailable) {
   }
 }
 
-function onWelcome(d) {
+async function onWelcome(d) {
   document.getElementById('status-dot').className = d.llm_available ? 'ok' : 'warn';
   _updateProviderBadge(d.provider, d.model, d.llm_available);
   if (d.memory_count) updateBadge('mem', d.memory_count);
@@ -442,9 +442,9 @@ function onWelcome(d) {
     scrollToBottom();
   }
 
-  if (!d.onboarding_complete) showOnboarding();
-  else if (!S.briefShown) { S.briefShown = true; loadMorningBrief(); }
-  loadAssistantPanel();
+  if (!d.onboarding_complete) await showOnboarding();
+  else if (!S.briefShown) { S.briefShown = true; await loadMorningBrief(); }
+  await loadAssistantPanel();
   openDetailSidebar('assistant');
   setTimeout(loadNotifications, 500);
   startSysmon();
@@ -1416,11 +1416,17 @@ async function loadTsbPanel() {
       fetch('/api/todos?include_done=false'),
       fetch('/api/reminders')
     ]);
+    if (!todosRes.ok || !remsRes.ok) throw new Error('API request failed');
     const todosData = await todosRes.json();
     const remsData  = await remsRes.json();
     renderTsbTodoList(todosData.todos || []);
     renderTsbRemList(remsData.reminders || []);
-  } catch(e) {}
+  } catch(e) {
+    console.error('Failed to load tasks sidebar:', e);
+    const errHtml = '<div class="panel-empty" style="color:var(--red)">Failed to load data.</div>';
+    if (document.getElementById('tsb-todo-list')) document.getElementById('tsb-todo-list').innerHTML = errHtml;
+    if (document.getElementById('tsb-rem-list')) document.getElementById('tsb-rem-list').innerHTML = errHtml;
+  }
 }
 
 function renderTsbTodoList(todos) {
@@ -1518,11 +1524,14 @@ async function loadRsbPanel() {
       fetch('/api/todos?include_done=false'),
       fetch('/api/reminders')
     ]);
+    if (!todosRes.ok || !remsRes.ok) throw new Error('API request failed');
     const todosData = await todosRes.json();
     const remsData  = await remsRes.json();
     renderRsbTodoList(todosData.todos || []);
     renderRsbRemList(remsData.reminders || []);
-  } catch(e) {}
+  } catch(e) {
+    console.error('Failed to load right sidebar:', e);
+  }
 }
 
 function buildRsbActions() {
@@ -1701,7 +1710,10 @@ function toggleGoalMode() {
 function updateBadge(key, count) {
   const el = document.getElementById('badge-' + key);
   if (!el) return;
-  if (count > 0) { el.style.display = ''; el.textContent = count > 99 ? '99+' : count; }
+  if (count > 0) { 
+    el.style.display = 'inline-flex'; 
+    el.textContent = count > 99 ? '99+' : count; 
+  }
   else el.style.display = 'none';
 }
 
@@ -1729,6 +1741,7 @@ function copyReportText() {
 async function loadNotifications() {
   try {
     const r = await fetch('/api/notifications?limit=30');
+    if (!r.ok) throw new Error('Failed to load notifications');
     const d = await r.json();
     renderNotifications(d.notifications||[]);
     const cnt = d.unread_count || 0;
@@ -1754,7 +1767,9 @@ async function loadNotifications() {
       if (Notification.permission === 'granted') { lnk.textContent = '✓ Desktop alerts on'; lnk.style.color = 'var(--success)'; }
       else if (Notification.permission === 'denied') { lnk.textContent = '🚫 Alerts blocked'; lnk.style.color = 'var(--danger)'; }
     }
-  } catch(_){}
+  } catch(e){
+    console.error('Notifications load error:', e);
+  }
 }
 
 async function requestBrowserNotifications() {
@@ -1809,10 +1824,14 @@ async function dismissAllNotifs() {
 async function loadMorningBrief() {
   try {
     const r = await fetch('/api/morning-brief');
+    if (!r.ok) throw new Error('Failed to load morning brief');
     const d = await r.json();
     if (d.total_items > 0 || d.nudges?.length) renderBriefCard(d);
     else renderWelcomeMsg();
-  } catch(_) { renderWelcomeMsg(); }
+  } catch(e) { 
+    console.error('Brief load error:', e);
+    renderWelcomeMsg(); 
+  }
 }
 
 function renderWelcomeMsg() {
@@ -1898,20 +1917,27 @@ function renderBriefCard(d) {
 async function refreshBrief() {
   try {
     const r = await fetch('/api/morning-brief?force=true');
+    if (!r.ok) throw new Error('Brief refresh failed');
     const d = await r.json();
     chatThread.querySelectorAll('.brief-card').forEach(c => c.closest('.msg').remove());
     if (d.total_items > 0 || d.nudges?.length) renderBriefCard(d);
     toast('Brief refreshed', 'ok', 1800);
-  } catch(e) { toast('Failed to refresh brief', 'err'); }
+  } catch(e) { 
+    console.error('Brief refresh error:', e);
+    toast('Failed to refresh brief', 'err'); 
+  }
 }
 
 // ── Profile ────────────────────────────────────────────────────────────────────
 async function loadProfile() {
   try {
     const r = await fetch('/api/profile');
+    if (!r.ok) throw new Error('Failed to load profile');
     S.profile = await r.json();
     renderProfileSection(S.profile);
-  } catch(_) {}
+  } catch(e) {
+    console.error('Profile load error:', e);
+  }
 }
 
 function renderProfileSection(p) {
@@ -2347,9 +2373,12 @@ async function deleteCalEvent(eventId, btn) {
 async function loadMemory() {
   try {
     const r = await fetch('/api/memory?limit=25');
+    if (!r.ok) throw new Error('Failed to load memory');
     const d = await r.json();
     renderMemory(d);
-  } catch(e){}
+  } catch(e){
+    console.error('Memory load error:', e);
+  }
 }
 
 function renderMemory(d) {
@@ -2386,13 +2415,16 @@ async function searchMemory(q) {
     if (!q) { loadMemory(); return; }
     try {
       const r = await fetch('/api/memory/search?q=' + encodeURIComponent(q) + '&top_k=10');
+      if (!r.ok) throw new Error('Search failed');
       const d = await r.json();
       const el = document.getElementById('mem-list');
       const results = d.results||[];
       el.innerHTML = results.length ? results.map(r2=>
         `<div class="mem-task-item"><div class="mem-task-cmd">${esc((r2.content||'').slice(0,90))}</div><div class="mem-task-meta"><span style="color:var(--accent)">score: ${(r2.score||0).toFixed(2)}</span></div></div>`
       ).join('') : '<div class="panel-empty">No matches found.</div>';
-    } catch(_){}
+    } catch(e){
+      console.error('Memory search error:', e);
+    }
   }, 300);
 }
 
@@ -2447,11 +2479,14 @@ async function triggerDetectPrefs() {
 async function loadWorkflows() {
   try {
     const r = await fetch('/api/workflows');
+    if (!r.ok) throw new Error('Failed to load workflows');
     const d = await r.json();
     const wfs = d.workflows||[];
     updateBadge('wf', wfs.length);
     renderWorkflows(wfs);
-  } catch(e){}
+  } catch(e){
+    console.error('Workflows load error:', e);
+  }
 }
 
 function renderWorkflows(wfs) {
@@ -2562,6 +2597,7 @@ function qa(cmd) {
 async function loadReports() {
   try {
     const r = await fetch('/api/reports?limit=30');
+    if (!r.ok) throw new Error('Failed to load reports');
     const d = await r.json();
     const el = document.getElementById('reports-list');
     const reps = d.reports||[];
@@ -2573,7 +2609,9 @@ async function loadReports() {
         <div class="report-meta"><span>${d2}</span><span>${r2.sources_count||0} sources</span><button onclick="event.stopPropagation();deleteReport(${r2.id})" style="margin-left:auto;background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:11px">✕</button></div>
       </div>`;
     }).join('');
-  } catch(e){}
+  } catch(e){
+    console.error('Reports load error:', e);
+  }
 }
 
 async function viewReport(id) {
@@ -2595,14 +2633,18 @@ async function deleteReport(id) {
 async function loadHistory() {
   try {
     const r = await fetch('/api/task-history?n=20');
+    if (!r.ok) throw new Error('Failed to load history');
     const d = await r.json();
     // used by terminal mode; not shown in chat but kept for compat
-  } catch(_){}
+  } catch(e){
+    console.error('History load error:', e);
+  }
 }
 
 async function loadAudit() {
   try {
     const r = await fetch('/api/audit-log?n=30');
+    if (!r.ok) throw new Error('Failed to load audit log');
     const d = await r.json();
     const el = document.getElementById('audit-list');
     const entries = d.entries||[];
@@ -2615,13 +2657,16 @@ async function loadAudit() {
         <span class="audit-detail"> ${esc((e2.detail||e2.tool||e2.command||'').toString().slice(0,60))}</span>
       </div>`;
     }).join('');
-  } catch(e){}
+  } catch(e){
+    console.error('Audit load error:', e);
+  }
 }
 
 // ── Sysmon ────────────────────────────────────────────────────────────────────
 async function loadSysmon() {
   try {
     const r = await fetch('/api/sysmon');
+    if (!r.ok) throw new Error('Failed to load sysmon');
     const d = await r.json();
     if (d.error) { document.getElementById('sysmon-content').innerHTML = `<div class="panel-empty">${esc(d.error)}</div>`; return; }
     const cpu = d.cpu_percent||0, ram = d.virtual_memory||{};
@@ -2643,7 +2688,9 @@ async function loadSysmon() {
       <div class="sysmon-card"><div class="sysmon-title">CPU</div><div class="sysmon-val" style="color:${cpuCls}">${cpu}%</div><div class="sysmon-bar"><div class="sysmon-fill" style="width:${cpu}%;background:${cpuCls}"></div></div></div>
       <div class="sysmon-card"><div class="sysmon-title">RAM</div><div class="sysmon-val" style="color:${ramCls}">${ramPct}% <span style="font-size:12px;font-weight:400;color:var(--muted)">(${Math.round((ram.used||0)/1073741824*10)/10} / ${Math.round((ram.total||0)/1073741824*10)/10} GB)</span></div><div class="sysmon-bar"><div class="sysmon-fill" style="width:${ramPct}%;background:${ramCls}"></div></div></div>
       ${procs.length?`<div class="sysmon-card"><div class="sysmon-title">Top Processes</div><div class="proc-row" style="font-weight:700"><div class="proc-name">Name</div><div class="proc-cpu">CPU</div><div class="proc-mem">MEM</div></div>${procsHtml}</div>`:''}`;
-  } catch(e){}
+  } catch(e){
+    console.error('Sysmon load error:', e);
+  }
 }
 
 function startSysmon() {
@@ -2655,10 +2702,13 @@ function startSysmon() {
 async function loadSettings() {
   try {
     const [statusRes, provRes] = await Promise.all([fetch('/api/status'), fetch('/api/providers')]);
+    if (!statusRes.ok || !provRes.ok) throw new Error('Failed to load settings');
     const status = await statusRes.json();
     const provData = await provRes.json();
     renderSettings(status, provData);
-  } catch(e){}
+  } catch(e){
+    console.error('Settings load error:', e);
+  }
 }
 
 const _PROV_ICONS = {
@@ -2848,13 +2898,16 @@ async function saveSettings() {
 async function loadAssistantPanel() {
   try {
     const [todosRes, remsRes] = await Promise.all([fetch('/api/todos?include_done=false'), fetch('/api/reminders')]);
+    if (!todosRes.ok || !remsRes.ok) throw new Error('Failed to load assistant data');
     const todosData = await todosRes.json();
     const remsData = await remsRes.json();
     renderTodoList(todosData.todos||[]);
     renderReminderList(remsData.reminders||[]);
     // Quick actions
     buildQuickActionList();
-  } catch(e){}
+  } catch(e){
+    console.error('Assistant panel load error:', e);
+  }
 }
 
 function buildQuickActionList() {
@@ -3086,10 +3139,13 @@ const _OB = { step: 1, data: {} };
 async function showOnboarding() {
   try {
     const r = await fetch('/api/disclosure');
+    if (!r.ok) throw new Error('Failed to load disclosure');
     const d = await r.json();
     const box = document.getElementById('ob-disclosure-box');
     if (box) box.textContent = d.text || '';
-  } catch(_){}
+  } catch(e){
+    console.error('Onboarding disclosure load error:', e);
+  }
   _OB.step = 1;
   _obShowStep(1);
   document.getElementById('onboarding-overlay').classList.remove('hidden');
@@ -3144,15 +3200,18 @@ async function obFinish() {
     provider: _OB.data.provider || 'anthropic',
   };
   try {
-    await fetch('/api/profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-    await fetch('/api/onboard', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider: payload.provider})});
+    const res1 = await fetch('/api/profile', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const res2 = await fetch('/api/onboard', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider: payload.provider})});
+    if (!res1.ok || !res2.ok) throw new Error('Failed to save onboarding data');
     if (payload.name) {
       S.profile = S.profile || {};
       S.profile.name = payload.name;
       S.profile.initials = payload.name[0].toUpperCase();
       renderProfileSection(S.profile);
     }
-  } catch(_){}
+  } catch(e){
+    console.error('Onboarding save error:', e);
+  }
   document.getElementById('onboarding-overlay').classList.add('hidden');
   toast(`Welcome${_OB.data.name ? ', ' + _OB.data.name : ''}! 👋`, 'ok', 3000);
   if (!S.briefShown) { S.briefShown = true; loadMorningBrief(); }
@@ -3449,7 +3508,7 @@ setInterval(loadNotifications, 60000);
 async function pollBridgeStatus() {
   try {
     const r = await fetch('/api/bridge/status');
-    if (!r.ok) return;
+    if (!r.ok) throw new Error('Bridge status request failed');
     const d = await r.json();
     const badge = document.getElementById('bridge-badge');
     if (!badge) return;
@@ -3464,7 +3523,9 @@ async function pollBridgeStatus() {
       badge.textContent = '🖥 Bridge: Off';
       badge.title = 'Local bridge not connected — click for setup instructions';
     }
-  } catch(e) {}
+  } catch(e) {
+    console.warn('Bridge status poll failed:', e);
+  }
 }
 pollBridgeStatus();
 setInterval(pollBridgeStatus, 10000);

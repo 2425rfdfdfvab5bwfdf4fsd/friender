@@ -26,14 +26,14 @@ PREFS_FILE = Arix_DIR / "user_prefs.json"
 
 # ── Gap #2: Improved tokenization with bigrams ────────────────────────────────
 
-def _tokenize(text: str) -> Counter:
+def _tokenize(text: str) -> Counter[str]:
     """Tokenize text into unigrams + bigrams for richer semantic matching."""
     tokens = re.findall(r"[a-z0-9]+", text.lower())
-    counts: Counter = Counter(tokens)
+    counts: Counter[str] = Counter(tokens)
     # Add bigrams with half-weight
     for i in range(len(tokens) - 1):
         bigram = f"{tokens[i]}_{tokens[i+1]}"
-        counts[bigram] = counts.get(bigram, 0) + 0.5
+        counts[bigram] += 0.5
     return counts
 
 
@@ -312,7 +312,7 @@ class MemoryManager:
             return {"compressed": 0, "groups": 0, "skipped": 0}
 
         # ── Group by (calendar-day, domain) ──────────────────────────────────
-        groups: dict[tuple, list] = _dd(list)
+        groups: dict[tuple[str, str], list[sqlite3.Row]] = _dd(list)
         for r in rows:
             day = time.strftime("%Y-%m-%d", time.localtime(r["created_at"]))
             domain = r["intent_domain"] or "general"
@@ -991,7 +991,7 @@ class MemoryManager:
             if r["outcome"] == "completed":
                 successes += 1
 
-        top_domain = max(domain_counts, key=domain_counts.get) if domain_counts else "none"
+        top_domain = max(domain_counts, key=lambda k: domain_counts[k]) if domain_counts else "none"
         tasks_preview = [
             {
                 "command": r["command"][:80],

@@ -86,7 +86,10 @@ class BridgeManager:
         self._pending[cmd_id] = fut
         try:
             payload = json.dumps({"cmd_id": cmd_id, "tool": tool, "args": args})
-            await self._ws.send_text(payload)
+            if self._ws:
+                await self._ws.send_text(payload)
+            else:
+                return {"ok": False, "error": "Bridge connection lost during send"}
         except Exception as e:
             self._pending.pop(cmd_id, None)
             return {"ok": False, "error": f"Send failed: {e}"}
@@ -116,8 +119,11 @@ class BridgeManager:
 
 
 # Global singleton
-_bridge = BridgeManager()
+_bridge: BridgeManager | None = None
 
 
 def get_bridge() -> BridgeManager:
+    global _bridge
+    if _bridge is None:
+        _bridge = BridgeManager()
     return _bridge

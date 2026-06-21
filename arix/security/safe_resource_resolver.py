@@ -10,7 +10,7 @@ import stat
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, cast
 
 from arix.models.resolved_resource import ResolvedResource, PathExpectation
 
@@ -57,19 +57,19 @@ class SafeResourceResolver:
 
         path_variant = self._classify_path_variant(raw_path)
         if path_variant not in ("normal", "hardlink", "reparse_point"):
-            return self._blocked(raw_path, path_variant, t, wall,
+            return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall,
                                  f"Unsafe path variant: {path_variant}")
 
         expanded = os.path.expanduser(os.path.expandvars(raw_path))
         if '\x00' in expanded:
-            return self._blocked(raw_path, path_variant, t, wall, "Null byte in path")
+            return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall, "Null byte in path")
 
         absolute_path = os.path.abspath(expanded)
         realpath = os.path.realpath(absolute_path)
 
         blocked = self._check_credential_path(realpath)
         if blocked:
-            return self._blocked(raw_path, path_variant, t, wall, blocked)
+            return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall, blocked)
 
         within_scope = True
         if task_scope and task_scope.allowed_path_prefixes:
@@ -82,10 +82,10 @@ class SafeResourceResolver:
         is_dir = os.path.isdir(realpath) if exists else False
 
         if expectation == PathExpectation.MUST_EXIST and not exists:
-            return self._blocked(raw_path, path_variant, t, wall,
+            return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall,
                                  f"Path does not exist: {realpath}")
         if expectation == PathExpectation.MUST_NOT_EXIST and exists:
-            return self._blocked(raw_path, path_variant, t, wall,
+            return self._blocked(raw_path, cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], path_variant), t, wall,
                                  f"Path already exists: {realpath}")
 
         inode = mtime_ns = st_size = st_dev = None
@@ -128,7 +128,7 @@ class SafeResourceResolver:
         return ResolvedResource(
             raw_input=raw_path,
             path_type=path_type,
-            path_variant=variant,
+            path_variant=cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], variant),
             absolute_path=absolute_path,
             realpath=realpath,
             inode=inode,
@@ -220,7 +220,7 @@ class SafeResourceResolver:
         return ResolvedResource(
             raw_input=raw_input,
             path_type="nonexistent",
-            path_variant=variant,
+            path_variant=cast(Literal["normal", "unc", "device", "nt_namespace", "ads", "short_name", "trailing_dot_space", "hardlink", "reparse_point"], variant),
             absolute_path="",
             realpath="",
             inode=None, mtime_ns=None, st_size=None, st_dev=None, win_file_id=None,

@@ -196,6 +196,8 @@ class SkillCurator:
         return self._state
 
     def _save(self) -> None:
+        if self._state is None:
+            return
         try:
             _CURATOR_FILE.parent.mkdir(parents=True, exist_ok=True)
             tmp = _CURATOR_FILE.with_suffix(".tmp")
@@ -222,6 +224,8 @@ class SkillCurator:
 
     def _update_skill_usage(self, goal: str, success: bool) -> None:
         state = self._state
+        if state is None:
+            return
         goal_lower = goal.lower()
         for skill in state.skills:
             if skill.pattern and skill.pattern.lower() in goal_lower:
@@ -273,22 +277,24 @@ class SkillCurator:
         results["stage_4_promoted"] = promoted
 
         # Enforce max skill limit
-        if len(state.skills) > _MAX_SKILLS:
+        if state is not None and len(state.skills) > _MAX_SKILLS:
             state.skills.sort(key=lambda s: s.score, reverse=True)
             state.skills = state.skills[:_MAX_SKILLS]
 
-        results["core_skills"] = [s.name for s in state.skills if s.is_core]
-        results["total_skills"] = len(state.skills)
+        if state is not None:
+            results["core_skills"] = [s.name for s in state.skills if s.is_core]
+            results["total_skills"] = len(state.skills)
         results["duration_s"] = round(time.time() - t0, 2)
 
-        state.last_run_at = time.time()
-        state.last_run_summary = (
-            f"Created {len(created)}, refined {len(refined)}, "
-            f"pruned {len(pruned)}, promoted {len(promoted)}"
-        )
+        if state is not None:
+            state.last_run_at = time.time()
+            state.last_run_summary = (
+                f"Created {len(created)}, refined {len(refined)}, "
+                f"pruned {len(pruned)}, promoted {len(promoted)}"
+            )
 
         self._save()
-        log.info("Curator loop complete: %s", state.last_run_summary)
+        log.info("Curator loop complete: %s", state.last_run_summary if state else "no state")
         return results
 
     def _get_recent_goals(self, limit: int) -> List[str]:
@@ -354,6 +360,8 @@ class SkillCurator:
 
     def _create_skills(self, patterns: List[dict]) -> List[CuratedSkill]:
         state = self._state
+        if state is None:
+            return []
         created = []
         existing_names = {s.name.lower() for s in state.skills}
 
@@ -383,6 +391,8 @@ class SkillCurator:
             return []
 
         state = self._state
+        if state is None:
+            return []
         underperforming = [
             s for s in state.skills
             if s.uses >= 3 and s.score < 2.5 and not s.is_core
@@ -421,6 +431,8 @@ class SkillCurator:
 
     def _prune_and_promote(self) -> Tuple[List[str], List[str]]:
         state = self._state
+        if state is None:
+            return [], []
         pruned_names = []
         promoted_names = []
 

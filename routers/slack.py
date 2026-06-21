@@ -15,7 +15,7 @@ class SendMessageRequest(BaseModel):
 
 @router.get("/status")
 def slack_status():
-    return {"configured": _slack.is_configured(), "setup": _slack.get_setup_instructions()}
+    return {"configured": _slack.is_configured(), "setup": _slack.get_setup_instructions(), "provider": "slack"}
 
 
 @router.get("/channels")

@@ -166,7 +166,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ── Auth middleware ───────────────────────────────────────────────────────────
 
-_ADMIN_TOKEN: str = os.environ.get("Arix_ADMIN_TOKEN", "")
+_ADMIN_TOKEN: str = os.environ.get("ARIX_ADMIN_TOKEN", os.environ.get("Arix_ADMIN_TOKEN", ""))
 _PUBLIC_PATHS = frozenset({"/", "/favicon.ico", "/webhook/whatsapp"})
 
 
@@ -183,7 +183,7 @@ async def auth_middleware(request: Request, call_next):
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer ") or auth[7:] != _ADMIN_TOKEN:
         return JSONResponse(
-            {"error": "Unauthorized — set Authorization: Bearer <Arix_ADMIN_TOKEN>"},
+            {"error": "Unauthorized — set Authorization: Bearer <ARIX_ADMIN_TOKEN>"},
             status_code=401,
         )
     return await call_next(request)

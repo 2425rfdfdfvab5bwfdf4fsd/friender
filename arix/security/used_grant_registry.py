@@ -98,11 +98,12 @@ class UsedGrantRegistry:
 
         try:
             db = self._get_db()
-            db.execute(
-                "INSERT OR IGNORE INTO used_grants (grant_id, consumed_at, expires_at) VALUES (?, ?, ?)",
-                (grant.grant_id, time.time(), grant.expires_at),
-            )
-            db.commit()
+            with self._lock:
+                db.execute(
+                    "INSERT OR IGNORE INTO used_grants (grant_id, consumed_at, expires_at) VALUES (?, ?, ?)",
+                    (grant.grant_id, time.time(), grant.expires_at),
+                )
+                db.commit()
         except Exception:
             pass  # Persistence failed; in-memory set still prevents replay in this session
 

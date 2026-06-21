@@ -9,7 +9,7 @@ ONBOARDING_FILE = Arix_DIR / "onboarding_complete.json"
 
 DISCLOSURE_TEXT = """
 ╔══════════════════════════════════════════════════════════════════════╗
-║              Arix v5.2 — Privacy & Data Disclosure                 ║
+║              Arix v9.5 — Privacy & Data Disclosure                 ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                      ║
 ║  Arix uses cloud AI services to understand your commands and        ║
@@ -48,7 +48,7 @@ def complete_onboarding(provider_id: str = "anthropic") -> None:
     data = {
         "completed": True,
         "provider_consented": provider_id,
-        "schema_version": "5.2",
+        "schema_version": "9.5.2",
     }
     with open(ONBOARDING_FILE, "w") as f:
         json.dump(data, f)

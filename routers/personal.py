@@ -30,6 +30,8 @@ async def update_profile(body: dict):
 
 @router.post("/api/profile/photo")
 async def upload_profile_photo(file: UploadFile = File(...)):
+    if file.content_type and not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Only images are allowed")
     _ARIX_DIR.mkdir(parents=True, exist_ok=True)
     photo_path = _ARIX_DIR / "profile_photo.jpg"
     with photo_path.open("wb") as f:

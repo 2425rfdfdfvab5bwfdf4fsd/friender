@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/youtube", tags=["youtube"])
 
 @router.get("/status")
 def youtube_status():
-    return {"configured": _youtube.is_configured(), "setup": _youtube.get_setup_instructions()}
+    return {"configured": _youtube.is_configured(), "setup": _youtube.get_setup_instructions(), "provider": "youtube"}
 
 
 @router.get("/search")

@@ -1167,7 +1167,9 @@ function connectCanvasSSE() {
       if (msg.event === 'card') prependCanvasCard(msg.data);
       else if (msg.event === 'delete') removeCanvasCard(msg.id);
       else if (msg.event === 'clear') document.getElementById('canvas-cards') && (document.getElementById('canvas-cards').innerHTML = '<div class="panel-empty">Canvas cleared.</div>');
-    } catch (_) {}
+    } catch (err) {
+      console.warn('Canvas SSE parse error:', err);
+    }
   };
   _canvasSSE.onerror = () => {
     _canvasSSE = null;

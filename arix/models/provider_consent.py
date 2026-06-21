@@ -47,9 +47,16 @@ class ConsentStore:
     def _save(self) -> None:
         self.consent_file.parent.mkdir(parents=True, exist_ok=True)
         tmp = {pid: asdict(pc) for pid, pc in self._consents.items()}
-        with open(self.consent_file, "w") as f:
-            json.dump(tmp, f, indent=2)
-        os.chmod(self.consent_file, 0o600)
+        temp_file = self.consent_file.with_suffix(".tmp")
+        try:
+            with open(temp_file, "w") as f:
+                json.dump(tmp, f, indent=2)
+            os.chmod(temp_file, 0o600)
+            os.replace(temp_file, self.consent_file)
+        except Exception:
+            if temp_file.exists():
+                os.remove(temp_file)
+            raise
 
     def has_consent(self, provider_id: str) -> bool:
         return provider_id in self._consents

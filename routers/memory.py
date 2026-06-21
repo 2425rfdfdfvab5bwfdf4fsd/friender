@@ -111,6 +111,8 @@ async def compress_memory(days: int = 7):
         llm_fn = None
         if agent.llm_client and agent.llm_client.is_available():
             async def _llm_summarize(prompt: str) -> str:
+                if not agent.llm_client:
+                    return ""
                 return await agent.llm_client.aask(
                     system=(
                         "You are a concise summarizer. Summarize the given list of "

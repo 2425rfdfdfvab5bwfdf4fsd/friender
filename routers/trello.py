@@ -16,7 +16,7 @@ class CreateCardRequest(BaseModel):
 
 @router.get("/status")
 def trello_status():
-    return {"configured": _trello.is_configured(), "setup": _trello.get_setup_instructions()}
+    return {"configured": _trello.is_configured(), "setup": _trello.get_setup_instructions(), "provider": "trello"}
 
 
 @router.get("/boards")

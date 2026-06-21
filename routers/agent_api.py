@@ -279,10 +279,14 @@ async def update_settings(body: dict):
         "risk_confirm_threshold": float,
         "risk_proceed_threshold": float,
         "max_file_egress_bytes": int,
+        "offline_mode": lambda v: v if isinstance(v, bool) else str(v).lower() == "true",
     }
     for field, cast in field_map.items():
         if field in body:
-            setattr(cfg, field, cast(body[field]))
+            try:
+                setattr(cfg, field, cast(body[field]))
+            except (ValueError, TypeError):
+                continue
     cfg.save()
     reset_agent()
     return {

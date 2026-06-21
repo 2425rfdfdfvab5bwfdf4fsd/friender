@@ -787,7 +787,7 @@ Rules:
             messages=messages,
             max_tokens=max_tokens,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
 
     async def _call_gemini(self, system: str, user: str, max_tokens: int) -> str:
         return await self._call_openai_compat(system, user, max_tokens)
@@ -817,7 +817,7 @@ Rules:
             messages=messages,
             max_tokens=max_tokens,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
 
     def _parse_plan(self, raw: str) -> list[dict]:
         text = raw.strip()

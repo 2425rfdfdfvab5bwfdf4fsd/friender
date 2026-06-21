@@ -18,7 +18,7 @@ def wa_is_configured() -> bool:
     return bool(wa_token() and wa_phone_id())
 
 
-def send_whatsapp_message(to: str, message: str, dry_run: bool = False) -> dict:
+async def send_whatsapp_message(to: str, message: str, dry_run: bool = False) -> dict:
     """Send a WhatsApp text message to a phone number via Meta Cloud API.
 
     Args:
@@ -59,21 +59,22 @@ def send_whatsapp_message(to: str, message: str, dry_run: bool = False) -> dict:
     try:
         import httpx
 
-        resp = httpx.post(
-            f"{WA_API_BASE}/{phone_id}/messages",
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": to_clean,
-                "type": "text",
-                "text": {"body": message, "preview_url": False},
-            },
-            timeout=30.0,
-        )
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{WA_API_BASE}/{phone_id}/messages",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "messaging_product": "whatsapp",
+                    "recipient_type": "individual",
+                    "to": to_clean,
+                    "type": "text",
+                    "text": {"body": message, "preview_url": False},
+                },
+                timeout=30.0,
+            )
 
         if resp.status_code == 200:
             data = resp.json()

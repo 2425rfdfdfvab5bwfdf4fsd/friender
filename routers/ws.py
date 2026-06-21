@@ -381,31 +381,38 @@ async def websocket_endpoint(ws: WebSocket):
             msg_type = msg.get("type", "command")
 
             if msg_type in ("command", "goal"):
-                command = msg.get("data", {}).get("command", "").strip()
-                if command:
-                    await _handle_command(command, agent, outgoing, active_tasks)
+                msg_data = msg.get("data")
+                if isinstance(msg_data, dict):
+                    command = msg_data.get("command", "").strip()
+                    if command:
+                        await _handle_command(command, agent, outgoing, active_tasks)
 
             elif msg_type == "confirm":
-                data = msg.get("data", {})
-                task_id = data.get("task_id", "")
-                conf_id = data.get("confirmation_id", "")
-                response = data.get("response", "")
-                skip_steps = data.get("skip_steps") or None
-                if task_id and conf_id:
-                    result = agent.confirm(task_id, conf_id, response, skip_steps=skip_steps)
-                    await put("confirm_ack", {"task_id": task_id, "accepted": result})
+                msg_data = msg.get("data")
+                if isinstance(msg_data, dict):
+                    task_id = msg_data.get("task_id", "")
+                    conf_id = msg_data.get("confirmation_id", "")
+                    response = msg_data.get("response", "")
+                    skip_steps = msg_data.get("skip_steps") or None
+                    if task_id and conf_id:
+                        result = agent.confirm(task_id, conf_id, response, skip_steps=skip_steps)
+                        await put("confirm_ack", {"task_id": task_id, "accepted": result})
 
             elif msg_type == "cancel":
-                task_id = msg.get("data", {}).get("task_id", "")
-                if task_id:
-                    agent.cancel_task(task_id)
-                    t = active_tasks.pop(task_id, None)
-                    if t:
-                        t.cancel()
-                    await put("cancelled", {"task_id": task_id})
+                msg_data = msg.get("data")
+                if isinstance(msg_data, dict):
+                    task_id = msg_data.get("task_id", "")
+                    if task_id:
+                        agent.cancel_task(task_id)
+                        t = active_tasks.pop(task_id, None)
+                        if t:
+                            t.cancel()
+                        await put("cancelled", {"task_id": task_id})
 
             elif msg_type == "ping":
-                await put("pong", {"ts": 0})
+                msg_data = msg.get("data")
+                ts = msg_data.get("ts", 0) if isinstance(msg_data, dict) else 0
+                await put("pong", {"ts": ts})
 
     except WebSocketDisconnect:
         pass

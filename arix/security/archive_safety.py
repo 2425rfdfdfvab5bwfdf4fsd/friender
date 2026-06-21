@@ -80,7 +80,9 @@ class ArchiveSafetyValidator:
                         return report
 
                     target = os.path.realpath(os.path.join(destination, fname))
-                    if not target.startswith(dest_real + os.sep) and target != dest_real:
+                    # Ensure destination and fname combined don't escape dest_real
+                    # The os.sep check is good, but let's be even more explicit with commonpath
+                    if os.path.commonpath([dest_real, target]) != dest_real:
                         report.blocked = True
                         report.block_reason = (
                             f"Zip Slip: entry escapes destination: {fname}"

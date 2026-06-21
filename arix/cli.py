@@ -104,10 +104,10 @@ def cmd_doctor() -> None:
         _print("No LLM API key found — running in demo/heuristic mode", ok=None)
 
     # Arix_ADMIN_TOKEN
-    if os.environ.get("Arix_ADMIN_TOKEN"):
-        _print("Arix_ADMIN_TOKEN set — API authentication enabled", ok=True)
+    if os.environ.get("ARIX_ADMIN_TOKEN") or os.environ.get("Arix_ADMIN_TOKEN"):
+        _print("ARIX_ADMIN_TOKEN set — API authentication enabled", ok=True)
     else:
-        _print("Arix_ADMIN_TOKEN not set — API is unauthenticated (fine for local use)", ok=None)
+        _print("ARIX_ADMIN_TOKEN not set — API is unauthenticated (fine for local use)", ok=None)
 
     # Allowed path prefixes
     try:

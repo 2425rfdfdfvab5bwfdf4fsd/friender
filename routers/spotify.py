@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/spotify", tags=["spotify"])
 
 @router.get("/status")
 def spotify_status():
-    return {"configured": _spotify.is_configured(), "setup": _spotify.get_setup_instructions()}
+    return {"configured": _spotify.is_configured(), "setup": _spotify.get_setup_instructions(), "provider": "spotify"}
 
 
 @router.get("/search")

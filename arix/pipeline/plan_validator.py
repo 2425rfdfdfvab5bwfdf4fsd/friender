@@ -89,6 +89,13 @@ class PlanValidator:
             if not isinstance(args, dict):
                 raise PlanValidationError(f"Step {i}: 'args' must be a dict")
 
+            # Check for missing required arguments based on tool_registry
+            meta = self.tool_registry.get(tool_name)
+            if hasattr(meta, "required_args"):
+                for req in meta.required_args:
+                    if req not in args:
+                        raise PlanValidationError(f"Step {i}: missing required argument '{req}' for tool '{tool_name}'")
+
             validated_args, resolved = self._validate_args(
                 tool_name, args, task_scope, i
             )

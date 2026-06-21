@@ -5,7 +5,7 @@ Supports starting, stopping, and status-checking Telegram and Discord adapters.
 from __future__ import annotations
 
 import os
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from arix.channels.channel_manager import get_channel_manager
@@ -177,9 +177,8 @@ async def start_line(body: StartLINERequest):
 
 
 @router.post("/line/webhook")
-async def line_webhook(request: "Request"):
+async def line_webhook(request: Request):
     """Receive LINE webhook events and route to agent."""
-    from fastapi import Request
     body_bytes = await request.body()
     signature = request.headers.get("X-Line-Signature", "")
     mgr = get_channel_manager()

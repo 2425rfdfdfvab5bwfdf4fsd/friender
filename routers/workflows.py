@@ -25,7 +25,9 @@ async def list_workflows():
 @router.post("")
 async def create_workflow(body: dict):
     wm = _require_workflow_manager()
-    command = body.get("command", "")
+    command = body.get("command", "").strip()
+    if not command:
+        raise HTTPException(status_code=400, detail="command is required")
     steps = body.get("steps", [])
     wf = parse_workflow_from_command(command, steps_hint=steps)
     if not wf:

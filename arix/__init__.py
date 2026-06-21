@@ -1,2 +1,2 @@
-"""Arix — Personal AI Computer-Control Agent v5.2"""
-__version__ = "5.2.0"
+"""Arix — Personal AI Computer-Control Agent v9.5.2"""
+__version__ = "9.5.2"

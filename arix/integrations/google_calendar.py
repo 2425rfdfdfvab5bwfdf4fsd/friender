@@ -44,9 +44,10 @@ def get_events(days_ahead: int = 7, calendar_id: str = "primary") -> dict:
         return {"ok": False, "error": "Failed to get access token. Check your Google Calendar credentials."}
     try:
         import httpx
-        now = datetime.utcnow()
-        time_min = now.isoformat() + "Z"
-        time_max = (now + timedelta(days=days_ahead)).isoformat() + "Z"
+        from datetime import datetime, timezone
+        now = datetime.now(timezone.utc)
+        time_min = now.isoformat().replace("+00:00", "Z")
+        time_max = (now + timedelta(days=days_ahead)).isoformat().replace("+00:00", "Z")
         resp = httpx.get(
             f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events",
             params={

@@ -26,7 +26,7 @@ def _size_str(n: int) -> str:
 
 
 def list_directory(path: str, show_hidden: bool = False) -> dict:
-    p = Path(path)
+    p = Path(path).resolve()
     if not p.exists():
         return {"error": f"Path does not exist: {path}"}
     if not p.is_dir():
@@ -53,7 +53,7 @@ def list_directory(path: str, show_hidden: bool = False) -> dict:
 
 
 def create_folder(path: str, dry_run: bool = False) -> dict:
-    p = Path(path)
+    p = Path(path).resolve()
     if p.exists():
         return {"error": f"Directory already exists: {path}"}
     if dry_run:
@@ -67,7 +67,7 @@ def create_folder(path: str, dry_run: bool = False) -> dict:
 
 def create_file(path: str, content: str = "", dry_run: bool = False,
                 overwrite: bool = False) -> dict:
-    p = Path(path)
+    p = Path(path).resolve()
     if p.exists() and not overwrite:
         st = p.stat()
         return {
@@ -89,7 +89,7 @@ def create_file(path: str, content: str = "", dry_run: bool = False,
 
 
 def read_file(path: str, max_bytes: int = 104_857_600) -> dict:
-    p = Path(path)
+    p = Path(path).resolve()
     if not p.exists():
         return {"error": f"File not found: {path}"}
     if not p.is_file():
@@ -105,8 +105,8 @@ def read_file(path: str, max_bytes: int = 104_857_600) -> dict:
 
 
 def move_file(source: str, destination: str, dry_run: bool = False) -> dict:
-    src = Path(source)
-    dst = Path(destination)
+    src = Path(source).resolve()
+    dst = Path(destination).resolve()
     if not src.exists():
         return {"error": f"Source not found: {source}"}
     if dst.exists():
@@ -126,8 +126,8 @@ def move_file(source: str, destination: str, dry_run: bool = False) -> dict:
 
 
 def copy_file(source: str, destination: str, dry_run: bool = False) -> dict:
-    src = Path(source)
-    dst = Path(destination)
+    src = Path(source).resolve()
+    dst = Path(destination).resolve()
     if not src.exists():
         return {"error": f"Source not found: {source}"}
     if dry_run:
@@ -263,6 +263,9 @@ def move_to_trash(paths: list[str], dry_run: bool = False) -> dict:
 def unzip_archive(archive_path: str, destination: str,
                   dry_run: bool = False) -> dict:
     validator = ArchiveSafetyValidator()
+    # Resolve paths for consistent reporting and safety checks
+    archive_path = str(Path(archive_path).resolve())
+    destination = str(Path(destination).resolve())
     report = validator.validate(archive_path, destination)
 
     if report.blocked:
@@ -306,7 +309,7 @@ def zip_files(source_paths: list[str], output_path: str,
     import zipfile
     from pathlib import Path
 
-    sources = [Path(p) for p in source_paths]
+    sources = [Path(p).resolve() for p in source_paths]
     missing = [str(s) for s in sources if not s.exists()]
     if missing:
         return {"error": f"Source(s) not found: {', '.join(missing)}"}

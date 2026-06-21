@@ -3,7 +3,7 @@ from __future__ import annotations
 from arix.integrations import google_calendar
 
 
-def list_calendar_events(days_ahead: int = 7, calendar_id: str = "primary") -> dict:
+async def list_calendar_events(days_ahead: int = 7, calendar_id: str = "primary") -> dict:
     """List upcoming Google Calendar events."""
     if not google_calendar.is_configured():
         return {
@@ -13,10 +13,11 @@ def list_calendar_events(days_ahead: int = 7, calendar_id: str = "primary") -> d
                 "Open the Calendar panel in Arix and follow the setup instructions to add your credentials."
             ),
         }
-    return google_calendar.get_events(days_ahead=days_ahead, calendar_id=calendar_id)
+    import asyncio
+    return await asyncio.to_thread(google_calendar.get_events, days_ahead=days_ahead, calendar_id=calendar_id)
 
 
-def create_calendar_event(
+async def create_calendar_event(
     title: str,
     start: str,
     end: str,
@@ -47,7 +48,9 @@ def create_calendar_event(
         return {"ok": False, "error": "Event title is required."}
     if not start or not end:
         return {"ok": False, "error": "Both start and end datetime are required."}
-    return google_calendar.create_event(
+    import asyncio
+    return await asyncio.to_thread(
+        google_calendar.create_event,
         title=title,
         start=start,
         end=end,
@@ -57,7 +60,7 @@ def create_calendar_event(
     )
 
 
-def delete_calendar_event(event_id: str, calendar_id: str = "primary") -> dict:
+async def delete_calendar_event(event_id: str, calendar_id: str = "primary") -> dict:
     """Delete a Google Calendar event by its ID."""
     if not google_calendar.is_configured():
         return {"ok": False, "error": "Google Calendar is not connected."}
@@ -65,14 +68,16 @@ def delete_calendar_event(event_id: str, calendar_id: str = "primary") -> dict:
         return {"ok": False, "error": "event_id is required."}
     try:
         import httpx, os
-        token = google_calendar._get_access_token()
+        from arix.integrations.google_calendar import _get_access_token
+        token = _get_access_token()
         if not token:
             return {"ok": False, "error": "Failed to get access token."}
-        resp = httpx.delete(
-            f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
-            headers={"Authorization": f"Bearer {token}"},
-            timeout=10,
-        )
+        async with httpx.AsyncClient() as client:
+            resp = await client.delete(
+                f"https://www.googleapis.com/calendar/v3/calendars/{calendar_id}/events/{event_id}",
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=10,
+            )
         if resp.status_code in (200, 204):
             return {"ok": True, "deleted": event_id}
         return {"ok": False, "error": f"API error {resp.status_code}: {resp.text[:200]}"}

@@ -5,7 +5,7 @@ import json
 import re
 import time
 from dataclasses import dataclass, field
-from typing import Literal, TYPE_CHECKING
+from typing import Literal, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from arix.config import UserConfig
@@ -161,7 +161,7 @@ class TaskScope:
             raw_command=command,
             redacted_command=redacted_command,
             intent_verb=verb,
-            intent_domain=domain,
+            intent_domain=cast(Literal["file", "app", "system", "calendar", "browser", "document", "git", "messaging", "vision", "coding", "research", "cleanup", "webapp", "mixed"], domain),
             allowed_tools=allowed_tools,
             allowed_path_prefixes=tuple(sorted(allowed_path_prefixes)),
             allowed_url_patterns=url_patterns,

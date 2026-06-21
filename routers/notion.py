@@ -19,7 +19,7 @@ class AppendRequest(BaseModel):
 
 @router.get("/status")
 def notion_status():
-    return {"configured": _notion.is_configured(), "setup": _notion.get_setup_instructions()}
+    return {"configured": _notion.is_configured(), "setup": _notion.get_setup_instructions(), "provider": "notion"}
 
 
 @router.get("/search")
