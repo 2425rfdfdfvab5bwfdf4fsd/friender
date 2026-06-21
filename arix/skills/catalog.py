@@ -202,7 +202,7 @@ def _load_installed() -> Dict[str, bool]:
 
 def _save_installed(data: Dict[str, bool]) -> None:
     INSTALLED_FILE.parent.mkdir(parents=True, exist_ok=True)
-    INSTALLED_FILE.write_text(json.dumps(data, indent=2))
+    INSTALLED_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
 def list_skills(category: Optional[str] = None, query: Optional[str] = None) -> List[dict]:

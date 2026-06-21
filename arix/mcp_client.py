@@ -117,7 +117,7 @@ class StdioTransport:
         await self._send(_rpc_request("initialize", {
             "protocolVersion": "2024-11-05",
             "capabilities": {},
-            "clientInfo": {"name": "arix", "version": "8.4.0"},
+            "clientInfo": {"name": "arix", "version": "9.5.2"},
         }))
         response = await self._recv()
         _parse_rpc_response(response)
