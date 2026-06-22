@@ -586,6 +586,18 @@ async def browser_open_url(url: str, dry_run: bool = False) -> dict:
         return {"error": reason, "blocked": True}
     if dry_run:
         return {"dry_run": True, "would_navigate": url}
+    # Prefer bridge (user's PC) over server-side Playwright
+    try:
+        from arix.bridge_manager import get_bridge
+        bridge = get_bridge()
+        if bridge.is_connected:
+            result = await bridge.send_command("open_url", {"url": url})
+            if result.get("ok"):
+                return {"url": url, "status": "opened", "via": "bridge",
+                        "message": f"Opened {url} in your default browser"}
+    except Exception:
+        pass
+    # Fall back to server-side Playwright
     controller = get_browser_controller()
     if not controller._page:
         await controller.start()
@@ -596,6 +608,18 @@ async def browser_web_search(query: str, engine: str = "duckduckgo",
                               dry_run: bool = False) -> dict:
     if dry_run:
         return {"dry_run": True, "query": query}
+    # Prefer bridge (user's PC) over server-side Playwright
+    try:
+        from arix.bridge_manager import get_bridge
+        bridge = get_bridge()
+        if bridge.is_connected:
+            result = await bridge.send_command("browser_web_search",
+                                               {"query": query, "engine": engine})
+            if result.get("ok"):
+                return result
+    except Exception:
+        pass
+    # Fall back to server-side Playwright
     controller = get_browser_controller()
     if not controller._page:
         await controller.start()

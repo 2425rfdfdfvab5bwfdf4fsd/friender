@@ -207,6 +207,29 @@ async def open_web_app(
             final_url = f"{base_url}?q={search_query.replace(' ', '+')}"
         action_desc = f"Search {app_name} for '{search_query}'"
 
+    # Prefer bridge (user's PC) over server-side Playwright
+    try:
+        from arix.bridge_manager import get_bridge
+        bridge = get_bridge()
+        if bridge.is_connected:
+            result = await bridge.send_command("open_url", {"url": final_url})
+            if result.get("ok"):
+                return {
+                    "opened": final_url,
+                    "app_name": app_name,
+                    "action": action or "home",
+                    "description": action_desc,
+                    "via": "bridge",
+                    "note": (
+                        f"{app_name} is opening in your default browser on your PC. "
+                        "Use desktop_screenshot to see the result, then desktop_click "
+                        "to interact with it."
+                    ),
+                }
+    except Exception:
+        pass
+
+    # Fall back to server-side Playwright
     ctrl = get_browser_controller()
     if not ctrl._page:
         await ctrl.start()

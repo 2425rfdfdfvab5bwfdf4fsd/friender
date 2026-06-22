@@ -153,6 +153,71 @@ def dispatch(tool: str, args: dict) -> dict:
             pyautogui.dragTo(tx, ty, duration=duration, button=button)
             return {"ok": True, "message": f"Dragged ({fx},{fy})→({tx},{ty})"}
 
+        elif tool == "open_url":
+            import webbrowser
+            url = args["url"]
+            webbrowser.open(url)
+            return {"ok": True, "message": f"Opened {url} in default browser", "url": url}
+
+        elif tool == "browser_web_search":
+            import webbrowser
+            import urllib.parse
+            query = args["query"]
+            engine = args.get("engine", "google")
+            engines = {
+                "google":     "https://www.google.com/search?q=",
+                "bing":       "https://www.bing.com/search?q=",
+                "duckduckgo": "https://duckduckgo.com/?q=",
+                "brave":      "https://search.brave.com/search?q=",
+            }
+            base = engines.get(engine, engines["google"])
+            url = base + urllib.parse.quote_plus(query)
+            webbrowser.open(url)
+            return {
+                "ok": True,
+                "message": f"Searching for '{query}' in your default browser",
+                "url": url,
+                "query": query,
+            }
+
+        elif tool == "desktop_read_screen":
+            import pytesseract
+            try:
+                from PIL import Image, ImageGrab
+                img = ImageGrab.grab()
+                text = pytesseract.image_to_string(img)
+                return {"ok": True, "text": text}
+            except ImportError:
+                img = pyautogui.screenshot()
+                try:
+                    text = pytesseract.image_to_string(img)
+                    return {"ok": True, "text": text}
+                except Exception as e:
+                    return {"ok": False, "error": f"pytesseract not installed: {e}"}
+
+        elif tool == "desktop_find_and_click":
+            description = args.get("description", "")
+            return {
+                "ok": False,
+                "error": (
+                    f"desktop_find_and_click requires vision — use desktop_screenshot "
+                    f"to see the screen first, then desktop_click with coordinates. "
+                    f"Looking for: '{description}'"
+                ),
+            }
+
+        elif tool == "desktop_double_click":
+            x = int(args["x"])
+            y = int(args["y"])
+            pyautogui.doubleClick(x, y)
+            return {"ok": True, "message": f"Double-clicked ({x},{y})"}
+
+        elif tool == "desktop_right_click":
+            x = int(args["x"])
+            y = int(args["y"])
+            pyautogui.rightClick(x, y)
+            return {"ok": True, "message": f"Right-clicked ({x},{y})"}
+
         else:
             return {"ok": False, "error": f"Unknown tool: {tool}"}
 
